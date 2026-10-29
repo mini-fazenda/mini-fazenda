@@ -54,6 +54,15 @@ export const query=r=>r,orderByKey=()=>{},limitToFirst=()=>{},startAfter=()=>{};
    if(c.width<=0||c.height<=0||c.left<0||c.right>600||c.visibility!=='visible')
      throw Error('Controle inacessível em tela menor: '+JSON.stringify(c));
  }
+ await page.setViewportSize({width:360,height:640});
+ const portrait=await page.evaluate(()=>{
+   const warning=document.getElementById('mf-rotate-warning');
+   const friends=document.getElementById('neighbors');
+   const exit=document.getElementById('logout');
+   return {warning:getComputedStyle(warning).display,passThrough:getComputedStyle(warning).pointerEvents,buttonZ:Number(getComputedStyle(document.getElementById('toolbar')).zIndex),warningZ:Number(getComputedStyle(warning).zIndex),friends:getComputedStyle(friends).visibility,logout:getComputedStyle(exit).visibility};
+ });
+ if(portrait.warning!=='flex'||portrait.passThrough!=='none'||portrait.buttonZ<=portrait.warningZ||portrait.friends!=='visible'||portrait.logout!=='visible')
+   throw Error('Controles inacessíveis em retrato: '+JSON.stringify(portrait));
  await page.setViewportSize({width:1280,height:720});
  console.log('PASS: tela cheia solicitada pelo host; Amigos e Sair dentro do viewport mobile');
  await f.evaluate(()=>{moedas=9876;window.__farmName='Conta';saveGameState('test')});
