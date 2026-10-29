@@ -1,0 +1,16 @@
+name: Verificar integração da Mini Fazenda
+on:
+  push:
+    branches: [integracao-html-2026-10-29]
+  pull_request:
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm test
+      - run: node --check public/online-ui.js
+      - run: node --check public/online.js
