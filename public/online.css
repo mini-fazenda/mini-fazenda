@@ -23,7 +23,7 @@ body:has(#farms[style*="display: flex"]) :is(#mf-bounds,#mf-truck-markers),body:
 #toolbar:not([hidden]) #neighbors:not([hidden]),#toolbar:not([hidden]) #home:not([hidden]),#toolbar:not([hidden]) #logout:not([hidden]){visibility:visible!important;opacity:1}
 #toolbar #neighbors,#toolbar #home{max-width:clamp(44px,25dvw,92px);flex-shrink:1;min-width:0}
 #toolbar #logout{max-width:32dvw;min-width:42px;flex-shrink:0}
-#mf-rotate-warning{display:none;position:fixed;inset:0;z-index:55000;background:#152c23ee;color:#fff;align-items:center;justify-content:center;text-align:center;font:700 20px system-ui;padding:20px;box-sizing:border-box}
+#mf-rotate-warning{display:none;position:fixed;inset:0;z-index:40000;pointer-events:none;background:#152c23ee;color:#fff;align-items:center;justify-content:center;text-align:center;font:700 20px system-ui;padding:20px;box-sizing:border-box}
 @media (max-width:900px) and (orientation:portrait){
  body:has(#gate[hidden]) #mf-rotate-warning{display:flex}
 }
