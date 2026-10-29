@@ -1,27 +1,24 @@
-// Separado do Firebase para poder verificar recuperação e conflitos sem credenciais.
-export function selectRecovery(remote, local) {
-  if (!local?.pending) return {state:remote?.state || null,revision:remote?.revision || 0};
-  if (local.id && remote?.saveId === local.id) return {state:local.state,revision:remote.revision};
-  if ((remote?.revision || 0) === local.baseRevision)
-    return {state:local.state,revision:local.baseRevision,pending:true};
-  return {conflict:true};
-}
-export function nextDocument(current, {sessionId,revision,id,state,timestamp}) {
-  if (current?.saveId === id) return undefined; // reenvio após confirmação perdida
-  if (current && current.revision !== revision) return undefined;
+// Documento autoritativo no Firebase: revisão e sessão impedem sobrescrita por outro dispositivo.
+export function nextDocument(current,{sessionId,revision,id,state,timestamp}){
+  if(current?.saveId===id)return undefined;
+  if(current&&current.revision!==revision)return undefined;
   return {sessionId,revision:revision+1,saveId:id,state,updatedAt:timestamp};
 }
-export function openJournal(indexedDB) {
-  return new Promise((resolve,reject)=>{
-    const req=indexedDB.open('mini-fazenda-online-v1',1);
-    req.onupgradeneeded=()=>req.result.createObjectStore('saves');
-    req.onerror=()=>reject(req.error);req.onsuccess=()=>resolve(req.result);
-  });
-}
-export function journal(db,mode,key,value) {
-  return new Promise((resolve,reject)=>{
-    const tx=db.transaction('saves',mode), store=tx.objectStore('saves');
-    const req=mode==='readonly'?store.get(key):store.put(value,key);
-    tx.oncomplete=()=>resolve(req.result);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
-  });
+// Remove somente os saves antigos da Mini Fazenda. Credenciais Firebase e preferências não são progresso.
+export function clearLegacySaves(projectId){
+  try{
+    const prefix=`mf-online:${projectId}:`;
+    for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if(key?.startsWith(prefix)||key==='mini_fazenda_autosave_v1')localStorage.removeItem(key)}
+  }catch{}
+  try{
+    const request=indexedDB.open('mini-fazenda-online-v1');
+    request.onsuccess=()=>{
+      const db=request.result;
+      if(db.objectStoreNames.contains('saves')){
+        const tx=db.transaction('saves','readwrite');tx.objectStore('saves').clear();
+        const finish=()=>{db.close();indexedDB.deleteDatabase('mini-fazenda-online-v1')};
+        tx.oncomplete=finish;tx.onerror=()=>db.close();
+      }else{db.close();indexedDB.deleteDatabase('mini-fazenda-online-v1')}
+    };
+  }catch{}
 }

@@ -101,7 +101,7 @@
       restore(host.bootState());
       document.documentElement.style.visibility='visible';
       host.attach({capture, pan:(dx,dy)=>{offsetX+=dx;offsetY+=dy;updateTruckDomPosition();requestRedraw()}});
-      if(!host.playing()){
+      if(host.isVisiting()){
         const cover=document.createElement('div');
         cover.style.cssText='position:fixed;inset:0;z-index:2147483647;touch-action:none';
         let p;
@@ -115,3 +115,4 @@
     }catch(e){host.fail(e)}
   }, 50);
 })();
+

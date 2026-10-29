@@ -61,15 +61,17 @@ O GitHub armazena o código; o Firebase Hosting publica o jogo. O site não fica
 
 O projeto visual da engine e os recursos ficam no repositório. Os dados da fazenda ficam vinculados ao UID do Google/Firebase. Não há migração automática dos saves antigos de outro navegador ou domínio para uma conta nova.
 
-## Salvamento e recuperação
+## Salvamento automático na conta
 
-A engine faz checkpoints a cada 500 ms e nos eventos de salvamento originais. Cada checkpoint é gravado primeiro em armazenamento local, separado por projeto e UID, e depois sincronizado com a nuvem em lotes de aproximadamente 1,2 segundo. Também há checkpoint ao ocultar ou sair da página. IndexedDB mantém uma cópia adicional.
+O progresso é lido exclusivamente do Firebase depois do login. Não há save de jogo em localStorage ou IndexedDB e não há opção de baixar backup ou resolver conflitos entre cópias. Os saves antigos deste jogo no navegador são limpos automaticamente; a versão confirmada no Firebase permanece como fonte do progresso.
 
-O indicador só informa “Salvo na nuvem” depois da confirmação do servidor. Sem internet, as alterações permanecem pendentes no dispositivo. A página impede sair da conta ou iniciar uma visita enquanto o envio não foi confirmado. O botão Backup exporta o checkpoint atual em JSON.
+Cada alteração sinalizada pela engine é enviada imediatamente, com verificação adicional do estado a cada 200 ms. Não há confirmação ao fechar ou recarregar. O jogo pausa e bloqueia os controles ao perder a conexão, retomando somente depois de confirmar que a sessão ainda é válida. Alterações em trânsito permanecem apenas na memória da página até serem confirmadas.
 
-Revisões e um identificador exclusivo de gravação evitam reaplicar uma alteração cuja confirmação foi perdida. Uma sessão por conta pode escrever: entrar em outra aba/dispositivo pausa a anterior, e as regras do servidor recusam gravações da sessão antiga. Saves locais pendentes só são recuperados automaticamente quando a revisão da nuvem ainda é compatível. Em conflito, o usuário pode baixar sua cópia local e escolher a versão da nuvem; o checkpoint conflitante também é arquivado no IndexedDB.
+Uma nova entrada na conta substitui o identificador da sessão no Firebase antes de carregar a fazenda. A sessão anterior é desconectada, seu iframe é removido e o login dessa aba é encerrado. As regras já publicadas recusam gravações de sessões antigas e revisões que poderiam sobrescrever uma versão mais nova. Isso também protege o caso em que o dispositivo anterior ficou sem internet.
 
-**Não existe garantia absoluta de perda zero:** fechar o navegador à força antes do checkpoint, apagar dados do site, perder o dispositivo com mudanças ainda offline ou falhas do serviço podem impedir recuperação. Use o status de confirmação e backups. Se o navegador bloquear ou esgotar o armazenamento local, o jogo pausa com uma mensagem em vez de simular uma gravação bem-sucedida.
+A autenticação usa persistência por aba, para que desconectar a aba antiga não encerre a nova. Credenciais de login e preferências visuais do navegador não são saves de progresso.
+
+Sem um save local, uma alteração que ainda não chegou ao servidor pode se perder se a página ou o dispositivo forem fechados à força. Nenhuma interface oferece garantia absoluta de perda zero em interrupções desse tipo. O salvamento é automático e o jogo exige conexão para continuar jogando.
 
 ## Visitas e acesso
 
@@ -90,7 +92,7 @@ npm test
 npm run serve
 ```
 
-O teste unitário cobre recuperação offline, conflito entre revisões, confirmação perdida e preservação dos dados no documento salvo. Para executar também os testes do navegador e das regras, instale as dependências opcionais:
+O teste unitário cobre revisões, repetição de confirmação e preservação dos dados no documento salvo. Para executar também os testes do navegador e das regras, instale as dependências opcionais:
 
 ```sh
 npm install --no-save playwright@1.51.1 firebase@12.5.0 @firebase/rules-unit-testing@5.0.0 firebase-tools@14.22.0
