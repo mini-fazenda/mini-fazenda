@@ -12,7 +12,7 @@ test('host preserva login Google, Firebase e controles de visita', () => {
   for (const id of ['gate','login','message','neighbors','home','logout','farms','farm-list','friends-content','friends-close','friends-title','friends-description']) {
     assert.ok(host.includes('id="' + id + '"'), 'controle ausente: ' + id);
   }
-  for (const script of ['firebase-config.js', 'online.js?v=account-v2', 'online-ui.js']) {
+  for (const script of ['firebase-config.js', 'online.js?v=mobile-20261029', 'online-ui.js']) {
     assert.ok(host.includes(script), 'script ausente: ' + script);
   }
 });
@@ -44,4 +44,29 @@ test('reutiliza imagens versionadas dos botoes', () => {
 
 test('script de interface compila', () => {
   assert.doesNotThrow(() => new vm.Script(ui, {filename:'online-ui.js'}));
+});
+
+test('modo tela cheia preserva a interface online sobre o jogo', () => {
+  const hostScript=read('public/online.js');
+  const hostCss=read('public/online.css');
+  assert.ok(hostScript.includes('requestFullscreen:requestHostFullscreen'), 'host controla fullscreen');
+  assert.ok(hostScript.includes('exitFullscreen:exitHostFullscreen'), 'host controla saída de fullscreen');
+  assert.ok(hostScript.includes("frame.src='game.html?v=mobile-20261029'"), 'novo HTML sem cache antigo');
+  assert.ok(game.includes('window.MFHost?.requestFullscreen()'), 'jogo solicita fullscreen no host');
+  assert.ok(game.includes('window.MFHost?.exitFullscreen()'), 'jogo sai do fullscreen do host');
+  assert.ok(hostCss.includes(':root:fullscreen #toolbar'), 'toolbar acima do iframe');
+  assert.ok(hostCss.includes('safe-area-inset-right'), 'respeita recortes do celular');
+  assert.ok(host.includes('mf-rotate-warning'), 'orientação horizontal sinalizada');
+});
+test('configurações mobile importadas e botões Amigos sempre acessíveis', () => {
+  const prefix='<script id="mf-project-bootstrap">window.__MF_PROJECT = ';
+  const a=game.indexOf(prefix)+prefix.length;
+  const b=game.indexOf(';</script>',a);
+  const project=JSON.parse(game.slice(a,b));
+  assert.ok(project.mobileLayout?.elements?.['cards-grid']);
+  assert.ok(project.mobileLayout?.elements?.['caminhao-pedidos']);
+  assert.notEqual(project.mobileLayout?.elements?.neighbors?.visible,false, 'Amigos não pode desaparecer');
+  assert.equal(project.onlineUI?.buttons?.friends?.image,'assets/online-friends.png');
+  assert.equal(project.onlineUI?.buttons?.home?.image,'assets/online-home.png');
+  assert.ok(!game.includes('window.__MF_GAME_HTML='));
 });
