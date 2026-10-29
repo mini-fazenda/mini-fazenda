@@ -532,5 +532,17 @@
     "path": "public/assets/3f2959e898593fc5d408-foice.png",
     "bytes": 214636,
     "sha256": "3f2959e898593fc5d4084b690026716b29b61adb009a0357f3303950279a8f7d"
+  },
+  {
+    "source": "https://i.postimg.cc/jqFhqvCB/Botao-Amigos-com-Casinha-e-Chapeu.png",
+    "path": "public/assets/online-friends.png",
+    "bytes": 690528,
+    "sha256": "9224001014b2d36e424486d2a6998e209b4950580952c6192c97b5131b61e6ed"
+  },
+  {
+    "source": "https://i.imgur.com/1VNO2Lc.png",
+    "path": "public/assets/online-home.png",
+    "bytes": 1323690,
+    "sha256": "77b35c76225b56000ca1449ab140f16a815e39096056e6bd6e5c55e19c885b2b"
   }
 ]
