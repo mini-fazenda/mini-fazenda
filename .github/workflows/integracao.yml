@@ -14,3 +14,16 @@ jobs:
       - run: npm test
       - run: node --check public/online-ui.js
       - run: node --check public/online.js
+
+  navegador:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save playwright@1.51.1
+      - run: npx playwright install --with-deps chromium --only-shell
+      - run: python3 -m http.server 8080 --directory public > /tmp/mini-fazenda-http.log 2>&1 &
+      - run: npm run test:browser

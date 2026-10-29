@@ -16,3 +16,20 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden}#game-container{positi
 @media(max-width:650px){#login-title{font-size:32px}#friends-content #farm-list{grid-template-columns:1fr!important}}@media(prefers-reduced-motion:reduce){#toolbar button{transition:none!important}}
 body:has(#farms[style*="display: flex"]) :is(#mf-bounds,#mf-truck-markers),body:has(#gate[style*="display: grid"]) :is(#mf-bounds,#mf-truck-markers){display:none!important}
 
+
+/* A camada online fica acima do iframe também no modo fullscreen. */
+:root:fullscreen #toolbar,:root:-webkit-full-screen #toolbar{z-index:2147483000}
+#toolbar{max-width:calc(100dvw - max(12px,env(safe-area-inset-left)) - max(12px,env(safe-area-inset-right)));right:max(8px,env(safe-area-inset-right));top:max(8px,env(safe-area-inset-top));flex-wrap:nowrap;white-space:nowrap;visibility:visible}
+#toolbar:not([hidden]) #neighbors:not([hidden]),#toolbar:not([hidden]) #home:not([hidden]),#toolbar:not([hidden]) #logout:not([hidden]){visibility:visible!important;opacity:1}
+#toolbar #neighbors,#toolbar #home{max-width:clamp(44px,25dvw,92px);flex-shrink:1;min-width:0}
+#toolbar #logout{max-width:32dvw;min-width:42px;flex-shrink:0}
+#mf-rotate-warning{display:none;position:fixed;inset:0;z-index:40000;pointer-events:none;background:#152c23ee;color:#fff;align-items:center;justify-content:center;text-align:center;font:700 20px system-ui;padding:20px;box-sizing:border-box}
+@media (max-width:900px) and (orientation:portrait){
+ body:has(#gate[hidden]) #mf-rotate-warning{display:flex}
+}
+@media (max-width:650px){
+ #toolbar{gap:clamp(3px,1vw,6px);top:max(4px,env(safe-area-inset-top));right:max(4px,env(safe-area-inset-right))}
+ #toolbar #neighbors,#toolbar #home{max-width:min(72px,24dvw)}
+ #toolbar #logout{font-size:12px}
+}
+@media (max-width:370px){#toolbar #neighbors,#toolbar #home{max-width:58px}#toolbar #logout{font-size:11px;padding:6px 7px}}
