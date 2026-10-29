@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mini Fazenda Online</title><link rel="stylesheet" href="online.css"></head>
+<body>
+<main id="gate"><section class="card"><div class="badge">🌱 MINI FAZENDA ONLINE</div><h1>Sua fazenda,<br>sua história.</h1><p>Entre com sua conta Google para cuidar da fazenda e visitar seus vizinhos.</p><button id="login" disabled>Entrar com Google</button><p id="message" role="status">Preparando conexão…</p><button id="recover" hidden>Baixar cópia de segurança</button><button id="use-cloud" hidden>Baixar backup e usar versão da nuvem</button></section></main>
+<header id="toolbar" hidden><strong id="farm-title">Minha fazenda</strong><span id="sync" role="status">Carregando…</span><button id="neighbors">Visitar fazendas</button><button id="home" hidden>Voltar à minha fazenda</button><button id="backup">Backup</button><button id="logout">Sair</button></header>
+<div id="game-container"></div>
+<dialog id="farms"><form method="dialog"><h2>Fazendas da comunidade</h2><button class="close" aria-label="Fechar">×</button></form><p>Visite para conhecer. Compras e alterações ficam desativadas.</p><div id="farm-list"></div><button id="more" hidden>Carregar mais</button></dialog>
+<script src="firebase-config.js"></script><script type="module" src="online.js"></script>
+</body></html>

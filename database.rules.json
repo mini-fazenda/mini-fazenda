@@ -1,0 +1,73 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "farms": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid && newData.exists()",
+        ".validate": "newData.hasChildren(['sessionId','revision','state','saveId','updatedAt']) && newData.child('sessionId').val() === root.child('sessions').child($uid).val() && newData.child('revision').isNumber() && ((!data.exists() && newData.child('revision').val() === 1) || (data.exists() && newData.child('revision').val() === data.child('revision').val() + 1))",
+        "sessionId": {
+          ".validate": "newData.isString() && newData.val().length <= 64"
+        },
+        "revision": {
+          ".validate": "newData.isNumber()"
+        },
+        "state": {
+          ".validate": "newData.hasChildren(['version','moedas','playerXP','playerLevel','COLS','ROWS','player'])",
+          "moedas": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "playerXP": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "playerLevel": {
+            ".validate": "newData.isNumber() && newData.val() >= 1"
+          },
+          "farmName": {
+            ".validate": "newData.isString() && newData.val().length <= 12"
+          },
+          "COLS": {
+            ".validate": "newData.isNumber() && newData.val() >= 3 && newData.val() <= 100"
+          },
+          "ROWS": {
+            ".validate": "newData.isNumber() && newData.val() >= 3 && newData.val() <= 100"
+          }
+        }
+      }
+    },
+    "publicFarms": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid && newData.exists()",
+        ".validate": "newData.hasChildren(['state','updatedAt']) && newData.child('state/farmName').isString() && newData.child('state/farmName').val().length <= 12"
+      }
+    },
+    "directory": {
+      ".read": "auth != null && query.orderByKey && query.limitToFirst != null && query.limitToFirst > 0 && query.limitToFirst <= 31",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid && newData.exists()",
+        ".validate": "newData.hasChildren(['name','level','updatedAt'])",
+        "name": {
+          ".validate": "newData.isString() && newData.val().length <= 12"
+        },
+        "level": {
+          ".validate": "newData.isNumber() && newData.val() >= 1"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "sessions": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.isString() && newData.val().length <= 64"
+      }
+    }
+  }
+}

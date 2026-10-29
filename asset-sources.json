@@ -1,0 +1,536 @@
+[
+  {
+    "source": "https://i.postimg.cc/1tc0s9KN/abacaxi-inicio.png",
+    "path": "public/assets/fd4a39ea5abe49d9a0c8-abacaxi-inicio.png",
+    "bytes": 1196785,
+    "sha256": "fd4a39ea5abe49d9a0c874d9e4dc64b8c17e7f5f8fc9001d0a1522695b8a50a9"
+  },
+  {
+    "source": "https://i.postimg.cc/25gW6Vcc/cavalo-filhote.png",
+    "path": "public/assets/d8109691007cb596b5cd-cavalo-filhote.png",
+    "bytes": 69049,
+    "sha256": "d8109691007cb596b5cd0a453e61ab0c6ce36f2552c42a5db52a8f358366e8f9"
+  },
+  {
+    "source": "https://i.postimg.cc/28TN5zBz/aradora-costa.png",
+    "path": "public/assets/8e7a2d4937b5eb0b9866-aradora-costa.png",
+    "bytes": 225256,
+    "sha256": "8e7a2d4937b5eb0b986612d972de560b4f40cf1041c980c2355eb515a54d60bc"
+  },
+  {
+    "source": "https://i.postimg.cc/2ySCNxdr/vaca-filhote.png",
+    "path": "public/assets/5b8e90b3f4cf79f720c3-vaca-filhote.png",
+    "bytes": 70913,
+    "sha256": "5b8e90b3f4cf79f720c31473ae58341c59eb895016840a4f9f8cf514275f7b7b"
+  },
+  {
+    "source": "https://i.postimg.cc/3JkXbQmF/milho-quase.png",
+    "path": "public/assets/448b0c48796198df36a3-milho-quase.png",
+    "bytes": 1040178,
+    "sha256": "448b0c48796198df36a3c2ce6fd8d19a01f3bf7fa2daa3312d5795996803ee0b"
+  },
+  {
+    "source": "https://i.postimg.cc/3RqhZTHD/aradora-frente.png",
+    "path": "public/assets/332efb573e1371b44d5b-aradora-frente.png",
+    "bytes": 253131,
+    "sha256": "332efb573e1371b44d5ba8c63141bf61933d9837f1f495e374a6154988eb6511"
+  },
+  {
+    "source": "https://i.postimg.cc/3wwC14R4/botao-mini-vendas.png",
+    "path": "public/assets/1bbc77c608917ce9d177-botao-mini-vendas.png",
+    "bytes": 97549,
+    "sha256": "1bbc77c608917ce9d1770e3b6f6f07864e8014a4420636cec0422a7816df8a78"
+  },
+  {
+    "source": "https://i.postimg.cc/3xY9Jgff/mouse-trator.png",
+    "path": "public/assets/51a81b50f31b25374a55-mouse-trator.png",
+    "bytes": 379337,
+    "sha256": "51a81b50f31b25374a5536e8788ceabd1214b5c976e763d365c26cc679719af8"
+  },
+  {
+    "source": "https://i.postimg.cc/44wbZf6W/icone-leite.png",
+    "path": "public/assets/7fc2de79ae289a20560f-icone-leite.png",
+    "bytes": 152796,
+    "sha256": "7fc2de79ae289a20560f3a118cbc2a112d0903a98df42fba943367de07bbc64f"
+  },
+  {
+    "source": "https://i.postimg.cc/76RKnHw2/trigo-inicio.png",
+    "path": "public/assets/ba521445f444bf267cf2-trigo-inicio.png",
+    "bytes": 899131,
+    "sha256": "ba521445f444bf267cf2ede57e5c20c28a923a72db1d930f7830ec8e6896850b"
+  },
+  {
+    "source": "https://i.postimg.cc/7PRhhFQR/cafe-inicio.png",
+    "path": "public/assets/bcd5f23abee672055bb7-cafe-inicio.png",
+    "bytes": 835462,
+    "sha256": "bcd5f23abee672055bb76494787a34feb5e4b35f580c1b6833d84ffddd8a2554"
+  },
+  {
+    "source": "https://i.postimg.cc/8zTDpCxd/entrada-aradora-background.png",
+    "path": "public/assets/ade5bc8d87b867faf076-entrada-aradora-background.png",
+    "bytes": 84913,
+    "sha256": "ade5bc8d87b867faf0768980e9d164f72f04fa8f5d5986dcb06a0dc85265491b"
+  },
+  {
+    "source": "https://i.postimg.cc/9MJ7W7SR/icone-trator.png",
+    "path": "public/assets/fa2c2ae500cc179aeae3-icone-trator.png",
+    "bytes": 452411,
+    "sha256": "fa2c2ae500cc179aeae36e6db19c05494b032f691c2921faa32a48bcca4d6189"
+  },
+  {
+    "source": "https://i.postimg.cc/9fb2vztC/cavalo-comum.png",
+    "path": "public/assets/e375e2186a21b02b736c-cavalo-comum.png",
+    "bytes": 74443,
+    "sha256": "e375e2186a21b02b736c749304ad220986fddd23b3ef4787db1190ba2c20c769"
+  },
+  {
+    "source": "https://i.postimg.cc/BbFf0wL8/porco-grande.png",
+    "path": "public/assets/5d820c33f8e145765192-porco-grande.png",
+    "bytes": 99899,
+    "sha256": "5d820c33f8e145765192ca078437e7bc9e541531bd1ccc817394e0bd6b44f480"
+  },
+  {
+    "source": "https://i.postimg.cc/C12cshSD/trigo-final.png",
+    "path": "public/assets/223fef30c90feed68db2-trigo-final.png",
+    "bytes": 1444907,
+    "sha256": "223fef30c90feed68db2b93bfe1e303166528d6d41af9b11f5a1b1d1e92102b5"
+  },
+  {
+    "source": "https://i.postimg.cc/CMngkdvH/cavalo-grande.png",
+    "path": "public/assets/ac18ea13efbc45a828a2-cavalo-grande.png",
+    "bytes": 102482,
+    "sha256": "ac18ea13efbc45a828a2a51b9223d6e309bf50c959cbc5d1036e5dd39c3f9ffc"
+  },
+  {
+    "source": "https://i.postimg.cc/CxfRntZh/botao-mensangens.png",
+    "path": "public/assets/3d273938895fcbe005f6-botao-mensangens.png",
+    "bytes": 103189,
+    "sha256": "3d273938895fcbe005f6eb08cd27e4fbfb1a926aece29de109e1ebd6afcbb90f"
+  },
+  {
+    "source": "https://i.postimg.cc/D0Vktfqk/entrada-aradora.gif",
+    "path": "public/assets/b38aaa7481f8da213a8c-entrada-aradora.gif",
+    "bytes": 6275679,
+    "sha256": "b38aaa7481f8da213a8c3273e867dd496ea626dadb9121fd244e97eaa6bef322"
+  },
+  {
+    "source": "https://i.postimg.cc/DfWtXbmc/bode-junino.png",
+    "path": "public/assets/61d611a88ff96785d0eb-bode-junino.png",
+    "bytes": 128112,
+    "sha256": "61d611a88ff96785d0ebcb14dcae55b64ca47d51a620e2467149cf27126d4c77"
+  },
+  {
+    "source": "https://i.postimg.cc/DzngCMqY/ovelha-filhote.png",
+    "path": "public/assets/cf0c31de39c78d0add73-ovelha-filhote.png",
+    "bytes": 58695,
+    "sha256": "cf0c31de39c78d0add731bd96a48eb604ed1280c4c164789fd1c6b34f262fcea"
+  },
+  {
+    "source": "https://i.postimg.cc/FRD5YKj1/btn-loja.png",
+    "path": "public/assets/08f4a1c6267e20253923-btn-loja.png",
+    "bytes": 595454,
+    "sha256": "08f4a1c6267e20253923c72bead88ad71c7aba16abd4224ecdbac7ff43652a14"
+  },
+  {
+    "source": "https://i.postimg.cc/GhBvcNSS/morango-quase.png",
+    "path": "public/assets/67841b85c4aaa07e737f-morango-quase.png",
+    "bytes": 1053771,
+    "sha256": "67841b85c4aaa07e737f9513a68c442e6bfa4cd8211534272cf361e9cdbb72c8"
+  },
+  {
+    "source": "https://i.postimg.cc/Gp46QZTD/btn-config.png",
+    "path": "public/assets/f6e285b131be98978c57-btn-config.png",
+    "bytes": 88874,
+    "sha256": "f6e285b131be98978c571bfec6ba952de11fd8e5c01dbae996210d2ccd816391"
+  },
+  {
+    "source": "https://i.postimg.cc/HnL0T86b/icone-bloqueado.png",
+    "path": "public/assets/789660136ed35cd21ba9-icone-bloqueado.png",
+    "bytes": 367849,
+    "sha256": "789660136ed35cd21ba9d61413b99d818ffd705378eb5f89b930d7f83b09159a"
+  },
+  {
+    "source": "https://i.postimg.cc/J7XHrsfc/background-vendas.png",
+    "path": "public/assets/478c01eeb20be0382a43-background-vendas.png",
+    "bytes": 870610,
+    "sha256": "478c01eeb20be0382a43c9b6abec418084cff8a85075cbd2cfb28467ec653469"
+  },
+  {
+    "source": "https://i.postimg.cc/Jnb3xyp3/icone-moedas.png",
+    "path": "public/assets/ffd360086159ad51164a-icone-moedas.png",
+    "bytes": 99127,
+    "sha256": "ffd360086159ad51164a16bfaee106c3fca50d94101f261352d64b492e25121f"
+  },
+  {
+    "source": "https://i.postimg.cc/Jzds6xcD/melancia-final.png",
+    "path": "public/assets/1649da0f642a8662aec8-melancia-final.png",
+    "bytes": 1189315,
+    "sha256": "1649da0f642a8662aec889d9f60f854ecd3564867c441f5a5719d0e70695cbbe"
+  },
+  {
+    "source": "https://i.postimg.cc/KYXWt6Cw/porco-comum-filhote.png",
+    "path": "public/assets/5a04907c65978f207fce-porco-comum-filhote.png",
+    "bytes": 25127,
+    "sha256": "5a04907c65978f207fce4f324ca708624fc71d3d07c447d61dae095c91914eab"
+  },
+  {
+    "source": "https://i.postimg.cc/L4W55c0Q/cafe-quase.png",
+    "path": "public/assets/d1d9fad4ef7e890ab1ea-cafe-quase.png",
+    "bytes": 1075441,
+    "sha256": "d1d9fad4ef7e890ab1eae6c72cd95ed054ec12fbe60192507fa2c72104c02ee2"
+  },
+  {
+    "source": "https://i.postimg.cc/Lsbg3g66/vaca-parada.gif",
+    "path": "public/assets/ef4967dfd1fd9f0b3cca-vaca-parada.gif",
+    "bytes": 1163605,
+    "sha256": "ef4967dfd1fd9f0b3cca33c916ccbb1e10353241637cae8caa2099fa69828d4e"
+  },
+  {
+    "source": "https://i.postimg.cc/NfZ5Tcm1/icone-botao-fechar.png",
+    "path": "public/assets/52822bffd4318c59c0b9-icone-botao-fechar.png",
+    "bytes": 158966,
+    "sha256": "52822bffd4318c59c0b98d094f0c07ee6bd28034c6da81ce1ac73be371328dcd"
+  },
+  {
+    "source": "https://i.postimg.cc/PJcvWTms/terra-seca.png",
+    "path": "public/assets/90ef7652824df981f954-terra-seca.png",
+    "bytes": 514050,
+    "sha256": "90ef7652824df981f954ce0e446c55e6e9820d62ae81d472bdd5fe9ccb72605a"
+  },
+  {
+    "source": "https://i.postimg.cc/PqqzypxL/aceitar.png",
+    "path": "public/assets/2595971a22e50a3a81fc-aceitar.png",
+    "bytes": 57694,
+    "sha256": "2595971a22e50a3a81fc9f9c09105ea846959da202108555825a7fe71bb47dde"
+  },
+  {
+    "source": "https://i.postimg.cc/PxJ6Dpsk/trigo-quase.png",
+    "path": "public/assets/df5839892e11479807aa-trigo-quase.png",
+    "bytes": 1328003,
+    "sha256": "df5839892e11479807aa9b45a02e4351ee8c895cf2247b8c0f681da623a8e454"
+  },
+  {
+    "source": "https://i.postimg.cc/PxJhZq9z/aradora-arando.png",
+    "path": "public/assets/c99ae2829f69da58381b-aradora-arando.png",
+    "bytes": 276115,
+    "sha256": "c99ae2829f69da58381b54968dcb451d28005f2e08755fb18b07db78d1a4819b"
+  },
+  {
+    "source": "https://i.postimg.cc/QC4V7VFz/carro-andando.gif",
+    "path": "public/assets/4b84bb49b6df5adcb33e-carro-andando.gif",
+    "bytes": 2018715,
+    "sha256": "4b84bb49b6df5adcb33e3846d3832fd3e40b602965ed59911a47616b140aebd7"
+  },
+  {
+    "source": "https://i.postimg.cc/QCxHVcdF/carro-parado.gif",
+    "path": "public/assets/5b6869aabac3384effa5-carro-parado.gif",
+    "bytes": 2037337,
+    "sha256": "5b6869aabac3384effa5f98027aa89d9e1625eef0f264ed3d71abf269ff41ffb"
+  },
+  {
+    "source": "https://i.postimg.cc/QMP5qfww/mini-negocios.png",
+    "path": "public/assets/1a0b216a4b6c91d1b6e3-mini-negocios.png",
+    "bytes": 1193106,
+    "sha256": "1a0b216a4b6c91d1b6e372f408804e984a3088e6c1a254665beaba7909f7bd9f"
+  },
+  {
+    "source": "https://i.postimg.cc/QNBRTWVS/bode-filhote-junino.png",
+    "path": "public/assets/8934aa5b96ce1f6e88ff-bode-filhote-junino.png",
+    "bytes": 99195,
+    "sha256": "8934aa5b96ce1f6e88ffbf79b4c0e91c4c479466dbf01a33dbe3bd64b2e0a6cc"
+  },
+  {
+    "source": "https://i.postimg.cc/Qd0mrBmT/Bau-sprite.png",
+    "path": "public/assets/586b221f1f4696af63c0-Bau-sprite.png",
+    "bytes": 490062,
+    "sha256": "586b221f1f4696af63c0eaf722e4816497235528c0e17a5aa0313e7e82a5b7b7"
+  },
+  {
+    "source": "https://i.postimg.cc/RZXdz3d9/background-bau.png",
+    "path": "public/assets/d8d0648d6b05a0cd9edd-background-bau.png",
+    "bytes": 858473,
+    "sha256": "d8d0648d6b05a0cd9edd15ad6f1dda7fca1fbe78a2d873e4e338ae6490a034fd"
+  },
+  {
+    "source": "https://i.postimg.cc/SNn6tbCM/milho-inicio.png",
+    "path": "public/assets/c2099537475b77b44d82-milho-inicio.png",
+    "bytes": 814382,
+    "sha256": "c2099537475b77b44d8201a07e9720ae2d8b1c7196e7858d3478cd421a6664ee"
+  },
+  {
+    "source": "https://i.postimg.cc/T3PyJFmV/icone-melancia.png",
+    "path": "public/assets/a4930100e545e1114d98-icone-melancia.png",
+    "bytes": 629615,
+    "sha256": "a4930100e545e1114d984a7ed0f51aecb5d1ef89887f80fdd78be63c33c4a250"
+  },
+  {
+    "source": "https://i.postimg.cc/TYGyNsZf/terra-arada.png",
+    "path": "public/assets/f85800574c3422a19492-terra-arada.png",
+    "bytes": 604714,
+    "sha256": "f85800574c3422a19492484041e3056bbad497effd615b312a50f27789ec7612"
+  },
+  {
+    "source": "https://i.postimg.cc/W1fdW86D/melancia-quase.png",
+    "path": "public/assets/f4566a4f4ec176730073-melancia-quase.png",
+    "bytes": 1004698,
+    "sha256": "f4566a4f4ec17673007342ffd560b18c1c6c0eb4bb63434bc388692de4673413"
+  },
+  {
+    "source": "https://i.postimg.cc/X73M455d/personagem-de-frente.png",
+    "path": "public/assets/b86748633e6ac8337f3b-personagem-de-frente.png",
+    "bytes": 186660,
+    "sha256": "b86748633e6ac8337f3ba0169dbd96fc33955ce5bf4e659b078094e2cf638126"
+  },
+  {
+    "source": "https://i.postimg.cc/YCRzQfpq/negar.png",
+    "path": "public/assets/0a674859b7937caf16c8-negar.png",
+    "bytes": 55778,
+    "sha256": "0a674859b7937caf16c899af78bfbc1e2a60b314ffd751e95c57ad86fa917499"
+  },
+  {
+    "source": "https://i.postimg.cc/YSTF9hnD/porco-filhote.png",
+    "path": "public/assets/a810302cea6e37ac207a-porco-filhote.png",
+    "bytes": 56010,
+    "sha256": "a810302cea6e37ac207a2c14bf5d437dea0c224a9299a6581fd56294e424f52a"
+  },
+  {
+    "source": "https://i.postimg.cc/ZYQnnGDX/cafe-final.png",
+    "path": "public/assets/c9fe142134e1258081ca-cafe-final.png",
+    "bytes": 1221737,
+    "sha256": "c9fe142134e1258081ca8640da25199b0db41b74dc5e33f6917d2fccf56089b0"
+  },
+  {
+    "source": "https://i.postimg.cc/ZbW202TW/beterraba-quase.png",
+    "path": "public/assets/e93dea16226bd0d84229-beterraba-quase.png",
+    "bytes": 934491,
+    "sha256": "e93dea16226bd0d8422920e6d0dbc8e0172765b2fe72eb8eef45c5d1a239c9e5"
+  },
+  {
+    "source": "https://i.postimg.cc/c4VmtNrk/Gemini-Generated-Image-ibf4glibf4glibf4-removebg-preview.png",
+    "path": "public/assets/2f295405dbc0fd60266b-Gemini-Generated-Image-ibf4glibf4glibf4-removebg-preview.png",
+    "bytes": 152759,
+    "sha256": "2f295405dbc0fd60266bc48a0264a4e6c0d7b255594a1f506ddab1d15a9ffe97"
+  },
+  {
+    "source": "https://i.postimg.cc/cHYvD7vx/botao-tela-cheia.png",
+    "path": "public/assets/9f132cd0931ad9c1efb9-botao-tela-cheia.png",
+    "bytes": 105710,
+    "sha256": "9f132cd0931ad9c1efb9430cdb23edb588be2d98e7002532e4ccb20f54edef84"
+  },
+  {
+    "source": "https://i.postimg.cc/cJ0mDbQh/ovelha-grande.png",
+    "path": "public/assets/673fc36f27a6b61b5c3b-ovelha-grande.png",
+    "bytes": 127736,
+    "sha256": "673fc36f27a6b61b5c3bfe5e145b71956ef4838a87d1c22a708e45765fc28285"
+  },
+  {
+    "source": "https://i.postimg.cc/cL8c6GJ3/milho-final.png",
+    "path": "public/assets/ba3dea47389b563b1101-milho-final.png",
+    "bytes": 1246278,
+    "sha256": "ba3dea47389b563b110135482ca575fef147ed2424fd8987188fc57dc92798b1"
+  },
+  {
+    "source": "https://i.postimg.cc/d0hdw8BZ/vaca-grande.png",
+    "path": "public/assets/59ff2aefd53f2b7f11a9-vaca-grande.png",
+    "bytes": 91016,
+    "sha256": "59ff2aefd53f2b7f11a9a64dee4d1d452d73e8bbd21ac99ac34572b0efa979e7"
+  },
+  {
+    "source": "https://i.postimg.cc/d1KRb7Gh/abacaxi-quase.png",
+    "path": "public/assets/733fe2565a332c731fdc-abacaxi-quase.png",
+    "bytes": 1309530,
+    "sha256": "733fe2565a332c731fdcb35177c87e632a613507bfea9dd250e21bc3f68b5de3"
+  },
+  {
+    "source": "https://i.postimg.cc/d1kdvT9d/pa.png",
+    "path": "public/assets/2a42eaeaca5ad4540099-pa.png",
+    "bytes": 168116,
+    "sha256": "2a42eaeaca5ad4540099a37bd049146628bd347f7494aafa2fce93a3ab9dd3e1"
+  },
+  {
+    "source": "https://i.postimg.cc/d3K4xWkb/beterraba-inicio.png",
+    "path": "public/assets/a8af1355be3becc02230-beterraba-inicio.png",
+    "bytes": 770149,
+    "sha256": "a8af1355be3becc02230253486334a469b865810dd6db3fa26d8cd31baddbe68"
+  },
+  {
+    "source": "https://i.postimg.cc/fy71XR4j/icone-terra.png",
+    "path": "public/assets/82fcefc4535a98260283-icone-terra.png",
+    "bytes": 396434,
+    "sha256": "82fcefc4535a982602839540c8610a1b981448f41e62a347bc2af6d683a3b791"
+  },
+  {
+    "source": "https://i.postimg.cc/fzz1ZyPC/icone-trigo.png",
+    "path": "public/assets/b1c195815ebb75911ecd-icone-trigo.png",
+    "bytes": 638489,
+    "sha256": "b1c195815ebb75911ecd322e3904b50944e4299fec2023ff9ff12a2fd6c827ac"
+  },
+  {
+    "source": "https://i.postimg.cc/gJkjLmW8/icone-abaxi.png",
+    "path": "public/assets/61e796271d4d94617a3c-icone-abaxi.png",
+    "bytes": 613419,
+    "sha256": "61e796271d4d94617a3c9563d6c47f750c4d7e715ff41e0e98ccec7f10f2615b"
+  },
+  {
+    "source": "https://i.postimg.cc/gJkjLmW8/icone-melancia.png",
+    "path": "public/assets/61e796271d4d94617a3c-icone-abaxi.png",
+    "bytes": 613419,
+    "sha256": "61e796271d4d94617a3c9563d6c47f750c4d7e715ff41e0e98ccec7f10f2615b"
+  },
+  {
+    "source": "https://i.postimg.cc/hPcQfftT/melancia-inicio.png",
+    "path": "public/assets/9883700369e3dd55833c-melancia-inicio.png",
+    "bytes": 927641,
+    "sha256": "9883700369e3dd55833c324c9af752618772290f4284d2b5cf14d29e445d4d4f"
+  },
+  {
+    "source": "https://i.postimg.cc/hjqrqN6W/cenoura-final.png",
+    "path": "public/assets/046025b7ebc48dc1e7d4-cenoura-final.png",
+    "bytes": 1149403,
+    "sha256": "046025b7ebc48dc1e7d48e25559bc35133c097351944c7cd919913e466e25680"
+  },
+  {
+    "source": "https://i.postimg.cc/j5QhqZYW/cenoura-inicio.png",
+    "path": "public/assets/27563a6b11a35177fae3-cenoura-inicio.png",
+    "bytes": 634035,
+    "sha256": "27563a6b11a35177fae31513206ddb752a3fd19ca8eea4aa31e61b22537df848"
+  },
+  {
+    "source": "https://i.postimg.cc/j5r6pWyc/abacaxi-final.png",
+    "path": "public/assets/266ee91980da38596c99-abacaxi-final.png",
+    "bytes": 1401682,
+    "sha256": "266ee91980da38596c9987d83ed12c0bb61b970d07f367d4958e080c220992a5"
+  },
+  {
+    "source": "https://i.postimg.cc/m2DDtxVC/xp.png",
+    "path": "public/assets/f4556986c6a9fd769ce3-xp.png",
+    "bytes": 102661,
+    "sha256": "f4556986c6a9fd769ce3329fcb18a48e5f26e6a5a73a86ff2c99a5117a36f821"
+  },
+  {
+    "source": "https://i.postimg.cc/mkG85d1R/beterraba-final.png",
+    "path": "public/assets/a5787abf1311994a2f3f-beterraba-final.png",
+    "bytes": 1305821,
+    "sha256": "a5787abf1311994a2f3f65d0073318b60e3d97817b8a8a5c19cc9b90ca3575b6"
+  },
+  {
+    "source": "https://i.postimg.cc/nVSvfZT6/morango-final.png",
+    "path": "public/assets/7b73afd26b88a734994f-morango-final.png",
+    "bytes": 1238525,
+    "sha256": "7b73afd26b88a734994f9a56f4b070a1b2e073b2c35caa9aba51f995a10af009"
+  },
+  {
+    "source": "https://i.postimg.cc/nVTYZF4S/leite-pressionado.png",
+    "path": "public/assets/eedfbf8aee6b2e55a638-leite-pressionado.png",
+    "bytes": 244385,
+    "sha256": "eedfbf8aee6b2e55a638a3e7a0e3187e293e05cd09c2d92bb3a7f92bd247a306"
+  },
+  {
+    "source": "https://i.postimg.cc/nVTYZF4q/leite-seta.png",
+    "path": "public/assets/2c5959f10ac7eea9cfa3-leite-seta.png",
+    "bytes": 235616,
+    "sha256": "2c5959f10ac7eea9cfa3ded8cecb3301289e3f8278f68957eba72310f772e9b7"
+  },
+  {
+    "source": "https://i.postimg.cc/nVWrrywm/icone-cafe.png",
+    "path": "public/assets/a21b10464cd8b9b45e08-icone-cafe.png",
+    "bytes": 251471,
+    "sha256": "a21b10464cd8b9b45e08a89f3afac81236c61be5c326b00d2289ea49da8748c1"
+  },
+  {
+    "source": "https://i.postimg.cc/nhTpVRRs/arando-a-terra.png",
+    "path": "public/assets/4af61ed5a1bace7feb06-arando-a-terra.png",
+    "bytes": 274936,
+    "sha256": "4af61ed5a1bace7feb064709c0555c111b4b75b05de888ed123cae571c9fc8f0"
+  },
+  {
+    "source": "https://i.postimg.cc/nzNfhZHn/mini-trator-spam.png",
+    "path": "public/assets/1e29563ee1404c19b105-mini-trator-spam.png",
+    "bytes": 1303087,
+    "sha256": "1e29563ee1404c19b105d9e560622f4f58c0547a0f85ca835f4f1aee200f707f"
+  },
+  {
+    "source": "https://i.postimg.cc/pTtZt34Y/cenoura-quase.png",
+    "path": "public/assets/cc8b7626f4b6d9b37319-cenoura-quase.png",
+    "bytes": 879396,
+    "sha256": "cc8b7626f4b6d9b37319c319e239a7fc8a66a82a930f6c82c1d4c710c20ed36c"
+  },
+  {
+    "source": "https://i.postimg.cc/pXZcFTfd/icone-cenoura.png",
+    "path": "public/assets/77ef8a9af9adacf38b3c-icone-cenoura.png",
+    "bytes": 158497,
+    "sha256": "77ef8a9af9adacf38b3c12e729e0763b635359ea94886c74d179fbb4ce3f4376"
+  },
+  {
+    "source": "https://i.postimg.cc/pdJ3Sdcv/loja-Layout.png",
+    "path": "public/assets/12288f7b8268caff1180-loja-Layout.png",
+    "bytes": 217213,
+    "sha256": "12288f7b8268caff11804e819fb0fb1a39786d8dbd369a91474a448acd22386f"
+  },
+  {
+    "source": "https://i.postimg.cc/qB8WwHXK/item-bode.png",
+    "path": "public/assets/30e3e5f44df11a44680d-item-bode.png",
+    "bytes": 123915,
+    "sha256": "30e3e5f44df11a44680d4f2dc26838d983ca6c823535bad56399ee416632c64d"
+  },
+  {
+    "source": "https://i.postimg.cc/qM4NM7P1/mouse-mover-estruturas.png",
+    "path": "public/assets/95b40b688d76476af866-mouse-mover-estruturas.png",
+    "bytes": 234355,
+    "sha256": "95b40b688d76476af866cb4919daebfdf674a7ab3d61c98f596f2f251e93f6a2"
+  },
+  {
+    "source": "https://i.postimg.cc/qRkKVLm4/icone-mover.png",
+    "path": "public/assets/636ac0afa81258a6b629-icone-mover.png",
+    "bytes": 391030,
+    "sha256": "636ac0afa81258a6b629e45cc194b73a908be23a4dd974914d7069c90d62b955"
+  },
+  {
+    "source": "https://i.postimg.cc/tJPg6pWb/fundo2.png",
+    "path": "public/assets/30bb51e426b3d082a8d3-fundo2.png",
+    "bytes": 159461,
+    "sha256": "30bb51e426b3d082a8d3fa8974beefb57fa1e7e4c4115441487c8d0e9cb574e1"
+  },
+  {
+    "source": "https://i.postimg.cc/wTV4mvXj/icone-morango.png",
+    "path": "public/assets/62db4d8b23ea18121b23-icone-morango.png",
+    "bytes": 193630,
+    "sha256": "62db4d8b23ea18121b230383e79d66aeefacef5830ee29f8ffb568cb4af06ae5"
+  },
+  {
+    "source": "https://i.postimg.cc/wTV4mvXv/icone-milho.png",
+    "path": "public/assets/f3c2a94cdb889df3ba40-icone-milho.png",
+    "bytes": 308698,
+    "sha256": "f3c2a94cdb889df3ba40a4be209437d75a9bc30dccd6abf0bf139b86e6cdab69"
+  },
+  {
+    "source": "https://i.postimg.cc/wvNwFKvN/icone-beterraba.png",
+    "path": "public/assets/2ea797d8f0d287d9c337-icone-beterraba.png",
+    "bytes": 175006,
+    "sha256": "2ea797d8f0d287d9c337ea93774fff4b8830f3f5255a0def9bc146a21f8c8214"
+  },
+  {
+    "source": "https://i.postimg.cc/wx4hYH0z/morango-inicio.png",
+    "path": "public/assets/ce27b8b245ad37596a2f-morango-inicio.png",
+    "bytes": 688861,
+    "sha256": "ce27b8b245ad37596a2f2ca9e8b38a436299c18d4fb30f372cbd7a7eda08ef8d"
+  },
+  {
+    "source": "https://i.postimg.cc/x8qvFVdS/background-loja.png",
+    "path": "public/assets/dd52a4f667121366e344-background-loja.png",
+    "bytes": 809563,
+    "sha256": "dd52a4f667121366e344d26d98ec79755b8f37907b7b3a7623b0014884e93407"
+  },
+  {
+    "source": "https://i.postimg.cc/xTPyXRrJ/item-ovelha.png",
+    "path": "public/assets/ed30d944f2b948ec7a84-item-ovelha.png",
+    "bytes": 124274,
+    "sha256": "ed30d944f2b948ec7a84081d0a164996df42f9a6b18e1bb24e83708d3e9f46d3"
+  },
+  {
+    "source": "https://i.postimg.cc/zGKYjxPJ/foice.png",
+    "path": "public/assets/3f2959e898593fc5d408-foice.png",
+    "bytes": 214636,
+    "sha256": "3f2959e898593fc5d4084b690026716b29b61adb009a0357f3303950279a8f7d"
+  }
+]
