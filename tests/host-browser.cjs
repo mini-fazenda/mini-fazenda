@@ -34,6 +34,28 @@ export const query=r=>r,orderByKey=()=>{},limitToFirst=()=>{},startAfter=()=>{};
  if(await page.locator('iframe').count())throw Error('Jogo abriu antes do login');
  await page.locator('#login').click();await page.waitForFunction(()=>document.querySelector('#gate').hidden);
  let f=page.frames().find(f=>f.url().includes('game.html'));
+ // O clique de tela cheia dentro do iframe deve acionar o documento pai.
+ await page.evaluate(()=>{
+   window.__testFullscreenRequests=0;
+   document.documentElement.requestFullscreen=()=>{window.__testFullscreenRequests++;return Promise.resolve()};
+ });
+ await f.evaluate(()=>{
+   const button=document.getElementById('btn-fullscreen');
+   if(!button)throw Error('Botão de tela cheia não encontrado');
+   button.click();
+ });
+ await page.waitForFunction(()=>window.__testFullscreenRequests===1);
+ await page.setViewportSize({width:600,height:320});
+ const controls=await page.evaluate(()=>['neighbors','logout'].map(id=>{
+   const el=document.getElementById(id),r=el.getBoundingClientRect();
+   return {id,width:r.width,height:r.height,left:r.left,right:r.right,visibility:getComputedStyle(el).visibility};
+ }));
+ for(const c of controls){
+   if(c.width<=0||c.height<=0||c.left<0||c.right>600||c.visibility!=='visible')
+     throw Error('Controle inacessível em tela menor: '+JSON.stringify(c));
+ }
+ await page.setViewportSize({width:1280,height:720});
+ console.log('PASS: tela cheia solicitada pelo host; Amigos e Sair dentro do viewport mobile');
  await f.evaluate(()=>{moedas=9876;window.__farmName='Conta';saveGameState('test')});
  await page.waitForFunction(()=>testCloud['farms/rodrigo']?.state.moedas===9876);
  console.log('PASS: salvamento automático por conta');
