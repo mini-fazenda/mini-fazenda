@@ -4,6 +4,94 @@
 <head>
 <style>html{visibility:hidden}</style>
 <script>if(parent===window || !parent.MFOnline)location.replace("./");else window.MFHost=parent.MFOnline;</script><script id="mf-online-defaults">window.__MF_ONLINE_DEFAULTS={online:{enabled:false},onlineUI:{}};</script>
+<script id="mf-game-audio-runtime">/* Mini Fazenda Audio 1.0: music is streamed, SFX are created on demand. */
+(function(){
+'use strict';
+if(window.MFGameAudio)return;
+const $=id=>document.getElementById(id);
+const srcConfig=()=>{const own=window.MFAdapter?.project?.audio||window.__MF_PROJECT?.audio;if(own)return own;try{return window.parent!==window?window.parent.__MF_PROJECT?.audio||{}:{}}catch(e){return {}}};
+const soundUrl=clip=>{const src=clip?.src||'';return src.startsWith('asset:')?srcConfig().assets?.[src.slice(6)]?.src||'':src};
+const clamp=(n,min=0,max=1)=>Math.max(min,Math.min(max,Number(n)||0));
+const num=(n,f=0)=>Number.isFinite(+n)?+n:f;
+const shell=!!window.__MF_AUDIO_SHELL;
+const editor=!!window.MFStudio && !!window.MFAdapter;
+const tracks={farm:null,loading:null};
+const active=new Set(), cooldown=new Map();
+let unlocked=false, locallyMuted=false, playerVolume=1, currentTrack='', pollTimer=0, lastMode='';
+try{locallyMuted=localStorage.getItem('mf-audio-muted')==='1';playerVolume=clamp(localStorage.getItem('mf-audio-volume')??1)}catch(e){}
+function fullVolume(clip,type){const c=srcConfig();return clamp(clip.volume??1)*clamp(c.master??.85)*clamp(type==='music'?c.music??.65:c.effects??.8)*playerVolume*(locallyMuted||c.muted?0:1)}
+function fade(audio,target,duration,done){
+ if(!audio)return;
+ if(audio._mfFade)cancelAnimationFrame(audio._mfFade);
+ const begin=performance.now(),from=audio.volume,to=clamp(target),ms=Math.max(0,num(duration,0))*1000;
+ if(!ms){audio.volume=to;done?.();return}
+ const step=t=>{const f=Math.min(1,(t-begin)/ms);audio.volume=clamp(from+(to-from)*f);if(f<1)audio._mfFade=requestAnimationFrame(step);else{audio._mfFade=0;done?.()}};
+ audio._mfFade=requestAnimationFrame(step);
+}
+function stopMusic(type){const slot=tracks[type];if(!slot)return;tracks[type]=null;fade(slot.audio,0,Math.min(5,num(slot.clip.fadeOut,.7)),()=>{slot.audio.pause();slot.audio.removeAttribute('src');slot.audio.load()})}
+function music(type){
+ if(!unlocked)return;
+ const c=srcConfig(),clip=c.tracks?.[type];if(!clip?.src||clip.enabled===false){stopMusic(type);return}
+ if(tracks[type]&&tracks[type].clip.src===clip.src){fade(tracks[type].audio,fullVolume(clip,'music'),.14);return}
+ stopMusic(type);
+ const audio=new Audio();audio.preload='metadata';audio.loop=clip.loop!==false;audio.volume=0;
+ audio.src=soundUrl(clip);if(!audio.src)return;const slot={audio,clip};tracks[type]=slot;
+ audio.addEventListener('ended',()=>{if(tracks[type]===slot)tracks[type]=null},{once:true});
+ const promise=audio.play();if(promise?.then)promise.then(()=>fade(audio,fullVolume(clip,'music'),num(clip.fadeIn,1))).catch(()=>{if(tracks[type]===slot)tracks[type]=null});
+ else fade(audio,fullVolume(clip,'music'),num(clip.fadeIn,1));
+}
+function chooseTrack(){
+ if(editor){const playing=document.body.classList.contains('mf-playing');currentTrack=playing?'farm':'';if(playing)music('farm');else stopMusic('farm');return}
+ if(shell){let playing=false;try{playing=!!window.MFOnline?.playing?.()}catch(e){}
+   if(playing){stopMusic('loading');currentTrack='';}else{currentTrack='loading';music('loading')}
+ }else{let playing=true;try{playing=!window.MFHost||!!window.MFHost.playing?.()}catch(e){}
+  currentTrack=playing?'farm':'';if(playing)music('farm');else stopMusic('farm');
+ }
+}
+function unlock(){if(unlocked)return;unlocked=true;chooseTrack();}
+function resolve(event,id){const c=srcConfig();if(id){const direct=c.items?.[id]?.[event]||c.dom?.[id];if(direct?.src&&direct.enabled!==false)return direct;if(direct?.enabled===false&&direct?.src)return null}
+ const gl=c.global?.[event];return gl?.src&&gl.enabled!==false?gl:null;
+}
+function play(event,id){
+ if(!unlocked)return false;
+ const c=srcConfig();if(c.muted||locallyMuted||playerVolume===0)return false;
+ const clip=resolve(event,id);if(!clip)return false;
+ const cooldownKey=event+'|'+(id||'');const now=performance.now();if(now-(cooldown.get(cooldownKey)||0)<num(clip.cooldown,75))return false;cooldown.set(cooldownKey,now);
+ if(active.size>=12)return false;
+ const same=Array.from(active).filter(x=>x.key===cooldownKey);if(same.length>=Math.min(5,Math.max(1,num(clip.polyphony,3))))return false;
+ const audio=new Audio();const entry={audio,key:cooldownKey};active.add(entry);audio.preload='auto';audio.volume=0;audio.src=soundUrl(clip);if(!soundUrl(clip)){active.delete(entry);return false}
+ let cleanupDone=false;
+ function cleanup(){if(cleanupDone)return;cleanupDone=true;if(audio._mfFade)cancelAnimationFrame(audio._mfFade);active.delete(entry);audio.pause();audio.removeAttribute('src')}
+ audio.addEventListener('ended',cleanup,{once:true});audio.addEventListener('error',cleanup,{once:true});
+ const start=audio.play();if(start?.then)start.then(()=>{fade(audio,fullVolume(clip,'fx'),num(clip.fadeIn,0));if(num(clip.fadeOut,0)>0){audio.addEventListener('timeupdate',()=>{if(!isFinite(audio.duration)||!audio.duration)return;const remaining=audio.duration-audio.currentTime;if(remaining<=num(clip.fadeOut,0)&&!audio._mfOutro){audio._mfOutro=true;fade(audio,0,remaining)}})}}).catch(cleanup);
+ else fade(audio,fullVolume(clip,'fx'),num(clip.fadeIn,0));
+ return true;
+}
+function event(type,itemId){return play(type,itemId)}
+function sync(){if(!unlocked)return;chooseTrack();for(const x of active){const clip=resolve(x.key.split('|')[0],x.key.split('|').slice(1).join('|'));if(clip&&!x.audio._mfOutro) x.audio.volume=fullVolume(clip,'fx');}}
+function setMuted(next){locallyMuted=!!next;try{localStorage.setItem('mf-audio-muted',locallyMuted?'1':'0')}catch(e){};sync();drawUI()}
+function setPlayerVolume(value){playerVolume=clamp(value);try{localStorage.setItem('mf-audio-volume',String(playerVolume))}catch(e){};sync();drawUI()}
+function drawUI(){const btn=$('mf-audio-toggle'),range=$('mf-audio-range');if(btn){btn.textContent=locallyMuted?'🔇':'🔊';btn.setAttribute('aria-label',locallyMuted?'Ativar áudio':'Silenciar áudio')}if(range)range.value=Math.round(playerVolume*100)}
+function addUI(){if(editor||document.body?.classList.contains('mf-editing'))return;if($('mf-audio-player'))return;
+ const ui=document.createElement('div');ui.id='mf-audio-player';ui.innerHTML='<button id="mf-audio-toggle" aria-label="Silenciar áudio" title="Ativar/desativar som" type="button">🔊</button><input id="mf-audio-range" aria-label="Volume do jogo" type="range" min="0" max="100" value="100" title="Volume do jogo">';
+ Object.assign(ui.style,{position:'fixed',left:'max(8px,env(safe-area-inset-left))',bottom:'max(8px,env(safe-area-inset-bottom))',zIndex:'350',display:'flex',alignItems:'center',gap:'4px',padding:'3px 6px',background:'rgba(14,40,29,.76)',border:'1px solid #ffffff3a',borderRadius:'14px',pointerEvents:'auto',maxWidth:'150px'});
+ document.body.appendChild(ui);const btn=$('mf-audio-toggle'),range=$('mf-audio-range');Object.assign(btn.style,{border:0,background:'none',color:'white',cursor:'pointer',fontSize:'18px'});range.style.width='67px';range.style.accentColor='#a1d273';
+ btn.addEventListener('click',e=>{e.stopPropagation();unlock();setMuted(!locallyMuted)});range.addEventListener('input',e=>{unlock();setPlayerVolume(Number(e.target.value)/100)});drawUI();
+}
+// Event delegation does not interfere with existing game handlers.
+document.addEventListener('pointerdown',unlock,{passive:true,capture:true});document.addEventListener('keydown',unlock,{passive:true,capture:true});
+document.addEventListener('click',e=>{if(document.body.classList.contains('mf-editing'))return;if(e.target.closest('#mf-audio-player'))return;
+ const el=e.target.closest('button,[role="button"],.card-item,input[type="button"],input[type="submit"],a');if(!el)return;
+ const id=el.id||el.closest('[id]')?.id||'';const evt=/fechar|close|sair|logout/i.test(id+' '+String(el.className))?'close':/loja|bau|trator|config|friends|neighbors|amigos|open/i.test(id)?'open':'button';
+ if(!play(evt,id)&&evt!=='button')play('button',id);
+ },{passive:true,capture:true});
+window.MFGameAudio={event,play,unlock,music,stopMusic,sync,setMuted,setPlayerVolume,config:srcConfig,refresh:()=>{if(editor&&!document.body.classList.contains('mf-playing'))stopMusic('farm');else{unlocked=true;chooseTrack()}}};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{addUI();chooseTrack()},{once:true});else{addUI();chooseTrack()}
+// Low-frequency state check for login/loading to in-game transition, no per-frame polling.
+pollTimer=setInterval(()=>{if(unlocked&&document.visibilityState!=='hidden')chooseTrack()},1200);
+document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const key of Object.keys(tracks))stopMusic(key);for(const entry of Array.from(active))entry.audio.pause()}else if(unlocked)chooseTrack()});
+})();
+</script>
 <style>
 #hud-nivel { display: none !important; }
 
@@ -2103,7 +2191,7 @@ function processArarNPC() {
     if (a.progress>=1) {
       try {
         t.imgSrc=(typeof TERRA_ARADA_SRC!=='undefined')?TERRA_ARADA_SRC:t.imgSrc;
-        t.cultura=null;
+        window.MFGameAudio?.event('plow');t.cultura=null;
       }catch(e){}
       if (t._ocupant==='aradora') t._ocupant=null;
       aradora.arando=false;
@@ -3980,35 +4068,35 @@ function tryHarvestAtTile(tile) {
 
   if (tipo === 'milho' && tile.cultura.etapa === 2) {
     spawnLoot('milho', screenX, screenY);
-    tile.cultura = null;
+    window.MFGameAudio?.event('harvest','item-'+tipo);tile.cultura=null;
     tile.imgSrc = TERRA_ARADA_SRC;
     addXP(window.MFAdapter?.project?.items?.['item-'+tipo]?.harvestXP ?? 225);
     return true;
   }
   if (tipo === 'cenoura' && tile.cultura.etapa === 2) {
     spawnLoot('cenoura', screenX, screenY);
-    tile.cultura = null;
+    window.MFGameAudio?.event('harvest','item-'+tipo);tile.cultura=null;
     tile.imgSrc = TERRA_ARADA_SRC;
     addXP(window.MFAdapter?.project?.items?.['item-'+tipo]?.harvestXP ?? 300);
     return true;
   }
   if (tipo === 'morango' && tile.cultura.etapa === 2) {
     spawnLoot('morango', screenX, screenY);
-    tile.cultura = null;
+    window.MFGameAudio?.event('harvest','item-'+tipo);tile.cultura=null;
     tile.imgSrc = TERRA_ARADA_SRC;
     addXP(window.MFAdapter?.project?.items?.['item-'+tipo]?.harvestXP ?? 400);
     return true;
   }
   if (tipo === 'trigo' && tile.cultura.etapa === 2) {
     spawnLoot('trigo', screenX, screenY);
-    tile.cultura = null;
+    window.MFGameAudio?.event('harvest','item-'+tipo);tile.cultura=null;
     tile.imgSrc = TERRA_ARADA_SRC;
     addXP(window.MFAdapter?.project?.items?.['item-'+tipo]?.harvestXP ?? 200);
     return true;
   }
   if (tipo === 'beterraba' && tile.cultura.etapa === 2) {
     spawnLoot('beterraba', screenX, screenY);
-    tile.cultura = null;
+    window.MFGameAudio?.event('harvest','item-'+tipo);tile.cultura=null;
     tile.imgSrc = TERRA_ARADA_SRC;
     addXP(window.MFAdapter?.project?.items?.['item-'+tipo]?.harvestXP ?? 275);
     return true;
@@ -4017,21 +4105,21 @@ function tryHarvestAtTile(tile) {
   
   if (tipo === 'abacaxi' && tile.cultura.etapa === 2) {
     for (let i = 0; i < 5; i++) spawnLoot('abacaxi', screenX, screenY);
-    tile.cultura = null;
+    window.MFGameAudio?.event('harvest','item-'+tipo);tile.cultura=null;
     tile.imgSrc = TERRA_ARADA_SRC;
     addXP(window.MFAdapter?.project?.items?.['item-'+tipo]?.harvestXP ?? 365);
     return true;
   }
   if (tipo === 'cafe' && tile.cultura.etapa === 2) {
     for (let i = 0; i < 5; i++) spawnLoot('cafe', screenX, screenY);
-    tile.cultura = null;
+    window.MFGameAudio?.event('harvest','item-'+tipo);tile.cultura=null;
     tile.imgSrc = TERRA_ARADA_SRC;
     addXP(window.MFAdapter?.project?.items?.['item-'+tipo]?.harvestXP ?? 525);
     return true;
   }
     if (tipo === 'melancia' && tile.cultura.etapa === 2) {
     for (let i = 0; i < 4; i++) spawnLoot('melancia', screenX, screenY);
-    tile.cultura = null;
+    window.MFGameAudio?.event('harvest','item-'+tipo);tile.cultura=null;
     tile.imgSrc = TERRA_ARADA_SRC;
     addXP(window.MFAdapter?.project?.items?.['item-'+tipo]?.harvestXP ?? 450);
     return true;
@@ -4041,7 +4129,7 @@ function tryHarvestAtTile(tile) {
   const cfg=window.MFAdapter?.project?.items?.['item-'+tipo];
   if(cfg?.custom && cfg.category==='plantacoes' && tile.cultura.etapa===2){
    for(let n=0;n<Math.max(1,Math.min(30,Number(cfg.yield)||1));n++)spawnLoot(tipo,screenX,screenY);
-   tile.cultura=null;tile.imgSrc=TERRA_ARADA_SRC;addXP(Number(cfg.harvestXP)||0);return true;
+   window.MFGameAudio?.event('harvest','item-'+tipo);tile.cultura=null;tile.imgSrc=TERRA_ARADA_SRC;addXP(Number(cfg.harvestXP)||0);return true;
   }
   return false;
 }
@@ -4147,7 +4235,7 @@ if (t._ocupant && t._ocupant !== 'player') {
     if (progress >= 1) {
       if (terrenos.includes(t)) {
         t.imgSrc = TERRA_ARADA_SRC;
-        addXP(85);
+        window.MFGameAudio?.event('plow');addXP(85);
       }
       arando = false;
       player.currentSprite = player.previousSprite || spriteFront;
@@ -4496,7 +4584,7 @@ function trySpawnProprioAt(gx, gy) {
   if (moedasSpan) moedasSpan.textContent = moedas;
   addXP(placingItem.xp || 10);
 
-  spawnedTiles.add(key);
+  spawnedTiles.add(key);window.MFGameAudio?.event('place',placingItem.id);
 
   if (typeof saveGameState === 'function') {
     try { saveGameState('colocar_terreno_proprio'); } catch (e) {}
@@ -4645,7 +4733,7 @@ function plantCropAtTile(terreno) {
 
     terreno.cultura = { tipo, etapa: 0, startTime: Date.now(), totalTime };
     terreno.imgSrc = etapas[0];
-    startGrowthTimer(terreno);
+    startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
   }
 }
 
@@ -4690,7 +4778,7 @@ if (
         if(terreno && terreno.imgSrc && terreno.imgSrc.includes('terra-arada') && !terreno.cultura && stages && moedas>=placingItem.price){
           moedas-=placingItem.price;if(moedasSpan)moedasSpan.textContent=moedas;
           addXP(placingItem.xp||0);terreno.cultura={tipo:type,etapa:0,startTime:Date.now(),totalTime:Number(def.growTime)||30000};
-          terreno.imgSrc=stages[0];startGrowthTimer(terreno);
+          terreno.imgSrc=stages[0];startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
         }
       } else if (placingItem.id === 'item-milho') {
         if (terreno && terreno.imgSrc && terreno.imgSrc.indexOf('terra-arada') !== -1 && !terreno.cultura) {
@@ -4699,7 +4787,7 @@ if (
             if (placingItem.xp) addXP(placingItem.xp);
             terreno.cultura = { tipo: 'milho', etapa: 0, startTime: Date.now(), totalTime: 20000 };
             terreno.imgSrc = MILHO_ETAPAS[0];
-            startGrowthTimer(terreno);
+            startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
           }
         } else {
           console.log('Só pode plantar milho em terra-arada vazia!');
@@ -4711,7 +4799,7 @@ if (
             if (placingItem.xp) addXP(placingItem.xp);
             terreno.cultura = { tipo: 'cenoura', etapa: 0, startTime: Date.now(), totalTime: 40000 };
             terreno.imgSrc = CENOURA_ETAPAS[0];
-            startGrowthTimer(terreno);
+            startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
           }
         } else {
           console.log('Só pode plantar cenoura em terra-arada vazia!');
@@ -4724,7 +4812,7 @@ if (
             terreno.cultura = { tipo: 'morango', etapa: 0, startTime: Date.now(), totalTime: 75000 };
             terreno.imgSrc = MORANGO_ETAPAS[0];
             if (!imgCache[MORANGO_ETAPAS[0]]) { const img = new Image(); img.src = MORANGO_ETAPAS[0]; imgCache[MORANGO_ETAPAS[0]] = img; }
-            startGrowthTimer(terreno);
+            startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
 
       } else if (placingItem.id === 'item-melancia') {
         if (terreno && terreno.imgSrc && terreno.imgSrc.indexOf('terra-arada') !== -1 && !terreno.cultura) {
@@ -4734,7 +4822,7 @@ if (
             terreno.cultura = { tipo: 'melancia', etapa: 0, startTime: performance.now(), totalTime: 55000 };
             terreno.imgSrc = MELANCIA_ETAPAS[0];
             if (!imgCache[MELANCIA_ETAPAS[0]]) { const img = new Image(); img.src = MELANCIA_ETAPAS[0]; imgCache[MELANCIA_ETAPAS[0]] = img; }
-            startGrowthTimer(terreno);
+            startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
           }
         } else {
           console.log('Só pode plantar melancia em terra-arada vazia!');
@@ -4750,7 +4838,7 @@ if (
             if (placingItem.xp) addXP(placingItem.xp);
             terreno.cultura = { tipo: 'trigo', etapa: 0, startTime: Date.now(), totalTime: 25000 };
             terreno.imgSrc = TRIGO_ETAPAS[0];
-            startGrowthTimer(terreno);
+            startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
           }
         } else {
           console.log('Só pode plantar trigo em terra-arada vazia!');
@@ -4763,7 +4851,7 @@ if (
             addXP(placingItem.xp || 80);
             terreno.cultura = { tipo: 'abacaxi', etapa: 0, startTime: Date.now(), totalTime: 55000 };
             terreno.imgSrc = ABACAXI_ETAPAS[0];
-            startGrowthTimer(terreno);
+            startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
           }
         }
       } else if (placingItem.id === 'item-cafe') {
@@ -4773,7 +4861,7 @@ if (
             addXP(placingItem.xp || 80);
             terreno.cultura = { tipo: 'cafe', etapa: 0, startTime: Date.now(), totalTime: 145000 };
             terreno.imgSrc = CAFE_ETAPAS[0];
-            startGrowthTimer(terreno);
+            startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
           }
         }
 
@@ -4783,7 +4871,7 @@ if (
             if (placingItem.xp) addXP(placingItem.xp);
             terreno.cultura = { tipo: 'beterraba', etapa: 0, startTime: Date.now(), totalTime: 35000 };
             terreno.imgSrc = BETERRABA_ETAPAS[0];
-            startGrowthTimer(terreno);
+            startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
           }
         } else {
           console.log('Só pode plantar beterraba em terra-arada vazia!');
@@ -4837,7 +4925,7 @@ if (dentroDoMapa && !ocupada && moedas >= placingItem.price) {
   return;
   
 } else {
-  terrenos.push({ gx: px, gy: py, w: placingItem.w, h: placingItem.h, imgSrc: placingItem.imgSrc, visualScale: placingItem.visualScale || 1 });
+  terrenos.push({ gx: px, gy: py, w: placingItem.w, h: placingItem.h, imgSrc: placingItem.imgSrc, visualScale: placingItem.visualScale || 1 });window.MFGameAudio?.event('place',placingItem.id);
 }
 
 }
@@ -4949,8 +5037,8 @@ ctx.scale(1, 1.35); // AUMENTA a altura sem perder o achatamento
 
 // Agora desenha o texto
 ctx.font = `bold ${Number(window.MFAdapter?.project?.progression?.expansionTitleSize)||75}px Amfost`;
-ctx.lineWidth = 7;
-ctx.strokeStyle = "#004d00";
+ctx.lineWidth = Number(window.MFAdapter?.project?.progression?.expansionTitleStrokeWidth ?? 7);
+ctx.strokeStyle = window.MFAdapter?.project?.progression?.expansionTitleStrokeColor || "#004d00";
 ctx.fillStyle = window.MFAdapter?.project?.progression?.expansionTitleColor||"#ffffff";
 ctx.textAlign = "center";
 
@@ -4960,6 +5048,9 @@ ctx.fillText(expansionTitle, 0, 0);
 
 ctx.font = `${Number(window.MFAdapter?.project?.progression?.expansionSubtitleSize)||35}px Amfost`;
 ctx.fillStyle = window.MFAdapter?.project?.progression?.expansionSubtitleColor||"#24631a";
+ctx.lineWidth = Number(window.MFAdapter?.project?.progression?.expansionSubtitleStrokeWidth ?? 0);
+ctx.strokeStyle = window.MFAdapter?.project?.progression?.expansionSubtitleStrokeColor || "#004d00";
+if(ctx.lineWidth>0)ctx.strokeText(window.MFAdapter?.project?.progression?.expansionSubtitle||"clique aqui 💰 R$50 mil",0,35);
 ctx.fillText(window.MFAdapter?.project?.progression?.expansionSubtitle||"clique aqui 💰 R$50 mil", 0, 35);
 
 ctx.restore();
@@ -7338,7 +7429,7 @@ document.addEventListener('DOMContentLoaded', () => {
 @keyframes mf-exit{from{opacity:1;scale:1}to{opacity:0;scale:.83}}
 #cards-grid .card-item::after{color:var(--mf-price-color,#000)!important}
 </style>
-<script id="mf-project-bootstrap">window.__MF_PROJECT = {"version":3,"online":{"enabled":true,"firebase":{"apiKey":"AIzaSyDO_04tINLTrbgVGj2dxRFCPYbExmw-gUA","authDomain":"mini-fazenda-9b007.firebaseapp.com","databaseURL":"https://mini-fazenda-9b007-default-rtdb.firebaseio.com","projectId":"mini-fazenda-9b007","storageBucket":"mini-fazenda-9b007.firebasestorage.app","messagingSenderId":"357614359683","appId":"1:357614359683:web:5c62d19ed9627038f8f7b6","measurementId":"G-ZCWZE7NMJK"}},"onlineUI":{"controls":{"top":10,"right":12,"width":92,"height":104,"gap":10,"mobileTop":6,"mobileRight":8,"mobileWidth":72,"mobileHeight":82},"buttons":{"friends":{"image":"assets/online-friends.png","label":"Amigos — visitar fazendas"},"home":{"image":"assets/online-home.png","label":"Voltar à minha fazenda"},"logout":{"label":"Sair","image":"","background":"#315f3c","color":"#ffffff","fontSize":13}},"labels":{"title":"Fazendas da comunidade","description":"Visite para conhecer. Compras e alterações ficam desativadas.","visit":"Visitar","more":"Carregar mais"},"friends":{"width":560,"maxHeight":80,"radius":22,"padding":28,"background":"#fffdf6","color":"#243b29","fontSize":14,"gap":10,"columns":1,"rowBackground":"#eef3e7","rowRadius":12,"buttonBackground":"#315f3c","buttonColor":"#ffffff"},"login":{"brand":"🌱 MINI FAZENDA ONLINE","title":"Sua fazenda, sua história.","description":"Entre com sua conta Google para cuidar da fazenda e visitar seus vizinhos.","button":"Entrar com Google","width":480,"radius":28,"padding":36,"background":"#eff4df","cardBackground":"#fffdf6","color":"#243b29","buttonBackground":"#315f3c","buttonColor":"#ffffff","fontSize":16}},"title":"Mini Fazenda","world":{"ground":"#8f9f56","opacity":2,"diamondImage":"assets/2ae76bf7fff9f395f352.png","diamondImageOpacity":50,"background":"assets/30bb51e426b3d082a8d3-fundo2.png","bgScale":6.3,"bgX":-612,"bgY":964,"cols":16,"rows":16},"camera":{"minZoom":0.6,"maxZoom":1.6,"zoom":0.8151041666666666,"x":-37.5,"y":-110.27083333333331,"inertiaEnabled":true,"friction":0.88},"truck":{"direction":"right","laneGy":5,"stopGxOffsetRight":4.2,"approachTiles":10,"tilesPerSecond":1.5,"startX":-4.2,"startY":5,"stopX":-10,"stopY":5,"movingGif":"assets/4b84bb49b6df5adcb33e-carro-andando.gif","stoppedGif":"assets/5b6869aabac3384effa5-carro-parado.gif"},"elements":{},"items":{"item-trigo":{"visualScale":1,"xp":25,"harvestXP":15,"growTime":5400000},"item-vaca":{"h":0,"w":2,"visualScale":0.7,"price":750,"level":10,"xp":700,"growTime":21600000},"item-milho":{"xp":25,"harvestXP":25,"growTime":10800000},"item-beterraba":{"xp":40,"harvestXP":45,"level":8,"growTime":21600000},"item-cenoura":{"harvestXP":55,"xp":42,"level":5,"growTime":10800000},"item-cafe":{"xp":42,"harvestXP":40,"level":10,"growTime":21600000},"item-melancia":{"harvestXP":45,"xp":42,"level":6,"growTime":21600000},"item-abacaxi":{"xp":45,"harvestXP":45,"growTime":10800000},"item-morango":{"harvestXP":35,"xp":30,"level":3,"growTime":10800000},"item-porco":{"price":450,"level":5,"growTime":21600000},"item-cavalo":{"price":450,"level":5,"growTime":21600000},"item-bodejunino":{"price":1000,"level":5,"growTime":21600000},"item-ovelha":{"level":10,"xp":800,"price":550,"growTime":21600000},"item-terra":{"xp":20}},"menuAppearance":{"font":"","textColor":"","overlayColor":"","fontSize":0},"shopAppearance":{"cardWidth":150,"cardHeight":200,"cardGap":0,"cardBackground":"","cardTextColor":"#362218","cardFontSize":25,"cardPriceColor":"#000000","cardPriceFontSize":25,"cardIconHeight":70,"gridScale":0.8},"transitions":{},"sprites":{"playerWalkFront":"assets/4dd659eb5af9099d6092.gif","playerFront":"assets/6aca82b20c0def5da472.gif","playerWalkBack":"assets/adc7a2e3a395bbe3b9e5.gif"},"scene":[],"game":{"moedas":500,"playerXP":0,"playerLevel":1,"COLS":16,"ROWS":16,"player":{"gx":11,"gy":6,"speed":2.3,"scale":0.2,"x":240,"y":408,"facing":1,"path":[],"action":null},"aradora":{"gx":8,"gy":8,"speed":3,"scale":0.2,"spawned":false,"x":0,"y":384,"facing":1,"path":[],"action":null,"fila":[]},"farmName":"","aradoraWelcomeShown":false,"terrenos":[],"inventory":{},"truckOrder":{"pedidos":[{"tipo":"leite","qtd":4,"entregue":0,"imgSrc":"assets/7fc2de79ae289a20560f-icone-leite.png"},{"tipo":"cenoura","qtd":6,"entregue":0,"imgSrc":"assets/046025b7ebc48dc1e7d4-cenoura-final.png"},{"tipo":"morango","qtd":8,"entregue":0,"imgSrc":"assets/7b73afd26b88a734994f-morango-final.png"}],"recompensaBase":905,"bonusExtra":273,"recompensa":1178,"completo":false,"aberto":true},"version":2,"offsetX":-37.5,"offsetY":-110.27083333333331,"zoom":0.8151041666666666,"activeSeconds":7,"truck":{"spawned":true,"state":"stopped","gx":-10,"gy":5,"w":3,"h":3,"stopGx":-10,"stopGy":5,"x":-921.5999999999999,"y":-172.79999999999998,"currentGif":null,"facing":-1},"nextTruckAt":0,"actionQueue":[],"loot":[]},"display":{"hoverTiles":true,"cropInfo":true,"placementTiles":true,"expandLabels":true,"editorGrid":true,"editorBounds":true},"sale":{"mode":"score","coinMultiplier":1,"xpMultiplier":1,"fixedCoins":10,"fixedXP":10,"pricePercent":6,"coinsAt60":5,"coinsAt100":10,"coinsAt150":15,"coinsAbove":25,"xpAt60":15,"xpAt100":20,"xpAt150":25,"xpAt220":30,"xpAbove":50},"progression":{"mode":"exponential","baseXP":5000,"perLevel":3500,"growthMultiplier":2,"rewardBase":300,"rewardBlockSize":25,"rewardMultiplier":2,"rewardCycleSize":5,"rewardCycleMultiplier":2,"landLimitBase":4,"landLimitPerLevel":2,"expansionCost":50000,"expansionTitle":"EXPANDA SUA FAZENDA","expansionSubtitle":"clique aqui 💰 R$50 mil","expansionTitleColor":"#ffffff","expansionSubtitleColor":"#24631a","expansionTitleSize":75,"expansionSubtitleSize":35,"expansionCols":5,"expansionRows":3},"feedback":{"enabled":true,"showCoins":true,"showXP":true,"duration":5000,"rise":72,"offsetY":-28,"fontSize":21,"iconSize":22,"scale":1.6,"gap":4,"combineWindow":120,"positiveColor":"#ffe978","negativeColor":"#ff6f6f","xpColor":"#8ff39e","bgColor":"rgba(46,28,10,0.92)","borderColor":"rgba(255,255,255,0.18)","borderRadius":16,"showBackground":false,"strokeEnabled":true,"strokeColor":"#33220c","strokeWidth":4,"shadow":"0 8px 22px rgba(0,0,0,.28)","coinIcon":"","xpLabel":"XP","minWidth":40,"zIndex":99999},"_exportMeta":{"schema":5,"at":"2026-10-29T16:20:56.975Z","itemCount":14,"objectCount":0},"_assetManifest":{"uploadedImages":6,"uploadedGifs":3,"paths":["world.diamondImage","sprites.playerWalkFront","sprites.playerFront","sprites.playerWalkBack","onlineUI.buttons.friends.image","onlineUI.buttons.home.image"]},"mobileLayout":{"elements":{"category-bar":{"scale":0.6,"left":15,"position":"absolute"},"cards-grid":{"scale":0.6,"left":8,"position":"absolute"},"loja-content":{"scale":1.2},"overlay-caminhao":{"scale":1},"caminhao-content":{"scale":0.6},"caminhao-actions":{"position":"absolute","left":219,"top":404},"caminhao-recompensa":{"position":"absolute","left":127,"top":287,"scale":0.7,"width":80},"caminhao-pedidos":{"position":"absolute","left":64,"top":76,"height":70,"width":100},"neighbors":{"scale":1,"width":92}},"structures":{},"camera":{"zoom":0.78}}};</script>
+<script id="mf-project-bootstrap">window.__MF_PROJECT = {"version":3,"online":{"enabled":true,"firebase":{"apiKey":"AIzaSyDO_04tINLTrbgVGj2dxRFCPYbExmw-gUA","authDomain":"mini-fazenda-9b007.firebaseapp.com","databaseURL":"https://mini-fazenda-9b007-default-rtdb.firebaseio.com","projectId":"mini-fazenda-9b007","storageBucket":"mini-fazenda-9b007.firebasestorage.app","messagingSenderId":"357614359683","appId":"1:357614359683:web:5c62d19ed9627038f8f7b6","measurementId":"G-ZCWZE7NMJK"}},"onlineUI":{"controls":{"top":10,"right":12,"width":92,"height":104,"gap":10,"mobileTop":6,"mobileRight":8,"mobileWidth":72,"mobileHeight":82},"buttons":{"friends":{"image":"assets/online-friends.png","label":"Amigos — visitar fazendas"},"home":{"image":"assets/online-home.png","label":"Voltar à minha fazenda"},"logout":{"label":"Sair","image":"","background":"#315f3c","color":"#ffffff","fontSize":13}},"labels":{"title":"Fazendas da comunidade","description":"Visite para conhecer. Compras e alterações ficam desativadas.","visit":"Visitar","more":"Carregar mais"},"friends":{"width":560,"maxHeight":80,"radius":22,"padding":28,"background":"#fffdf6","color":"#243b29","fontSize":14,"gap":10,"columns":1,"rowBackground":"#eef3e7","rowRadius":12,"buttonBackground":"#315f3c","buttonColor":"#ffffff"},"login":{"brand":"🌱 MINI FAZENDA ONLINE","title":"Sua fazenda, sua história.","description":"Entre com sua conta Google para cuidar da fazenda e visitar seus vizinhos.","button":"Entrar com Google","width":480,"radius":28,"padding":36,"background":"#eff4df","cardBackground":"#fffdf6","color":"#243b29","buttonBackground":"#315f3c","buttonColor":"#ffffff","fontSize":16}},"title":"Mini Fazenda","world":{"ground":"#8f9f56","opacity":2,"diamondImage":"assets/2ae76bf7fff9f395f352.png","diamondImageOpacity":50,"background":"assets/30bb51e426b3d082a8d3-fundo2.png","bgScale":6.3,"bgX":-612,"bgY":964,"cols":16,"rows":16},"camera":{"minZoom":0.6,"maxZoom":1.6,"zoom":0.8151041666666666,"x":-37.5,"y":-110.27083333333331,"inertiaEnabled":true,"friction":0.88},"truck":{"direction":"right","laneGy":5,"stopGxOffsetRight":4.2,"approachTiles":10,"tilesPerSecond":1.5,"startX":-4.2,"startY":5,"stopX":-10,"stopY":5,"movingGif":"assets/4b84bb49b6df5adcb33e-carro-andando.gif","stoppedGif":"assets/5b6869aabac3384effa5-carro-parado.gif"},"elements":{},"items":{"item-trigo":{"visualScale":1,"xp":25,"harvestXP":15,"growTime":5400000},"item-vaca":{"h":0,"w":2,"visualScale":0.7,"price":750,"level":10,"xp":700,"growTime":21600000},"item-milho":{"xp":25,"harvestXP":25,"growTime":10800000},"item-beterraba":{"xp":40,"harvestXP":45,"level":8,"growTime":21600000},"item-cenoura":{"harvestXP":55,"xp":42,"level":5,"growTime":10800000},"item-cafe":{"xp":42,"harvestXP":40,"level":10,"growTime":21600000},"item-melancia":{"harvestXP":45,"xp":42,"level":6,"growTime":21600000},"item-abacaxi":{"xp":45,"harvestXP":45,"growTime":10800000},"item-morango":{"harvestXP":35,"xp":30,"level":3,"growTime":10800000},"item-porco":{"price":450,"level":5,"growTime":21600000},"item-cavalo":{"price":450,"level":5,"growTime":21600000},"item-bodejunino":{"price":1000,"level":5,"growTime":21600000},"item-ovelha":{"level":10,"xp":800,"price":550,"growTime":21600000},"item-terra":{"xp":20}},"menuAppearance":{"font":"","textColor":"","overlayColor":"","fontSize":0},"shopAppearance":{"cardWidth":150,"cardHeight":200,"cardGap":0,"cardBackground":"","cardTextColor":"#362218","cardFontSize":25,"cardPriceColor":"#000000","cardPriceFontSize":25,"cardIconHeight":70,"gridScale":0.8},"transitions":{},"sprites":{"playerWalkFront":"assets/4dd659eb5af9099d6092.gif","playerFront":"assets/6aca82b20c0def5da472.gif","playerWalkBack":"assets/adc7a2e3a395bbe3b9e5.gif"},"scene":[],"game":{"moedas":500,"playerXP":0,"playerLevel":1,"COLS":16,"ROWS":16,"player":{"gx":11,"gy":6,"speed":2.3,"scale":0.2,"x":240,"y":408,"facing":1,"path":[],"action":null},"aradora":{"gx":8,"gy":8,"speed":3,"scale":0.2,"spawned":false,"x":0,"y":384,"facing":1,"path":[],"action":null,"fila":[]},"farmName":"","aradoraWelcomeShown":false,"terrenos":[],"inventory":{},"truckOrder":{"pedidos":[{"tipo":"leite","qtd":4,"entregue":0,"imgSrc":"assets/7fc2de79ae289a20560f-icone-leite.png"},{"tipo":"cenoura","qtd":6,"entregue":0,"imgSrc":"assets/046025b7ebc48dc1e7d4-cenoura-final.png"},{"tipo":"morango","qtd":8,"entregue":0,"imgSrc":"assets/7b73afd26b88a734994f-morango-final.png"}],"recompensaBase":905,"bonusExtra":273,"recompensa":1178,"completo":false,"aberto":true},"version":2,"offsetX":-37.5,"offsetY":-110.27083333333331,"zoom":0.8151041666666666,"activeSeconds":7,"truck":{"spawned":true,"state":"stopped","gx":-10,"gy":5,"w":3,"h":3,"stopGx":-10,"stopGy":5,"x":-921.5999999999999,"y":-172.79999999999998,"currentGif":null,"facing":-1},"nextTruckAt":0,"actionQueue":[],"loot":[]},"display":{"hoverTiles":true,"cropInfo":true,"placementTiles":true,"expandLabels":true,"editorGrid":true,"editorBounds":true},"sale":{"mode":"score","coinMultiplier":1,"xpMultiplier":1,"fixedCoins":10,"fixedXP":10,"pricePercent":6,"coinsAt60":5,"coinsAt100":10,"coinsAt150":15,"coinsAbove":25,"xpAt60":15,"xpAt100":20,"xpAt150":25,"xpAt220":30,"xpAbove":50},"progression":{"mode":"exponential","baseXP":5000,"perLevel":3500,"growthMultiplier":2,"rewardBase":300,"rewardBlockSize":25,"rewardMultiplier":2,"rewardCycleSize":5,"rewardCycleMultiplier":2,"landLimitBase":4,"landLimitPerLevel":2,"expansionCost":50000,"expansionTitle":"EXPANDA SUA FAZENDA","expansionSubtitle":"clique aqui 💰 R$50 mil","expansionTitleColor":"#ffffff","expansionSubtitleColor":"#24631a","expansionTitleSize":75,"expansionSubtitleSize":35,"expansionCols":5,"expansionRows":3},"feedback":{"enabled":true,"showCoins":true,"showXP":true,"duration":5000,"rise":72,"offsetY":-28,"fontSize":21,"iconSize":22,"scale":1.6,"gap":4,"combineWindow":120,"positiveColor":"#ffe978","negativeColor":"#ff6f6f","xpColor":"#8ff39e","bgColor":"rgba(46,28,10,0.92)","borderColor":"rgba(255,255,255,0.18)","borderRadius":16,"showBackground":false,"strokeEnabled":true,"strokeColor":"#33220c","strokeWidth":4,"shadow":"0 8px 22px rgba(0,0,0,.28)","coinIcon":"","xpLabel":"XP","minWidth":40,"zIndex":99999},"_exportMeta":{"schema":5,"at":"2026-10-29T16:20:56.975Z","itemCount":14,"objectCount":0},"_assetManifest":{"uploadedImages":6,"uploadedGifs":3,"paths":["world.diamondImage","sprites.playerWalkFront","sprites.playerFront","sprites.playerWalkBack","onlineUI.buttons.friends.image","onlineUI.buttons.home.image"]},"mobileLayout":{"elements":{"category-bar":{"scale":0.6,"left":15,"position":"absolute"},"cards-grid":{"scale":0.6,"left":8,"position":"absolute"},"loja-content":{"scale":1.2},"overlay-caminhao":{"scale":1},"caminhao-content":{"scale":0.6},"caminhao-actions":{"position":"absolute","left":219,"top":404},"caminhao-recompensa":{"position":"absolute","left":127,"top":287,"scale":0.7,"width":80},"caminhao-pedidos":{"position":"absolute","left":64,"top":76,"height":70,"width":100},"neighbors":{"scale":1,"width":92}},"structures":{},"camera":{"zoom":0.78}},"audio":{"master":0.85,"music":0.65,"effects":0.85,"muted":false,"tracks":{"farm":{"src":"asset:audmvtswoeb9dsvh","name":"trilha sonora mini fazenda - usesuno.com.mp3","enabled":true,"volume":1,"fadeIn":1,"fadeOut":1,"loop":true,"polyphony":3,"cooldown":80}},"global":{"plow":{"src":"asset:audmvtt427964wmd","name":"arando.mp3","enabled":true,"volume":1,"fadeIn":0,"fadeOut":0,"loop":false,"polyphony":3,"cooldown":80},"plant":{"src":"asset:audmvtt57aosive8","name":"cavando.mp3","enabled":true,"volume":1,"fadeIn":0,"fadeOut":0,"loop":false,"polyphony":3,"cooldown":80},"harvest":{"src":"asset:audmvtt4q7nedr8y","name":"efeito sonoro click.mp3","enabled":true,"volume":1,"fadeIn":0,"fadeOut":0,"loop":false,"polyphony":3,"cooldown":80},"sell":{"src":"asset:audmvtt4q7nedr8y","name":"efeito sonoro click.mp3","enabled":true,"volume":1,"fadeIn":0,"fadeOut":0,"loop":false,"polyphony":3,"cooldown":80}},"items":{"item-abacaxi":{"place":{"src":"","name":"","enabled":true,"volume":1,"fadeIn":0,"fadeOut":0,"loop":false,"polyphony":3,"cooldown":80}}},"dom":{"btn-loja":{"src":"","name":"","enabled":true,"volume":1,"fadeIn":0,"fadeOut":0,"loop":false,"polyphony":3,"cooldown":80}},"assets":{"audmvtswi0hi9ss8":{"src":"assets/audio/audmvtswi0hi9ss8.mp3","name":"trilha sonora mini fazenda - usesuno.com (1).mp3","size":3114185},"audmvtswoeb9dsvh":{"src":"assets/audio/audmvtswoeb9dsvh.mp3","name":"trilha sonora mini fazenda - usesuno.com.mp3","size":2704620},"audmvtt427964wmd":{"src":"assets/audio/audmvtt427964wmd.mp3","name":"arando.mp3","size":20112},"audmvtt4q7nedr8y":{"src":"assets/audio/audmvtt4q7nedr8y.mp3","name":"efeito sonoro click.mp3","size":8409},"audmvtt57aosive8":{"src":"assets/audio/audmvtt57aosive8.mp3","name":"cavando.mp3","size":8827}}}};</script>
 <script id="mf-runtime">
 /* Mini Fazenda · Runtime de configuração / compatibilidade. Sem dependências externas. */
 (function(){
@@ -7349,22 +7440,72 @@ const merge=(a,b)=>{for(const [k,v] of Object.entries(b||{})){if(v&&typeof v==='
 let project=merge(copy(def),window.__MF_PROJECT||{});
 const $=id=>document.getElementById(id);
 const finite=(n,f)=>Number.isFinite(+n)?+n:f;
-const movableSelector='#toolbar,#neighbors,#home,#logout,#friends-content,#friends-title,#friends-description,#farm-list,#more,#friends-close,#login-card,#login-title,#login-description,#login-brand,#login,#message,#farms,#gate,#hud-moedas,#hud-xp,#hud-fazenda-wrapper,#btn-loja,#btn-bau,#btn-trator,#btn-mover,#btn-fullscreen,#btn-config,#btn-mensagens,#loja-content,#bau-content,#trator-content,#caminhao-content,#mini-venda-box,#category-bar,#cards-grid,#bau-inventario,#caminhao-pedidos,#caminhao-recompensa,#caminhao-actions,#img-mini-trator,#bg-loja,#bg-bau,#bg-vendas';
+const movableSelector='[data-mf-editable],#toolbar,#neighbors,#home,#logout,#friends-content,#friends-title,#friends-description,#farm-list,#more,#friends-close,#login-card,#login-title,#login-description,#login-brand,#login,#message,#farms,#gate,#hud-moedas,#hud-xp,#hud-fazenda-wrapper,#btn-loja,#btn-bau,#btn-trator,#btn-mover,#btn-fullscreen,#btn-config,#btn-mensagens,#loja-content,#bau-content,#trator-content,#caminhao-content,#mini-venda-box,#category-bar,#cards-grid,#bau-inventario,#caminhao-pedidos,#caminhao-recompensa,#caminhao-actions,#img-mini-trator,#bg-loja,#bg-bau,#bg-vendas';
 const savedElements=()=>document.querySelectorAll(movableSelector);
  function mobileView(){return window.__MF_FORCE_MOBILE_VIEW===true || (!window.__MF_EDITOR_EDITING && window.innerWidth<=900);}
- function currentElements(p=project){return mobileView() ? (p.mobileLayout?.elements||{}) : (p.elements||{});}
+ function currentElements(p=project){if(!mobileView())return p.elements||{};const out={};for(const [id,v]of Object.entries(p.elements||{}))out[id]={...v};for(const [id,v]of Object.entries(p.mobileLayout?.elements||{}))out[id]={...(out[id]||{}),...v};return out;}
  const baseStyles=new Map();
- const mobileStyleProperties=['position','top','left','right','bottom','width','height','z-index','opacity','scale','rotate','visibility','background','color','border-radius','font-size','font-family','text-shadow','transform'];
+
+ const knownImageLayers=['background-size','background-repeat','background-position','background-image','border','border-color','border-width','border-style','-webkit-text-stroke','letter-spacing','font-weight','text-align'];
+ function applyVisualSkin(el,entry){
+  if(!el||!entry)return;
+  if(Object.prototype.hasOwnProperty.call(entry,'img')){
+   const direct=el.tagName==='IMG'?el:el.querySelector(':scope > img');
+   if(direct&&entry.imageMode!=='background'){
+    if(direct.getAttribute('src')!==entry.img)direct.setAttribute('src',entry.img||'');
+    el.style.removeProperty('background-image');
+   }else{
+    el.style.setProperty('background-image',entry.img?'url('+JSON.stringify(entry.img)+')':'none','important');
+    el.style.setProperty('background-size',entry.imageFit||'100% 100%','important');
+    el.style.setProperty('background-repeat','no-repeat','important');
+    el.style.setProperty('background-position',entry.imagePosition||'center center','important');
+   }
+  }
+  if(entry.borderWidth!==undefined)el.style.setProperty('border-width',Math.max(0,Number(entry.borderWidth)||0)+'px','important');
+  if(entry.borderColor!==undefined&&entry.borderColor)el.style.setProperty('border-color',entry.borderColor,'important');
+  if(entry.borderStyle!==undefined)el.style.setProperty('border-style',entry.borderStyle||'solid','important');
+  if(entry.textStrokeWidth!==undefined)el.style.setProperty('-webkit-text-stroke-width',Math.max(0,Number(entry.textStrokeWidth)||0)+'px','important');
+  if(entry.textStrokeColor!==undefined&&entry.textStrokeColor)el.style.setProperty('-webkit-text-stroke-color',entry.textStrokeColor,'important');
+  if(entry.fontWeight!==undefined&&entry.fontWeight!=='')el.style.setProperty('font-weight',String(entry.fontWeight),'important');
+  if(entry.letterSpacing!==undefined&&entry.letterSpacing!=='')el.style.setProperty('letter-spacing',Number(entry.letterSpacing)+'px','important');
+  if(entry.textAlign!==undefined&&entry.textAlign)el.style.setProperty('text-align',String(entry.textAlign),'important');
+ }
+
+ const mobileStyleProperties=['position','top','left','right','bottom','width','height','z-index','opacity','scale','rotate','visibility','background','color','border-radius','font-size','font-family','text-shadow','transform',...knownImageLayers];
  function restoreProfileStyles(){for(const [el,props] of baseStyles){if(!el.isConnected){baseStyles.delete(el);continue}for(const [k,p]of props){if(p[0])el.style.setProperty(k,p[0],p[1]);else el.style.removeProperty(k)}}}
  function captureProfileStyles(el){if(baseStyles.has(el))return;const values=new Map();for(const k of mobileStyleProperties)values.set(k,[el.style.getPropertyValue(k),el.style.getPropertyPriority(k)]);baseStyles.set(el,values)}
  function applyLayoutProfile(){restoreProfileStyles();for(const [id,v]of Object.entries(currentElements())){const el=$(id);if(!el)continue;captureProfileStyles(el);applyElement(id,v)}}
  function scaleForStructure(t,base){if(!mobileView())return base;let key=String(t?.itemId||t?.id||t?.animal?.tipo||t?.cultura?.tipo||t?.tipo||'').replace(/^item-/,'');const val=project.mobileLayout?.structures?.['item-'+key]?.scale;return base*(Number.isFinite(+val)&&+val>0?+val:1)}
+
+ const mfEditableRootIds=['overlay-loja','overlay-bau','overlay-trator','overlay-caminhao','overlay-config','mini-venda-overlay'];
+ function ensureEditableMenuChildren(){
+  for(const rootId of mfEditableRootIds){
+   const root=$(rootId);if(!root)continue;
+   // Use immutable markup positions, not unstable list content (such as products and farms).
+   const elements=root.querySelectorAll('section,article,header,footer,form,h1,h2,h3,h4,p,span,button,label,input,div,img');
+   let count=0;
+   for(const el of elements){
+    if(count++>250)break;
+    if(el.closest('.card-item,.farm-row,[data-mf-custom]'))continue;
+    if(!el.id){
+     let node=el,path=[];
+     while(node&&node!==root){const parent=node.parentElement;if(!parent)break;path.unshift(Array.prototype.indexOf.call(parent.children,node));node=parent}
+     if(node!==root)continue;
+     el.id='mf-menu-'+rootId+'-'+path.join('-');
+     el.dataset.mfEditable='1';
+    }
+   }
+  }
+ }
+
 const floatPosition=(el)=>{const s=getComputedStyle(el);return {left:parseFloat(s.left)||0,top:parseFloat(s.top)||0,right:parseFloat(s.right)||0,bottom:parseFloat(s.bottom)||0,width:el.getBoundingClientRect().width||100,height:el.getBoundingClientRect().height||50}};
 const ignore=['mf-toolbar','mf-panel','mf-inspector','mf-outline','mf-toast'];
 function saveElements(){for(const el of savedElements()){if(ignore.includes(el.id))continue;const key=el.id;if(!key)continue;if(project.elements[key]){
  const p=project.elements[key];p.img=el.tagName==='IMG'?el.getAttribute('src'):el.querySelector(':scope > img')?.getAttribute('src')||p.img;
 }}}
-function applyElement(id,entry){const el=$(id);if(!el||!entry)return;el.style.setProperty('position',entry.position||'absolute','important');
+function applyElement(id,entry){const el=$(id);if(!el||!entry)return;
+ if(entry.position!==undefined&&entry.position!=='')el.style.setProperty('position',entry.position,'important');
+ else if(entry.top!==undefined||entry.left!==undefined)el.style.setProperty('position','absolute','important');
  for(const p of ['top','left','right','bottom','width','height','zIndex','opacity']){if(entry[p]!==undefined&&entry[p]!==null&&entry[p]!=='') el.style.setProperty(p,(typeof entry[p]==='number'&&!['opacity','zIndex'].includes(p)?entry[p]+'px':String(entry[p])),'important');}
  if(entry.left!==undefined||entry.top!==undefined)el.style.setProperty('transform','none','important');if(entry.left!==undefined)el.style.setProperty('right','auto','important');if(entry.top!==undefined)el.style.setProperty('bottom','auto','important');
  if(entry.scale!==undefined)el.style.setProperty('scale',entry.scale,'important');if(entry.rotate!==undefined)el.style.setProperty('rotate',entry.rotate+'deg','important');if(entry.visible===false)el.style.setProperty('visibility','hidden','important');else el.style.removeProperty('visibility');
@@ -7374,7 +7515,7 @@ function applyElement(id,entry){const el=$(id);if(!el||!entry)return;el.style.se
  if(entry.font)el.style.setProperty('font-family',entry.font,'important');
  if(entry.textShadow!==undefined)el.style.setProperty('text-shadow',entry.textShadow,'important');
 
- if(entry.img){const img=el.tagName==='IMG'?el:el.querySelector(':scope > img');if(img&&img.getAttribute('src')!==entry.img)img.setAttribute('src',entry.img)}
+ applyVisualSkin(el,entry);
  if(entry.text!==undefined&&!el.querySelector('img')&&el.children.length===0)el.textContent=entry.text;
 }
 function ensureCustomCard(id,entry){
@@ -7466,6 +7607,8 @@ function applyMenuAppearance(){
   if(p.textColor)el.style.setProperty('color',p.textColor,'important');
   if(p.font)el.style.setProperty('font-family',p.font,'important');
   if(Number(p.fontSize)>0)el.style.setProperty('font-size',p.fontSize+'px','important');
+  if(p.textStrokeColor)el.style.setProperty('-webkit-text-stroke-color',p.textStrokeColor,'important');
+  if(p.textStrokeWidth!==undefined)el.style.setProperty('-webkit-text-stroke-width',Math.max(0,Number(p.textStrokeWidth)||0)+'px','important');
  }
 }
 function applyShopAppearance(){
@@ -7565,6 +7708,7 @@ function apply(p,opts={}){project=merge(copy(def),p||{});
  for(const el of document.querySelectorAll('#cards-grid .card-item[data-mf-custom]')){if(!project.items?.[el.id])el.remove()}
  for(const [id,v]of Object.entries(project.items||{}))applyItem(id,v);
  applyShopAppearance();applyMenuAppearance();
+ ensureEditableMenuChildren();
  applyLayoutProfile();
  document.documentElement.style.setProperty('--mf-open-ms',(project.transitions.default?.duration||250)+'ms');
  for(const [id,v]of Object.entries(project.transitions||{})){const el=$(id);if(el)el.dataset.mfTransition=v.effect||'scale'}
