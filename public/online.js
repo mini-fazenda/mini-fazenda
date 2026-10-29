@@ -83,7 +83,36 @@ async function flush(){
     if(pending&&connected&&sessionActive&&!stopped&&run===epoch)queueMicrotask(()=>flush().catch(fail));
   }
 }
+
+/* Fullscreen belongs to the parent page, never the game iframe: the online HUD
+   (Friends, Home, Logout and dialog) must remain inside the fullscreen root. */
+function isHostFullscreen(){
+  const el=document.fullscreenElement || document.webkitFullscreenElement ||
+    document.mozFullScreenElement || document.msFullscreenElement;
+  return el===document.documentElement;
+}
+function requestHostFullscreen(){
+  const root=document.documentElement;
+  const fn=root.requestFullscreen || root.webkitRequestFullscreen ||
+    root.mozRequestFullScreen || root.msRequestFullscreen;
+  if(!fn)return Promise.resolve(false);
+  try{return Promise.resolve(fn.call(root)).then(()=>true).catch(e=>{
+    console.warn('Tela cheia não suportada neste navegador:',e);return false;
+  })}catch(e){console.warn('Tela cheia:',e);return Promise.resolve(false)}
+}
+function exitHostFullscreen(){
+  const fn=document.exitFullscreen || document.webkitExitFullscreen ||
+    document.mozCancelFullScreen || document.msExitFullscreen;
+  if(!fn || !isHostFullscreen())return Promise.resolve(false);
+  try{return Promise.resolve(fn.call(document)).then(()=>true).catch(e=>{
+    console.warn('Não foi possível sair da tela cheia:',e);return false;
+  })}catch(e){console.warn('Sair da tela cheia:',e);return Promise.resolve(false)}
+}
+
 window.MFOnline={
+  isFullscreen:isHostFullscreen,
+  requestFullscreen:requestHostFullscreen,
+  exitFullscreen:exitHostFullscreen,
   isVisiting:()=>visiting,playing,
   bootState:()=>initialState,
   changed:()=>queueMicrotask(checkpoint),
@@ -99,7 +128,7 @@ function mount(state,visit){
   $('farm-title').textContent=visit?`Visitando: ${state.farmName||'Fazenda'}`:state?.farmName||'Minha fazenda';
   gate(visit?'Abrindo visita…':'Carregando sua fazenda…');
   const frame=document.createElement('iframe');frame.title=visit?'Visita à fazenda (somente visualização)':'Minha fazenda';
-  frame.src='game.html?v=account-v2';frame.allow='fullscreen';$('game-container').replaceChildren(frame);
+  frame.src='game.html?v=mobile-20261029';frame.allow='fullscreen';$('game-container').replaceChildren(frame);
   status(visit?'Somente visualização':'Online');
 }
 async function reconnect(run){
