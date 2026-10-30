@@ -31,5 +31,22 @@ const assert=require('node:assert/strict');const {chromium}=require('playwright'
  await f.evaluate(()=>{const t=terrenos[0];t.cultura=null;});await page.waitForTimeout(200);assert.equal(await f.locator('.mf-fertilized-stars').count(),1);
  await f.evaluate(()=>{const t=terrenos[0];t.cultura={tipo:'espinafre',startTime:Date.now(),totalTime:1200000,etapa:0};reapplyGrowthFromTime(t);});
  assert.ok(await f.evaluate(()=>{const t=terrenos[0];return MFFertilizerCore.delay(t.cultura,1200000)<=780000&&t.cultura.fertWindows.length===1;}));assert.equal(await f.evaluate(()=>moedas),before.coins);assert.equal(await f.evaluate(()=>terrenos.length),before.n);
+ await f.evaluate(()=>{
+  const previous=getTerrenosSnapshot(),realNow=Date.now,now=realNow();
+  try{
+   Date.now=()=>now;
+   const seeded={gx:2,gy:2,w:2,h:2,imgSrc:CROP_STAGE_TABLE.milho[0],cultura:{tipo:'milho',startTime:now-720000,totalTime:3600000,etapa:0,fertilizada:true}};
+   const plain=JSON.parse(JSON.stringify(seeded));plain.gx=4;plain.cultura.fertilizada=false;
+   restoreTerrenosFromSnapshot([seeded,plain]);
+   const faster=MFGrowthInfo.describe(terrenos[0]),normal=MFGrowthInfo.describe(terrenos[1]);
+   if(Math.abs(faster.remaining-normal.remaining*.65)>2)throw Error('Relógio legado não acelerou');
+   const saved=getTerrenosSnapshot(),until=saved[0].fertilizerUntil;
+   restoreTerrenosFromSnapshot(saved);
+   if(terrenos[0].fertilizerUntil!==until||terrenos[0].cultura.fertWindows.length!==1)throw Error('Relógio perdido ao restaurar');
+   Date.now=()=>now+faster.remaining+10;syncAllGrowth(Date.now());
+   if(terrenos[0].cultura.etapa!==2||terrenos[1].cultura.etapa===2)throw Error('Milho adubado não amadureceu antes do comum');
+  }finally{Date.now=realNow;restoreTerrenosFromSnapshot(previous);}
+ });
+ console.log('PASS: relógio legado restaurado mantém prazo e milho adubado amadurece antes do comum na engine real');
  assert.deepEqual(errors,[]);console.log('PASS: visita permite zoom, câmera e tela cheia; estrelas e duração persistem sem alterar moedas/objetos');
 }finally{await browser.close()}})().catch(e=>{console.error(e);process.exit(1)});

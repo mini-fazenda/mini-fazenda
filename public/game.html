@@ -921,7 +921,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const 
 <script src="crop-sprites.js?v=2"></script>
 <script src="farm-economy.js?v=girassol-4"></script>
 <script src="growth-time.js?v=1"></script>
-<script src="fertilizer-core.js?v=block-12h"></script>
+<script src="fertilizer-core.js?v=clock-fix-5"></script>
 <script src="animal-production.js?v=1"></script>
 <script src="fences-core.js?v=atlas-1"></script>
 </head>
@@ -2579,6 +2579,7 @@ function restoreTerrenosFromSnapshot(arr) {
           totalTime: it.cultura.totalTime || 0,
           fertilizada: !!it.cultura.fertilizada
         };
+        Object.assign(t.cultura,JSON.parse(JSON.stringify(it.cultura)));
         // restart growth timer if needed
         if (typeof startGrowthTimer === 'function') {
           startGrowthTimer(t);
@@ -7800,7 +7801,7 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 <script src="barn-ui.js?v=1"></script>
 <script src="animal-tools.js?v=1"></script>
 <script src="job-feedback.js?v=hidpi-1"></script>
-<script src="growth-info.js?v=block-12h"></script>
+<script src="growth-info.js?v=clock-fix-5"></script>
 <script src="sheep-animation.js?v=suave-2"></script>
 <script src="animal-indicators.js?v=hidpi-1"></script>
 <script src="fence-art.js?v=1"></script>

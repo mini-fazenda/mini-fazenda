@@ -4,6 +4,13 @@
   const c=t?.cultura;if(!c||c.tipo==='morta')return false;
   // Migra a aceleração por plantio da versão anterior sem perder o progresso.
   if(c.fertilizedDuration&&c.fertilizedAt){const at=Number(c.fertilizedAt),duration=Number(c.fertilizedDuration),p=(at-c.startTime)/duration;c.totalTime=duration/.65;c.startTime=at-p*c.totalTime;c.fertWindows=[{at,until:at+HOURS12}];if(!t.fertilizerAt){t.fertilizerAt=at;t.fertilizerUntil=at+HOURS12;}delete c.fertilizedDuration;}
+  // Saves antigos guardavam somente a estrela. Reconstitui uma janela uma
+  // única vez, preservando o percentual atual; depois ela segue no save.
+  if(!t.fertilizerAt&&(c.fertilizada||c.fertWindows?.length)){
+   const last=(c.fertWindows||[]).reduce((a,b)=>Number(b.at)>Number(a?.at||0)?b:a,null);
+   t.fertilizerAt=Number(last?.at)||Number(c.fertilizedAt)||Date.now();
+   t.fertilizerUntil=Number(last?.until)||t.fertilizerAt+HOURS12;
+  }
   if(!t.fertilizerAt||Number(c.startTime)>=t.fertilizerUntil)return false;
   if(!Array.isArray(c.fertWindows))c.fertWindows=[];
   if(c.fertWindows.some(w=>w.at===t.fertilizerAt))return false;

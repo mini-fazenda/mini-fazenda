@@ -21,3 +21,15 @@ test('cultivo longo deixa de acelerar na expiração e nova dose só vale após 
  assert.equal(F.apply(t,{key,at:start+12*H}),true);assert.equal(t.cultura.fertWindows.length,2);
  const other=crop();assert.equal(F.apply(other,{key:'block_99_99',at:start}),false);
 });
+test('save legado com estrela sem relógio recebe aceleração e não renova a janela ao recarregar',()=>{
+ const now=Date.now(),t={gx:2,gy:4,cultura:{tipo:'milho',startTime:now-12*60000,totalTime:H,fertilizada:true}};
+ const plain=structuredClone(t);plain.cultura.fertilizada=false;
+ const faster=MFGrowthInfo.describe(t,now,{}),normal=MFGrowthInfo.describe(plain,now,{});
+ assert.equal(faster.percent,normal.percent);assert.ok(Math.abs(faster.remaining-normal.remaining*.65)<3);
+ const restored=JSON.parse(JSON.stringify(t)),deadline=restored.fertilizerUntil;F.bind(restored);assert.equal(restored.fertilizerUntil,deadline);
+});
+test('dois milhos simultâneos: adubado fica pronto em 39min e comum só em 60min, inclusive após save',()=>{
+ const t=crop(start,H),plain=crop(start,H);F.apply(t,{key:F.key(t),at:start});const restored=JSON.parse(JSON.stringify(t));F.bind(restored);
+ for(const at of [start+12*60000,start+38*60000])assert.ok(MFGrowthInfo.describe(restored,at,{}).remaining<MFGrowthInfo.describe(plain,at,{}).remaining);
+ assert.equal(MFGrowthInfo.describe(restored,start+39*60000,{}).ready,true);assert.equal(MFGrowthInfo.describe(plain,start+39*60000,{}).ready,false);
+});
