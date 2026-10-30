@@ -63,15 +63,15 @@ O projeto visual da engine e os recursos ficam no repositório. Os dados da faze
 
 ## Salvamento automático na conta
 
-O progresso é lido exclusivamente do Firebase depois do login. Não há save de jogo em localStorage ou IndexedDB e não há opção de baixar backup ou resolver conflitos entre cópias. Os saves antigos deste jogo no navegador são limpos automaticamente; a versão confirmada no Firebase permanece como fonte do progresso.
+O Firebase mantém o progresso confirmado da conta. Uma cópia temporária, por UID, guarda apenas alterações ainda não confirmadas no localStorage (e sessionStorage como alternativa). Ela é apagada após confirmação e só pode ser recuperada se sua versão de origem ainda corresponder à nuvem, inclusive quando o save que estava em trânsito foi confirmado ao fechar a página. Uma versão remota posterior de outra sessão prevalece. Saves legados continuam sendo removidos.
 
-Cada alteração sinalizada pela engine é enviada imediatamente, com verificação adicional do estado a cada 200 ms. Não há confirmação ao fechar ou recarregar. O jogo pausa e bloqueia os controles ao perder a conexão, retomando somente depois de confirmar que a sessão ainda é válida. Alterações em trânsito permanecem apenas na memória da página até serem confirmadas.
+Cada alteração sinalizada pela engine é enviada imediatamente, com verificação adicional a cada segundo. “Salvando…” indica pendência; “Salvo na nuvem” só aparece após confirmação. Falhas mostram o código e pausam o jogo, com repetição automática e tentativa manual no aviso. O jogo também pausa ao perder conexão. Não há confirmação ao fechar ou recarregar.
 
 Uma nova entrada na conta substitui o identificador da sessão no Firebase antes de carregar a fazenda. A sessão anterior é desconectada, seu iframe é removido e o login dessa aba é encerrado. As regras já publicadas recusam gravações de sessões antigas e revisões que poderiam sobrescrever uma versão mais nova. Isso também protege o caso em que o dispositivo anterior ficou sem internet.
 
 A autenticação usa persistência por aba, para que desconectar a aba antiga não encerre a nova. Credenciais de login e preferências visuais do navegador não são saves de progresso.
 
-Sem um save local, uma alteração que ainda não chegou ao servidor pode se perder se a página ou o dispositivo forem fechados à força. Nenhuma interface oferece garantia absoluta de perda zero em interrupções desse tipo. O salvamento é automático e o jogo exige conexão para continuar jogando.
+A recuperação pendente depende do armazenamento do navegador: limpeza dos dados, armazenamento indisponível ou troca de aparelho antes da sincronização podem perder alterações não confirmadas. Nenhuma interface oferece garantia absoluta de perda zero em interrupções desse tipo. O salvamento é automático e o jogo exige conexão para continuar jogando.
 
 ## Visitas e acesso
 

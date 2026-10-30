@@ -17,5 +17,5 @@ export async function redeemTestCredit({sdk,db,uid,sessionId,revision,active}){
   if(!active()||current?.revision!==revision)return;
   return creditDocument(current,{code,uid,ownerUid,sessionId,timestamp:sdk.serverTimestamp()});
  },{applyLocally:false});
- return result.committed?{amount:50000,revision:result.snapshot.val().revision}:null;
+ return result.committed?{amount:50000,revision:result.snapshot.val().revision,saveId:result.snapshot.val().saveId}:null;
 }

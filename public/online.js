@@ -1,5 +1,5 @@
-import {nextDocument,clearLegacySaves} from './persistence.js?v=account-v3';
-import {redeemTestCredit} from './test-credit.js?v=1';
+import {nextDocument,clearLegacySaves,recoverPendingState} from './persistence.js?v=pending-v4';
+import {redeemTestCredit} from './test-credit.js?v=2';
 import {startFriends,stopFriends,publishProfile,api as friendsApi} from './friends.js?v=permissao-fert-1';
 const $=id=>document.getElementById(id);
 const config=window.MINI_FAZENDA_FIREBASE;
@@ -8,11 +8,35 @@ let ready=false,connected=false,sessionActive=false,stopped=false,visiting=false
 let bridge=null,initialState=null,ownState=null,pending=null,saving=null,lastText='',lastKey=null;
 let stopConnection,stopSession,resolveConnection,connectionReady,projectionTimer,retryTimer,reconnectTimer;
 let retryDelay=1000,loginAttempt=false;
+let confirmedSaveId=null,inFlightRecord=null,saveBlocked=false,lastSaveError='';
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const transient=e=>['unavailable','database/network-error','network-request-failed','auth/network-request-failed','disconnected'].some(x=>String(e?.code||'').includes(x));
-function retryPending(){if(stopped||!pending)return;clearTimeout(retryTimer);status('Sincronização pendente…');retryTimer=setTimeout(()=>{if(stopped)return;if(connected&&sessionActive)void flush().catch(e=>{console.warn('[sync retry]',e);retryPending()});else retryPending()},retryDelay);retryDelay=Math.min(retryDelay*2,30000)}
+function recoveryKey(){return 'mf-pending-v3:'+user.uid}
+function rememberPending(){
+  if(!user||!pending)return;
+  const value=JSON.stringify({state:pending.state,revision,baseSaveId:confirmedSaveId,sessionId,inFlightId:inFlightRecord?.id||null,pendingId:pending.id,at:Date.now()});
+  let kept=false;
+  for(const storage of [localStorage,sessionStorage])try{storage.setItem(recoveryKey(),value);kept=true}catch(e){console.warn('[pending storage]',e)}
+  if(!kept)status('Salvando… mantenha esta página aberta.');
+}
+function forgetPending(){
+  for(const storage of [localStorage,sessionStorage])try{const record=JSON.parse(storage.getItem(recoveryKey())||'null');if(!record||record.sessionId===sessionId)storage.removeItem(recoveryKey());storage.removeItem('mf-recovery-v2:'+user.uid)}catch{}
+}
+function saveError(error){
+  lastSaveError=String(error?.code||error?.message||'sem confirmação').slice(0,120);
+  saveBlocked=true;
+  gate('Não foi possível salvar sua fazenda ('+lastSaveError+').\nO jogo está pausado para proteger seu progresso. Tentando novamente…');
+  status('Falha ao salvar: '+lastSaveError+'. Toque para tentar.');
+}
+function retryPending(error){
+  if(stopped||!pending)return;
+  if(error)saveError(error);
+  clearTimeout(retryTimer);
+  retryTimer=setTimeout(()=>{if(stopped)return;if(connected&&sessionActive)void flush().catch(e=>{console.warn('[sync retry]',e);retryPending(e)});else retryPending()},retryDelay);
+  retryDelay=Math.min(retryDelay*2,30000);
+}
 let clockOffset=0; // diferença entre o relógio do aparelho e o do servidor (anti-troca de data)
-function status(text){$('sync').textContent=text}
+function status(text){const el=$('sync');el.textContent=text;el.hidden=false;el.dataset.state=saveBlocked?'error':pending?'pending':'saved';}
 function gate(text){$('farms').close();$('gate').hidden=false;$('message').textContent=text}
 function freeze(){ready=false;sessionActive=false;stopped=true;pending=null;clearTimeout(retryTimer);clearTimeout(reconnectTimer);clearTimeout(projectionTimer);$('game-container').replaceChildren();bridge=null;$('toolbar').hidden=true}
 function fail(error){
@@ -25,18 +49,16 @@ async function disconnectPrevious(){
   await sdk.signOut(auth);
   gate('Sua conta entrou em outro dispositivo ou aba. Esta sessão foi desconectada.');
 }
-function playing(){return ready&&connected&&sessionActive&&!stopped&&!visiting&&!suspending}
+function playing(){return ready&&connected&&sessionActive&&!stopped&&!visiting&&!suspending&&!saveBlocked}
 function checkpoint(){
   if(!playing()||!bridge)return;
   try{
     const state=bridge.capture(),text=JSON.stringify(state);
     if(text===lastText)return;
     lastText=text;ownState=state;pending={id:crypto.randomUUID(),state};
-    // Cópia de emergência somente desta aba para recargas durante falhas de rede.
-    try{sessionStorage.setItem('mf-recovery-v2:'+user.uid,JSON.stringify({state,revision,at:Date.now()}))}catch(e){console.warn('[recovery storage]',e)}
-    // Alterações são enviadas imediatamente. Não há gravação do progresso no navegador.
-    void flush().catch(e=>{console.warn('[save]',e);retryPending()});
-  }catch(e){fail(e)}
+    rememberPending();status('Salvando…');
+    void flush().catch(e=>{console.warn('[save]',e);retryPending(e)});
+  }catch(e){saveError(e)}
 }
 function publicState(state){
   // Saves anteriores podem não conter farmName. O Firebase exige string em publicFarms.
@@ -66,29 +88,35 @@ async function flush(){
   if(saving)return saving;
   if(!pending||!connected||!sessionActive||stopped||visiting||!ready)return;
   const run=epoch,uid=user.uid,token=sessionId;
+  let watchdog;
+  const watch=()=>{clearTimeout(watchdog);watchdog=setTimeout(()=>{if(run===epoch&&!stopped&&pending&&connected&&sessionActive)saveError({code:'save/timeout'});},12000);};
   let failed=false;
   const operation=(async()=>{
     while(pending&&connected&&sessionActive&&!stopped&&run===epoch){
-      const record=pending,base=revision;
+      const record=pending,base=revision;inFlightRecord=record;rememberPending();watch();
       const result=await sdk.runTransaction(sdk.ref(db,`farms/${uid}`),current=>{
         if(run!==epoch||!sessionActive||stopped)return;
         return nextDocument(current,{sessionId:token,revision:base,id:record.id,state:record.state,timestamp:sdk.serverTimestamp()});
       },{applyLocally:false});
+      clearTimeout(watchdog);
       if(run!==epoch||stopped||!sessionActive)return;
       if(!result.committed&&result.snapshot.val()?.saveId!==record.id){
         const currentToken=(await sdk.get(sdk.ref(db,`sessions/${uid}`))).val();
         if(currentToken!==token){await disconnectPrevious();return}
         // Outra gravação da mesma sessão foi confirmada: atualiza a revisão e tenta novamente.
         const remoteRevision=Number(result.snapshot.val()?.revision);
-        if(Number.isSafeInteger(remoteRevision)&&remoteRevision>revision){revision=remoteRevision;continue}
+        if(Number.isSafeInteger(remoteRevision)&&remoteRevision>revision){revision=remoteRevision;confirmedSaveId=result.snapshot.val().saveId||null;rememberPending();continue}
         throw new Error('save/revision-conflict');
       }
-      revision=result.snapshot.val().revision;
+      revision=result.snapshot.val().revision;confirmedSaveId=result.snapshot.val().saveId;inFlightRecord=null;
       if(pending?.id===record.id)pending=null;
       ownState=record.state;
-      try{const k='mf-recovery-v2:'+uid,s=JSON.parse(sessionStorage.getItem(k)||'null');if(s&&JSON.stringify(s.state)===JSON.stringify(record.state))sessionStorage.removeItem(k)}catch{}
+      // Atualiza a base da pendência MAIS RECENTE após confirmar a anterior.
+      if(pending)rememberPending();else forgetPending();
       $('farm-title').textContent=record.state.farmName||'Minha fazenda';
-      retryDelay=1000;clearTimeout(retryTimer);status('Online');scheduleProjection(record.state,revision,run);
+      retryDelay=1000;clearTimeout(retryTimer);
+      if(!pending){saveBlocked=false;lastSaveError='';if(ready&&!suspending)$('gate').hidden=true;status('Salvo na nuvem');}else status('Salvando…');
+      scheduleProjection(record.state,revision,run);
     }
   })();
   saving=operation;
@@ -102,8 +130,9 @@ async function flush(){
     }
     throw e;
   }finally{
+    clearTimeout(watchdog);
     if(saving===operation)saving=null;
-    if(!failed&&pending&&connected&&sessionActive&&!stopped&&run===epoch)queueMicrotask(()=>flush().catch(e=>{console.warn('[sync]',e);retryPending()}));
+    if(!failed&&pending&&connected&&sessionActive&&!stopped&&run===epoch)queueMicrotask(()=>flush().catch(e=>{console.warn('[sync]',e);retryPending(e)}));
   }
 }
 
@@ -175,14 +204,14 @@ async function reconnect(run){
     if(run!==epoch||!connected||stopped)return;
     if(token!==sessionId){await disconnectPrevious();return}
     sessionActive=true;
-    if(ready){$('gate').hidden=true;await flush();if(!visiting)checkpoint()}
+    if(ready){await flush();if(!saveBlocked)$('gate').hidden=true;if(!visiting)checkpoint()}
   }catch(e){if(run===epoch&&connected&&!stopped){console.warn('[reconnect]',e);status('Reconectando…');clearTimeout(reconnectTimer);reconnectTimer=setTimeout(()=>{if(run===epoch&&connected&&!stopped)void reconnect(run)},3000)}}
 }
 async function boot(account){
   const run=++epoch;
   stopConnection?.();stopSession?.();clearTimeout(projectionTimer);clearTimeout(retryTimer);clearTimeout(reconnectTimer);retryDelay=1000;
   ready=false;sessionActive=false;connected=false;stopped=false;bridge=null;pending=null;saving=null;
-  user=account;ownState=null;lastText='';$('game-container').replaceChildren();$('toolbar').hidden=true;
+  user=account;ownState=null;lastText='';saveBlocked=false;lastSaveError='';confirmedSaveId=null;inFlightRecord=null;$('game-container').replaceChildren();$('toolbar').hidden=true;
   if(!user){stopFriends();$('login').hidden=false;gate('Entre com sua conta Google para continuar.');return}
   $('login').hidden=true;gate('Conectando à sua fazenda…');
   connectionReady=new Promise(resolve=>{resolveConnection=resolve});
@@ -210,22 +239,25 @@ async function boot(account){
   if(token!==sessionId){await disconnectPrevious();return}
   const remote=(await sdk.get(sdk.ref(db,`farms/${user.uid}`))).val();
   if(run!==epoch||stopped)return;
-  revision=remote?.revision||0;ownState=remote?.state||null;
-  // Recuperação conservadora: nunca substitui um save remoto mais novo.
-  try{
-    const recovery=JSON.parse(sessionStorage.getItem('mf-recovery-v2:'+user.uid)||'null');
-    if(recovery?.state&&Number(recovery.revision)===revision&&Date.now()-recovery.at<86400000){
-      ownState=recovery.state;
-      lastText='';
-      console.warn('[recovery] progresso pendente desta aba restaurado');
-    }else if(recovery)sessionStorage.removeItem('mf-recovery-v2:'+user.uid);
-  }catch(e){console.warn('[recovery]',e)}
+  revision=remote?.revision||0;confirmedSaveId=remote?.saveId||null;ownState=remote?.state||null;
+  // A nuvem é a autoridade; só recupere uma pendência baseada nela.
+  let restoredPending=false;
+  for(const storage of [localStorage,sessionStorage])try{
+    const recovery=JSON.parse(storage.getItem(recoveryKey())||'null');
+    const recovered=recoverPendingState(remote,recovery);
+    if(recovered){ownState=recovered;restoredPending=true;break;}
+  }catch(e){console.warn('[pending recovery]',e)}
+  if(!restoredPending)try{
+    const legacy=JSON.parse(sessionStorage.getItem('mf-recovery-v2:'+user.uid)||'null');
+    if(legacy?.state&&Number(legacy.revision)===revision&&Date.now()-legacy.at<86400000)ownState=legacy.state;
+    else if(legacy)sessionStorage.removeItem('mf-recovery-v2:'+user.uid);
+  }catch(e){console.warn('[legacy recovery]',e)}
   // Resgate autenticado, atômico e único, antes de abrir o jogo ou permitir saves.
   if(ownState){
     try{
       const credit=await redeemTestCredit({sdk,db,uid:user.uid,sessionId,revision,active:()=>run===epoch&&!stopped});
       if(run!==epoch||stopped)return;
-      if(credit){revision=credit.revision;ownState={...ownState,moedas:ownState.moedas+credit.amount};lastText='';}
+      if(credit){revision=credit.revision;confirmedSaveId=credit.saveId;ownState={...ownState,moedas:ownState.moedas+credit.amount};lastText='';}
     }catch(e){console.warn('[crédito de teste]',e)}
   }
   if(run!==epoch||stopped)return;
@@ -244,8 +276,9 @@ async function drain(){
     if(stopped)return false;
     if(pending)throw new Error('Ainda há progresso sem confirmação do servidor. Aguarde a sincronização antes de visitar amigos.');
     return true;
-  }catch(e){suspending=false;if(connected)$('gate').hidden=true;throw e}
+  }catch(e){suspending=false;if(connected&&!saveBlocked)$('gate').hidden=true;throw e}
 }
+$('sync').onclick=()=>{if(stopped)return;if(!pending){if(ready&&saveBlocked){saveBlocked=false;checkpoint();}return;}clearTimeout(retryTimer);status('Tentando salvar…');void flush().catch(e=>retryPending(e));};
 $('logout').onclick=async()=>{
   try{
     if(!visiting&&!await drain())return;
@@ -258,7 +291,7 @@ $('home').onclick=async()=>{
     gate('Abrindo sua fazenda…');
     const remote=(await sdk.get(sdk.ref(db,`farms/${user.uid}`))).val();
     if(stopped)return;
-    revision=remote?.revision||0;ownState=remote?.state||null;lastText='';mount(ownState,false);
+    revision=remote?.revision||0;confirmedSaveId=remote?.saveId||null;ownState=remote?.state||null;lastText='';mount(ownState,false);
   }catch(e){fail(e)}
 };
 // Fertilizações dos amigos: só aplica com a própria fazenda aberta e o jogo pronto.
