@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';import '../public/plot-ground.js';
+test('solo une apenas bordas compartilhadas, incluindo contato parcial',()=>{
+ let fills=0;const g={save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},fill(){fills++;}};
+ const a={gx:0,gy:0,w:2,h:2,cultura:'melancia'},project=(x,y)=>({x:(x-y)*48,y:(x+y)*24});
+ MFPlotGround.drawJoins(g,[a,{...a,gx:3}],project);assert.equal(fills,0);
+ MFPlotGround.drawJoins(g,[a,{...a,gx:2}],project);assert.equal(fills,1);
+ MFPlotGround.drawJoins(g,[a,{...a,gx:2,gy:1}],project);assert.equal(fills,2);
+ MFPlotGround.drawJoins(g,[a,{...a,gx:2,gy:2}],project);assert.equal(fills,2);
+ MFPlotGround.drawJoins(g,[a,{...a,gx:2}],project,a);assert.equal(fills,2);
+});

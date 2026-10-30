@@ -4954,6 +4954,8 @@ function isSoloOuCulturaTerreno(item) {
   });
 
 
+  window.MFPlotGround?.drawJoins(ctx,terrenos,gridToScreen,modoMover?estruturaMovendo:null);
+
   // desenha em ordem
   for (const item of drawables) {
     if(item.kind==='fenceRail'||item.kind==='fencePost'){window.MFFences.drawItem(ctx,item);continue;}
