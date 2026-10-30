@@ -52,8 +52,8 @@
   if(visiting()||!modoMover||estruturaMovendo||mode)return false;
   const target=hit(mouse({clientX:x,clientY:y}),touch?22:13);
   if(!target)return false;
-  mode={type:target.type};original=target;hover=target;axis='auto';
-  rotate.textContent='Direção: automática ↔';
+  mode={type:target.type};original=target;hover=target;axis=target.axis;
+  rotate.textContent=axis==='x'?'Direção: ↘ (R)':'Direção: ↙ (R)';
   toolbar.hidden=false;store.hidden=false;
   info.textContent='Cerca selecionada — arraste ou toque no destino para mover.';
   canvas.style.cursor='grabbing';requestRedraw();
@@ -61,7 +61,10 @@
  }
  function hoverMoveAt(x,y){
   if(!original||!modoMover)return false;
-  hover=closest(mouse({clientX:x,clientY:y}),original.type);
+  // O clique costuma acontecer sobre o trilho (17 px acima do chão).
+  // Convertemos para a aresta no solo antes de encaixar na grade isométrica.
+  const p=mouse({clientX:x,clientY:y});p.y+=17;
+  hover=closest(p,original.type);
   requestRedraw();
   return !!hover;
  }
