@@ -26,6 +26,6 @@ test('ovelha existente passa a um quadrado sem perder produção ou idade',()=>{
  assert.equal(cfg.items['item-ovelha'].w,1);assert.equal(cfg.items['item-ovelha'].h,1);assert.ok(96*.9<96*2*.7);
 });
 test('ovelha descansa, pasta e volta à posição inicial em ciclos de 20 segundos',()=>{
- assert.ok(MFSheepAnimation.frameIndex(13999)<6);assert.equal(MFSheepAnimation.frameIndex(14000),6);assert.ok(MFSheepAnimation.frameIndex(16000)>=6);assert.equal(MFSheepAnimation.frameIndex(19999),17);assert.equal(MFSheepAnimation.frameIndex(20000),0);
- for(let n=0;n<60000;n+=50)assert.ok(MFSheepAnimation.frameIndex(n)>=0&&MFSheepAnimation.frameIndex(n)<18);
+ assert.equal(MFSheepAnimation.frameIndex(12999),0);assert.equal(MFSheepAnimation.frameIndex(13000),0);assert.equal(MFSheepAnimation.frameIndex(13300),10);assert.ok(MFSheepAnimation.frameIndex(16000)>=20);assert.equal(MFSheepAnimation.frameIndex(19999),0);assert.equal(MFSheepAnimation.frameIndex(20000),0);
+ for(let n=0;n<60000;n+=50)assert.ok(MFSheepAnimation.frameIndex(n)>=0&&MFSheepAnimation.frameIndex(n)<26);
 });
