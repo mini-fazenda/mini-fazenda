@@ -153,3 +153,21 @@ A comparação do progresso desconsidera apenas `savedAt` e `activeSeconds`, que
 mudam sem ações do jogador, para evitar transações contínuas com a fazenda parada.
 Alterações reais continuam sendo capturadas. Um documento existente sem `state`
 ou com revisão inválida é bloqueado para análise, em vez de ser zerado.
+
+## Recuperação de `maxretry` ao entrar/salvar
+
+O aviso de falha no save após autenticar não é uma recusa do login Google. Quando
+uma transação de `farms/$uid` esgota os retries do SDK, a sessão passa a usar a
+API REST do próprio Realtime Database, autenticada com o token Firebase atual.
+Ela lê a versão com `X-Firebase-ETag: true` e grava com `If-Match`: qualquer mudança
+concorrente rejeita a escrita com HTTP 412, sem substituir o documento novo.
+As regras de dono, sessão e revisão continuam sendo aplicadas pelo Firebase.
+
+Não há `set` incondicional para contornar o erro, nem exclusão/recriação de conta.
+Resposta perdida é confirmada pelo `saveId`, evitando reaplicar o progresso. Token
+expirado é renovado uma vez; falhas continuam visíveis e pausam a simulação. Conflitos
+de revisão só podem ser repetidos na mesma sessão e em número limitado por tentativa.
+A troca de transporte não exige regras novas; as regras de compatibilidade de contas
+sem revisão, descritas acima, continuam necessárias para esses documentos específicos.
+
+Referência: https://firebase.google.com/docs/database/rest/save-data#section-conditional-requests

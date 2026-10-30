@@ -1,10 +1,12 @@
-const {chromium}=require('playwright');
+const {chromium,webkit,devices}=require('playwright');
 const mock=require('./firebase-mock.cjs');
 (async()=>{
- const browser=await chromium.launch({headless:true,...(process.env.MF_CHROMIUM_PATH?{executablePath:process.env.MF_CHROMIUM_PATH}:{}),args:['--no-sandbox']});
- const page=await browser.newPage();const errors=[];
+ const ios=process.env.MF_BROWSER==='webkit';
+ const browser=await (ios?webkit:chromium).launch({headless:true,...(!ios&&process.env.MF_CHROMIUM_PATH?{executablePath:process.env.MF_CHROMIUM_PATH}:{}),...(!ios?{args:['--no-sandbox']}: {})});
+ const page=await browser.newPage(ios?{...devices['iPhone 13'],viewport:{width:844,height:390}}:{});const errors=[];
+ await page.addInitScript(()=>{window.testFailMaxretry=1000;});
  page.on('pageerror',e=>errors.push(e.message));
- await page.route('**/firebase-config.js',r=>r.fulfill({contentType:'application/javascript',body:"window.MINI_FAZENDA_FIREBASE={apiKey:'demo',authDomain:'demo',databaseURL:'demo',projectId:'demo',appId:'demo'};"}));
+ await page.route('**/firebase-config.js',r=>r.fulfill({contentType:'application/javascript',body:"window.MINI_FAZENDA_FIREBASE={apiKey:'demo',authDomain:'demo',databaseURL:'https://firebase.test',projectId:'demo',appId:'demo'};"}));
  await page.route('https://www.gstatic.com/firebasejs/12.5.0/*',r=>r.fulfill({contentType:'application/javascript',body:mock}));
  await page.route('https://i.postimg.cc/**',r=>r.abort());
  await page.goto('http://localhost:8080');
@@ -35,6 +37,7 @@ const mock=require('./firebase-mock.cjs');
  f=page.frames().find(f=>f.url().includes('game.html'));
  if(await f.evaluate(()=>moedas)!==12346)throw Error('Visita perdeu saldo');
  if(errors.length)throw Error(errors.join('\n'));
- console.log('PASS: conta sem revisão com números e listas antigos salva, recarrega, visita e retorna sem apagar progresso.');
+ if(!await page.evaluate(()=>testRestWrites>0&&testFailMaxretry>0))throw Error('Não recuperou maxretry no primeiro save da conta');
+ console.log('PASS: conta com maxretry persistente e sem revisão com números e listas antigos salva, recarrega, visita e retorna sem apagar progresso.');
  await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
