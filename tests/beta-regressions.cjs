@@ -58,6 +58,28 @@ const {chromium,webkit,devices}=require('playwright');
   for(let i=0;i<2;i++){const a=player.acaoAtual;if(!a)throw Error('Ação perdida');player.gx=a.alvo.gx;player.gy=a.alvo.gy;player.path=[];a.state='ararando';a.startTime=performance.now()-a.duration-10;processArar();}
   if(terrenos.map(t=>t.cultura?.tipo).join(',')!=='cenoura,trigo'||moedas!==750)throw Error('Fila não retomou os dois plantios e cobranças corretas');
  });
- if(errors.length)throw Error(errors.join('\n'));console.log('PASS: fila de plantio volta com semente e preço corretos ('+(ios?'WebKit/iOS':'Chromium/toque')+')');
+ console.log('PASS: fila de plantio volta com semente e preço corretos');
+ await f.evaluate(()=>{
+  terrenos.forEach(t=>(t._timers||[]).forEach(clearTimeout));terrenos=[];player.acaoAtual=null;player.path=[];filaAcoes=[];moedas=1000;
+  MFCharacter.choose('menino');MFTutorial.restore({step:5,done:true},false);MFDaily.restore({claimed:6,lastDay:'2026-10-30'});
+  const xp=playerXP,path=JSON.stringify(player.path);MFBarn.select();MFBarn.rotate();
+  if(placingItem.w!==6||placingItem.h!==4)throw Error('Giro da prévia incorreto');
+  if(!MFBarn.place(6,6))throw Error('Não colocou o celeiro');
+  const t=terrenos[0];if(moedas!==800||playerXP!==xp||player.acaoAtual||JSON.stringify(player.path)!==path)throw Error('Obra cobrou errado, prendeu o personagem ou premiou antes de concluir');
+  if(t.barnReadyAt-t.barnStartedAt!==300000)throw Error('Prazo da obra incorreto');
+ });
+ await reload();f=frame();await f.evaluate(()=>{
+  const t=terrenos[0];if(!MFBarn.is(t)||t.barnOrientation!==1||t.w!==6||t.h!==4)throw Error('Obra/giro não persistiu');
+  const xp=playerXP;t.barnStartedAt-=300001;t.barnReadyAt-=300001;parent.testPlaying=true;MFBarn.tick();MFBarn.tick();parent.testPlaying=false;
+  if(playerXP!==xp+5||!t.barnXPGranted)throw Error('Obra não deu exatamente 5 estrelas');
+  document.querySelectorAll('#mf-char,#mf-daily').forEach(el=>{el.classList.remove('on');el.hidden=true;el.style.display='none';});
+  MFTutorial.restore({step:5,done:true},false);offsetX=0;offsetY=-180;zoom=.5;requestRedraw();
+ });
+ await f.waitForFunction(()=>{const im=preload(terrenos[0].imgSrc);return im.complete&&im.naturalWidth>0;});
+ const tap=await f.evaluate(()=>{const t=terrenos[0],p=gridToScreen(t.gx+(t.w-1)/2,t.gy+(t.h-1)/2);return {x:canvas.width/2+offsetX+p.x*zoom,y:canvas.height/3+offsetY+(p.y-80)*zoom};});
+ await f.locator('#game').tap({position:tap});
+ await f.waitForFunction(()=>document.getElementById('overlay-bau').style.display==='flex');
+ await reload();f=frame();await f.evaluate(()=>{const xp=playerXP;parent.testPlaying=true;MFBarn.tick();parent.testPlaying=false;if(playerXP!==xp)throw Error('Estrelas da obra repetiram após reload');});
+ if(errors.length)throw Error(errors.join('\n'));console.log('PASS: celeiro 200 moedas, obra autônoma 5min, giro, save, 5 estrelas únicas e toque abre vendas ('+(ios?'WebKit/iOS':'Chromium/toque')+')');
  await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});

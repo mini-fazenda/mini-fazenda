@@ -288,3 +288,12 @@ REVISAO 22 - REGRESSOES DOS BETAS: COLHEITA, SALDO E RETORNO
 - Crescimento e reavaliado ao retomar a aba; estado completo da cultura e preservado e o estagio vem do relogio.
 - Nao alterados precos, lucro, saldo existente nem concedidas compensacoes. Ciclo de 4 cenouras repetido tres vezes confere custo 600, venda 840 e lucro 240.
 - 46 testes unitarios passaram. Regressao real em Chromium/toque passou: todas as culturas lucram, venda imediata sem duplicar apos recarga, crescimento offline com artes locais e fila de plantio retomada. CI inclui WebKit/iOS.
+
+REVISAO 23 - CELEIRO CONSTRUIVEL E OVELHA ESTAVEL
+- Celeiro na aba Construcoes: 200 moedas, nivel 1, tamanho de 2x3 areas de plantacao (4x6 quadradinhos). Giro troca para 6x4, preserva o centro e o tamanho visual e rejeita sobreposicao.
+- Obra automatica de 5 minutos, com fundacao, estrutura e acabamento, contador visivel e personagem livre. Ao concluir: 5 estrelas uma unica vez, inclusive ao retornar depois de sair.
+- Antes de colocar ou no modo mover: botao Girar celeiro / tecla R. Clique no celeiro pronto abre o Mini Celeiro para vender produtos.
+- Prazo, orientacao e recibo de estrelas preservados no save e no MiniBau. Visitas nao concedem estrelas.
+- Artes das duas posicoes recortadas da folha enviada; sem fundo magenta ou fragmentos da linha seguinte.
+- Ovelha usa duas poses estaveis com transicoes curtas e mastigacao minima, eliminando a alternancia repetida de desenhos diferentes durante o descanso.
+- 49 testes unitarios e regressao local Chromium/toque passaram; inclui custo, personagem livre, giro, prazo, save, estrelas unicas e toque no predio abrindo vendas. CI tambem executa WebKit/iOS.
