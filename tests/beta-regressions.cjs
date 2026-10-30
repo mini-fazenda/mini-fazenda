@@ -239,6 +239,7 @@ const {chromium,webkit,devices}=require('playwright');
   window.MFCancelPlacing();
  });
  console.log('PASS: quatro árvores, vaca e ovelha compradas com coleta pronta; save não perde lote, segunda coleta bloqueada até o próximo ciclo');
+ await f.evaluate(()=>{MFShop.open();document.querySelector('.mfs-tab[data-k="animais"]').click();const sheep=document.querySelector('.mfs-card[data-id="item-ovelha"]').textContent,cow=document.querySelector('.mfs-card[data-id="item-vaca"]').textContent;if(!sheep.includes('30 min')||!sheep.includes('100')||sheep.includes('⏱ 5 min'))throw Error('Loja não mostra ciclo e venda da lã');if(!cow.includes('15 min')||!cow.includes('60')||cow.includes('⏱ 5 min'))throw Error('Loja não mostra ciclo e venda do leite');for(const tipo of ['porco','cavalo','bodejunino']){const a={tipo,etapa:0,startTime:Date.now(),totalTime:21600000};MFAnimalProduction.start(a);if(a.etapa!==2)throw Error('Animal novo não ficou adulto');}MFShop.close();});console.log('PASS: loja mostra ciclos e preços de leite/lã; animais novos colocados adultos');
  if(errors.length)throw Error(errors.join('\n'));console.log('PASS: celeiro 200 moedas, obra autônoma 5min, giro, save, 5 estrelas únicas e toque abre vendas ('+(ios?'WebKit/iOS':'Chromium/toque')+')');
  await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
