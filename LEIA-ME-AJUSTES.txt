@@ -280,3 +280,11 @@ REVISAO 21 - CREDITO UNICO DE TESTE AO ID 986568
 - Transacao no documento da fazenda soma ao saldo e grava recibo unico, preservado em todos os saves seguintes; nenhuma regra do Firebase foi afrouxada.
 - Preservados progresso, inventario, plantacoes e demais jogadores. Resgate ocorre antes de abrir a fazenda.
 - 46 testes unitarios passaram. Teste de navegador verifica resgate, gasto, salvamento e recarga sem repetir o credito.
+
+REVISAO 22 - REGRESSOES DOS BETAS: COLHEITA, SALDO E RETORNO
+- Colheita entra no Celeiro imediatamente; voo do produto e apenas visual. Flag credited preservada no save evita duplicacao; particulas antigas sem a flag continuam compativeis.
+- Plantio recusa terreno ocupado e pede save ao concluir. Fila guarda o tipo de trabalho, semente e preco e retoma essas informacoes ao reabrir; acao concluida tambem solicita save.
+- 33 artes legadas de culturas, solos e icones agora usam arquivos locais versionados, sem dependencia do Postimg. Imagens de saves antigos sao normalizadas.
+- Crescimento e reavaliado ao retomar a aba; estado completo da cultura e preservado e o estagio vem do relogio.
+- Nao alterados precos, lucro, saldo existente nem concedidas compensacoes. Ciclo de 4 cenouras repetido tres vezes confere custo 600, venda 840 e lucro 240.
+- 46 testes unitarios passaram. Regressao real em Chromium/toque passou: todas as culturas lucram, venda imediata sem duplicar apos recarga, crescimento offline com artes locais e fila de plantio retomada. CI inclui WebKit/iOS.
