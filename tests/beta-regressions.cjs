@@ -203,7 +203,7 @@ const {chromium,webkit,devices}=require('playwright');
  // Recarrega antes de terminar o voo dos produtos ao Celeiro.
  await reload();f=frame();await f.evaluate(()=>{
   const item=__gameInventory.map.espinafre,slot=__gameInventory.slots[item?.slotIndex];
-  if(item?.count!==4||slot?.dataset.count!=='4'||!slot.querySelector('img').src.endsWith('produtos/espinafre.png'))throw Error('Espinafre perdido ou invisível depois de recarregar');
+  if(item?.count!==4||slot?.dataset.count!=='4'||!slot.querySelector('img').src.endsWith(MFAdapter.project.items['item-espinafre'].lootIcon))throw Error('Espinafre perdido ou invisível depois de recarregar');
   if(terrenos.some(t=>t.cultura)||moedas!==1600)throw Error('Plantio/colheita não persistiu');
   const before=moedas;document.querySelector('#mf-sales-actions button:nth-child(2)').click();if(moedas!==before+560)throw Error('Quatro espinafres deveriam render 560 moedas');
   clearInventoryFromSave();for(let i=0;i<25;i++)addToInventory('produto-teste-'+i,1,'');addToInventory('espinafre',4,'');
