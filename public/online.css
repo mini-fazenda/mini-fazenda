@@ -36,3 +36,6 @@ body:has(#farms[style*="display: flex"]) :is(#mf-bounds,#mf-truck-markers),body:
 
 /* botão Amigos do topo removido: os amigos ficam na barra de baixo do jogo */
 #toolbar #neighbors{display:none!important}
+/* Visitando: "Voltar à minha fazenda" no canto inferior direito */
+#toolbar #home{position:fixed;top:auto!important;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom))}
+@media (max-width:900px),(max-height:500px){#toolbar #home{width:72px!important;height:82px!important;right:max(6px,env(safe-area-inset-right));bottom:max(6px,env(safe-area-inset-bottom))}}

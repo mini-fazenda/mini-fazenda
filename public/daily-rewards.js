@@ -29,14 +29,20 @@
    const button=document.createElement('button');button.type='button';
    button.textContent=done?'✓ Resgatado':r.preview?'Em breve':today&&can?'Resgatar':today?'Volte amanhã':'Próximo dia';
    button.disabled=done||!today||!can||r.preview||!!visiting();
-   button.onclick=()=>{
-    if(visiting())return;
+   button.onclick=async()=>{
+    if(visiting()||button.dataset.busy)return;
+    button.dataset.busy='1';button.disabled=true;
+    let now;
+    try{now=window.MFHost?.serverTime?await window.MFHost.serverTime():Date.now();}
+    catch(e){button.textContent='Sem conexão';delete button.dataset.busy;setTimeout(render,1500);return;}
+    delete button.dataset.busy;
     const ok=model.claim(index=>{
      const reward=rewards[index];
      if(reward.coins){moedas+=reward.coins;document.getElementById('valor-moedas').textContent=moedas;}
      else window.addToInventory(reward.item,reward.qty,icon(reward));
-    });
-    if(ok){window.MFHost?.changed?.('daily-reward');requestRedraw();render();}
+    },now);
+    if(ok){window.MFHost?.changed?.('daily-reward');requestRedraw();}
+    render();
    };
    card.append(title,img,name,button);cards.append(card);
   });

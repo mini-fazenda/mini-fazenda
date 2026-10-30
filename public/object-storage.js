@@ -62,7 +62,7 @@
   if(shown||visiting()||!window.MFHost||!window.MFDaily||document.querySelector('#mf-char.on'))return;
   if(!window.__mfCharacter)return;
   shown=true;clearInterval(timer);
-  const state=window.MFDaily.capture(),today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-  if(state.claimed<6&&state.lastDay!==today)window.MFDaily.open();
+  const state=window.MFDaily.capture(),today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(Date.now()));
+  if(state.claimed<6&&(!state.lastDay||today>state.lastDay))window.MFDaily.open();
  },600);
 })();

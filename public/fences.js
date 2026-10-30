@@ -3,7 +3,8 @@
  const core=window.MFFenceCore,board=core.create();let mode=null,hover=null,down=false,axis='auto',original=null,lastPaint=null;
  const visiting=()=>!!window.MFHost?.isVisiting?.();
  const point=p=>gridToScreen(p.gx-.5,p.gy-.5);
- const changed=()=>{window.MFHost?.changed?.('fences');requestRedraw();};
+ let invalidate=()=>{};
+ const changed=()=>{invalidate();window.MFHost?.changed?.('fences');requestRedraw();};
  function line(ctx,a,b,color,width){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';ctx.stroke();}
  function rail(ctx,e){const [a,b]=core.ends(e).map(point),white=e.type==='white';ctx.save();
   line(ctx,{x:a.x,y:a.y+2},{x:b.x,y:b.y+2},'#244b2828',5);
@@ -50,9 +51,10 @@
   const card=e.target.closest?.('#item-cerca-flores,#item-cerca-arame,#item-cerca-branca');if(card){e.preventDefault();e.stopImmediatePropagation();const type=Object.keys(core.catalog).find(t=>core.catalog[t].id===card.id);start(type);return;}
   if(mode&&e.target.closest?.('#btn-mover,#btn-enxada,#btn-trator,#btn-loja,#btn-bau,#mf-btn-celeiro,#mf-btn-presente'))stop();
  },true);
- for(const event of ['mousedown','mousemove','mouseup','click'])canvas.addEventListener(event,e=>{
-  if(visiting())return;const p=mouse(e);
+ for(const event of ['mousedown','mousemove','mouseup','click'])window.addEventListener(event,e=>{
+  if(e.target!==canvas||visiting())return;const p=mouse(e);
   if(!mode&&modoMover&&!estruturaMovendo){const target=hit(p);if(event==='click'&&target){e.preventDefault();e.stopImmediatePropagation();mode={type:target.type};original=target;axis='auto';rotate.textContent='Direção: automática ↔';hover=target;toolbar.hidden=false;store.hidden=false;info.textContent='Mover cerca — escolha outro trecho ou guarde no MiniBaú';requestRedraw();return;}if(target&&(event==='mousedown'||event==='mouseup')){e.preventDefault();e.stopImmediatePropagation();return;}}
+  if(!mode&&!modoMover&&!modoTrator&&!modoColocar&&!placingItem&&event==='click'){const target=hit(p);if(target&&freeSpot(p)){e.preventDefault();e.stopImmediatePropagation();openMenu(target,e);return;}}
   if(!mode&&modoTrator){const target=hit(p);if(target){e.preventDefault();e.stopImmediatePropagation();if(event==='click'&&board.store(target))changed();return;}}
   if(!mode)return;e.preventDefault();e.stopImmediatePropagation();hover=closest(p,mode.type);canvas.style.cursor='crosshair';
   if(event==='mousedown'&&e.button===0){down=true;if(!original)paint(hover);}
@@ -63,6 +65,27 @@
  },true);
  canvas.addEventListener('mouseleave',()=>{hover=null;down=false;requestRedraw();});window.addEventListener('mouseup',()=>down=false);window.addEventListener('blur',()=>down=false);
  document.addEventListener('keydown',e=>{if(!mode||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key==='Escape'){stop();e.preventDefault();}else if(e.key.toLowerCase()==='r'){turn();e.preventDefault();}});
+ // ---- menu da cerca (Mover / Guardar no Mini Baú) ----
+ const menu=document.createElement('div');menu.id='mf-fence-menu';menu.hidden=true;
+ menu.innerHTML='<b></b><button type="button" data-move>✥ Mover</button><button type="button" data-keep>📦 Guardar no Mini Baú</button><button type="button" data-close class="x">✕</button>';document.body.append(menu);
+ const menuStyle=document.createElement('style');menuStyle.textContent='#mf-fence-menu[hidden]{display:none!important}#mf-fence-menu{position:fixed;z-index:1500;transform:translate(-50%,-115%);background:#fff0bd;border:3px solid #86552b;border-radius:14px;padding:8px;display:flex;align-items:center;gap:6px;box-shadow:0 4px 15px #0006;color:#63401f;font:15px Amfost,Arial;white-space:nowrap}#mf-fence-menu b{font-weight:400;margin:0 4px}#mf-fence-menu button{font:16px Amfost,Arial;background:linear-gradient(#a4df64,#589a33);border:2px solid #46752b;border-radius:8px;padding:6px 10px;color:#fff;cursor:pointer}#mf-fence-menu button.x{background:linear-gradient(#e59a7f,#b8553b);border-color:#8c3d27;padding:6px 9px}';document.head.append(menuStyle);
+ let menuTarget=null;
+ function closeMenu(){menu.hidden=true;menuTarget=null;}
+ function openMenu(target,e){menuTarget=target;menu.querySelector('b').textContent=core.catalog[target.type].name.replace('Cerca de madeira com ','Cerca com ');menu.style.left=Math.max(140,Math.min(innerWidth-140,e.clientX))+'px';menu.style.top=Math.max(70,e.clientY)+'px';menu.hidden=false;}
+ menu.querySelector('[data-close]').onclick=closeMenu;
+ menu.querySelector('[data-keep]').onclick=()=>{const t=menuTarget;closeMenu();if(t&&board.store(t)){changed();window.MFToast?.('Cerca guardada no Mini Baú 📦');}};
+ menu.querySelector('[data-move]').onclick=()=>{const t=menuTarget;closeMenu();if(!t)return;setFarmMoveMode(true);mode={type:t.type};original=t;axis='auto';rotate.textContent='Direção: automática ↔';hover=t;toolbar.hidden=false;store.hidden=false;info.textContent='Mover cerca — toque no novo lugar ou guarde no MiniBaú';requestRedraw();};
+ document.addEventListener('pointerdown',e=>{if(!menu.hidden&&!e.target.closest?.('#mf-fence-menu'))closeMenu();},true);
+ // no toque normal, a cerca só abre o menu se ali não tiver colheita/arar para fazer
+ function freeSpot(p){try{const tile=screenPointToTile(p.x,p.y),t=findTerrainAt(tile.gx,tile.gy);return farmPointerAction(t)==='arrow';}catch(_){return true;}}
+ // ---- colisão: a cerca entre dois quadrados bloqueia a passagem ----
+ let blockCache=null;
+ function blockSet(){if(blockCache)return blockCache;blockCache=new Set(board.list().map(core.key));return blockCache;}
+ function blocks(x,y,nx,ny){const b=blockSet();if(!b.size)return false;
+  if(x===nx&&Math.abs(y-ny)===1)return b.has('x:'+x+':'+Math.max(y,ny));
+  if(y===ny&&Math.abs(x-nx)===1)return b.has('y:'+Math.max(x,nx)+':'+y);
+  return false;}
  function previewDraw(ctx){if(!mode||!hover)return;const available=original?true:mode.fromStock?board.stock()[mode.type]>0:moedas>=core.catalog[mode.type].price;const fits=available&&board.canPlace(hover,COLS,ROWS,original?core.key(original):null);ctx.save();ctx.globalAlpha=.65;rail(ctx,hover);for(const p of core.ends(hover))post(ctx,{...p,type:hover.type});const [a,b]=core.ends(hover).map(point);line(ctx,a,b,fits?'#b5ed55':'#ef6551',5);ctx.restore();}
- window.MFFences={start,stop,capture:()=>board.capture(),restore:s=>{stop();board.restore(s);requestRedraw();},stock:()=>board.stock(),renderStored(grid){for(const [type,count]of Object.entries(board.stock())){if(!count)continue;const card=document.createElement('article'),pic=document.createElement('img'),label=document.createElement('strong'),button=document.createElement('button');pic.src=core.catalog[type].icon;pic.alt=core.catalog[type].name;label.textContent=core.catalog[type].name+' ×'+count;button.textContent='Colocar';button.onclick=()=>{document.getElementById('mf-objects').hidden=true;start(type,true);};card.append(pic,label,button);grid.append(card);}},appendDrawables(list){if(mode&&((!original&&modoColocar!=='fence')||(original&&!modoMover)))stop();for(const e of board.list()){if(original&&core.key(e)===core.key(original))continue;const [a,b]=core.ends(e).map(point);list.push({kind:'fenceRail',fence:e,depth:(a.y+b.y),footY:(a.y+b.y)/2});}for(const p of board.posts()){const a=point(p);list.push({kind:'fencePost',fence:p,depth:a.y*2+.1,footY:a.y});}},drawItem,drawPreview:previewDraw};
+ invalidate=()=>{blockCache=null;};
+ window.MFFences={start,stop,blocks,count:()=>board.list().length,capture:()=>board.capture(),restore:s=>{stop();board.restore(s);blockCache=null;requestRedraw();},stock:()=>board.stock(),renderStored(grid){for(const [type,count]of Object.entries(board.stock())){if(!count)continue;const card=document.createElement('article'),pic=document.createElement('img'),label=document.createElement('strong'),button=document.createElement('button');pic.src=core.catalog[type].icon;pic.alt=core.catalog[type].name;label.textContent=core.catalog[type].name+' ×'+count;button.textContent='Colocar';button.onclick=()=>{document.getElementById('mf-objects').hidden=true;start(type,true);};card.append(pic,label,button);grid.append(card);}},appendDrawables(list){if(mode&&((!original&&modoColocar!=='fence')||(original&&!modoMover)))stop();for(const e of board.list()){if(original&&core.key(e)===core.key(original))continue;const [a,b]=core.ends(e).map(point);list.push({kind:'fenceRail',fence:e,depth:(a.y+b.y),footY:(a.y+b.y)/2});}for(const p of board.posts()){const a=point(p);list.push({kind:'fencePost',fence:p,depth:a.y*2+.1,footY:a.y});}},drawItem,drawPreview:previewDraw};
 })();

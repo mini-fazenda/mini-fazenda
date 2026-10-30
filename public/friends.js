@@ -146,11 +146,11 @@ export const api = {
     try { await sdk.update(sdk.ref(db), { [`friends/${uid}/${other}`]: null, [`friends/${other}/${uid}`]: null }); } catch (e) { throw new Error(friendly(e)); }
   },
   visit(other) { return ctx?.visit?.(other); },
-  // Quantas fertilizações de amizade ainda restam nas últimas 24h.
-  async fertilizeLeft() {
-    if (!ctx) return 0;
+  // Quantos fertilizantes ainda restam para ESTE amigo nas últimas 24h (5 por amigo).
+  async fertilizeLeft(owner) {
+    if (!ctx || !owner) return { left: 0, resetIn: 0 };
     const { sdk, db, uid } = ctx;
-    const u = (await sdk.get(sdk.ref(db, `fertUsage/${uid}`))).val();
+    const u = (await sdk.get(sdk.ref(db, `fertUsage/${uid}/${owner}`))).val();
     if (!u || Date.now() - (Number(u.start) || 0) >= DAY) return { left: FERT_PER_DAY, resetIn: 0 };
     return { left: Math.max(0, FERT_PER_DAY - (Number(u.n) || 0)), resetIn: Math.max(0, (Number(u.start) || 0) + DAY - Date.now()) };
   },
@@ -162,17 +162,17 @@ export const api = {
     try {
       const isFriend = (await sdk.get(sdk.ref(db, `friends/${uid}/${owner}`))).val();
       if (!isFriend) throw new Error('Só dá para fertilizar a fazenda de amigos.');
-      const u = (await sdk.get(sdk.ref(db, `fertUsage/${uid}`))).val(), now = Date.now();
+      const u = (await sdk.get(sdk.ref(db, `fertUsage/${uid}/${owner}`))).val(), now = Date.now();
       let usage;
       if (!u || now - (Number(u.start) || 0) >= DAY) usage = { start: now, n: 1 };
       else if ((Number(u.n) || 0) < FERT_PER_DAY) usage = { start: Number(u.start), n: (Number(u.n) || 0) + 1 };
-      else { const h = Math.ceil(((Number(u.start) || 0) + DAY - now) / 3600000); throw new Error(`Você já usou as ${FERT_PER_DAY} fertilizações de hoje. Volte em ${h}h.`); }
+      else { const h = Math.ceil(((Number(u.start) || 0) + DAY - now) / 3600000); throw new Error(`Você já usou os ${FERT_PER_DAY} fertilizantes nessa fazenda. Volte em ${h}h.`); }
       const id = now.toString(36) + Math.random().toString(36).slice(2, 7);
       await sdk.update(sdk.ref(db), {
-        [`fertUsage/${uid}`]: usage,
+        [`fertUsage/${uid}/${owner}`]: usage,
         [`fertilize/${owner}/${uid}/${id}`]: { gx: Math.floor(plot.gx), gy: Math.floor(plot.gy), at: sdk.serverTimestamp(), name: String(me?.name || myName || 'Amigo').slice(0, 12) },
       });
-      return { left: FERT_PER_DAY - usage.n };
+      return { left: FERT_PER_DAY - usage.n, resetIn: usage.start + DAY - now };
     } catch (e) { throw new Error(friendly(e)); }
   },
 };

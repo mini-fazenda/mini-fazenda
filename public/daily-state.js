@@ -5,7 +5,7 @@
   constructor(saved={}){this.restore(saved)}
   restore(s={}){this.data={claimed:Math.max(0,Math.min(6,Math.floor(Number(s.claimed)||0))),lastDay:typeof s.lastDay==='string'?s.lastDay:''}}
   capture(){return {...this.data}}
-  available(now=Date.now()){return this.data.claimed<6&&this.data.lastDay!==dayKey(now)}
+  available(now=Date.now()){return this.data.claimed<6&&(!this.data.lastDay||dayKey(now)>this.data.lastDay)}
   claim(grant,now=Date.now()){
    if(!this.available(now))return false;
    grant(this.data.claimed);this.data.claimed++;this.data.lastDay=dayKey(now);return true;

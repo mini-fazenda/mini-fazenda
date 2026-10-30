@@ -6,6 +6,12 @@
   const css = `
   /* janelas sempre acima da barra de amigos e do menu */
   #overlay-bau,#overlay-config{z-index:2050!important}
+  /* Celeiro: botões Vender / Vender tudo sempre visíveis (antes ficavam escondidos
+     embaixo da rolagem em telas de notebook, e a venda não acontecia) */
+  #overlay-bau #mf-sales-actions{position:sticky!important;bottom:0!important;z-index:30!important;background:#77381fee!important;border-radius:12px!important}
+  @media (min-height:521px){
+    #overlay-bau #bau-content{width:min(720px,94vw,calc((94vh - 300px) * 1.5 + 60px))!important;min-width:min(420px,94vw)!important}
+  }
   @media (max-height:520px){
     /* ---------- Recompensas diárias ---------- */
     #mf-daily{padding:6px!important}

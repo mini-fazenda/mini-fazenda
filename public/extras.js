@@ -155,13 +155,22 @@
 
   body.mf-visit #mf-menu,body.mf-visit #btn-enxada,body.mf-visit #mf-amigos{display:none!important}
   /* ---------- Fertilizar (visita) ---------- */
-  #mf-visit-bar{position:fixed;left:50%;top:max(10px,env(safe-area-inset-top));transform:translateX(-50%);z-index:5;background:#3b260bee;border:3px solid #c98a3c;border-radius:16px;
-    color:#fff3cf;font:400 17px Amfost,Arial,sans-serif;padding:8px 16px;text-align:center;pointer-events:none;max-width:70vw;box-shadow:0 6px 16px #0007}
-  #mf-visit-bar b{color:#9bff6b;font-weight:400}
-  #mf-visit-bar small{display:block;font:700 12px Arial,sans-serif;color:#ffe9b0;margin-top:2px}
+  #mf-visit-bar{position:fixed;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:5;pointer-events:none;
+    background:linear-gradient(#6b4218f2,#3b260bf2);border:3px solid #c98a3c;border-radius:18px;color:#fff3cf;font:400 18px Amfost,Arial,sans-serif;
+    padding:6px 14px 7px;text-align:center;box-shadow:0 6px 16px #0007;max-width:92vw;box-sizing:border-box}
+  #mf-visit-bar .mfv-title{display:flex;align-items:center;justify-content:center;gap:8px;line-height:1.1}
+  #mf-visit-bar .mfv-title b{color:#9bff6b;font-weight:400}
+  #mf-visit-bar .mfv-count{background:#2a1a07;border:2px solid #c98a3c;border-radius:10px;padding:0 8px;color:#fff;font-size:17px}
+  #mf-visit-bar .mfv-bags{display:flex;justify-content:center;gap:6px;margin:4px 0 2px}
+  #mf-visit-bar .mfv-bags img{width:46px;height:54px;object-fit:contain;filter:drop-shadow(0 2px 0 #0006);transition:filter .3s,opacity .3s,transform .3s}
+  #mf-visit-bar .mfv-bags img.used{filter:grayscale(1) brightness(.6);opacity:.35;transform:scale(.82)}
+  #mf-visit-bar small{display:block;font:700 12px Arial,sans-serif;color:#ffe9b0;margin-top:1px}
+  #mf-visit-bar.empty{border-color:#8a8a8a}
+  .mf-fert-fly{position:fixed;z-index:7;width:46px;height:54px;pointer-events:none;margin:-27px 0 0 -23px}
+  @media (max-width:900px),(max-height:500px){#mf-visit-bar{font-size:14px;padding:4px 10px 5px;border-radius:14px}
+    #mf-visit-bar .mfv-bags img,.mf-fert-fly{width:32px;height:38px}#mf-visit-bar .mfv-count{font-size:14px}#mf-visit-bar small{font-size:10.5px}}
   .mf-spark{position:fixed;z-index:6;pointer-events:none;font-size:26px;animation:mfSpark 1.2s ease-out forwards}
   @keyframes mfSpark{0%{transform:translate(-50%,-50%) scale(.4);opacity:0}20%{opacity:1}100%{transform:translate(calc(-50% + var(--dx)),calc(-50% - 70px)) scale(1.2);opacity:0}}
-  @media (max-width:900px),(max-height:500px){#mf-visit-bar{font-size:13px;padding:5px 10px}}
 
   /* ---------- Mini Loja ---------- */
   #mf-shop{position:fixed;inset:0;z-index:2000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45)}
@@ -723,18 +732,50 @@
       return true;
     }
   };
-  // Visitante: toque numa plantação crescendo do amigo.
-  let visitBar = null, fertLeft = null, fertBusy = false;
+  // Visitante: barra com 5 fertilizantes POR AMIGO (voltam 24h depois do primeiro uso nessa fazenda).
+  const FERT_IMG = 'assets/fertilizante.svg', FERT_MAX = 5;
+  let visitBar = null, fertLeft = null, fertBusy = false, fertResetAt = 0, fertTimer = 0;
+  function fmtWait(ms) {
+    const m = Math.max(1, Math.ceil(ms / 60000)), h = Math.floor(m / 60);
+    return h ? `${h}h ${String(m % 60).padStart(2, '0')}min` : `${m} min`;
+  }
   function renderVisitBar(extra) {
     if (!visitBar) return;
-    const left = fertLeft == null ? '…' : fertLeft;
-    visitBar.innerHTML = `🌱 <b>Fertilizar</b>: toque numa plantação crescendo do seu amigo<small>${extra || `Restam ${left} de 5 hoje · cada uma acelera 35%`}</small>`;
+    const left = fertLeft == null ? null : fertLeft;
+    let bags = '';
+    for (let i = 0; i < FERT_MAX; i++) bags += `<img src="${FERT_IMG}" alt="" draggable="false"${left != null && i >= left ? ' class="used"' : ''}>`;
+    let msg = extra;
+    if (!msg) {
+      if (left == null) msg = 'Carregando fertilizantes…';
+      else if (left === 0) msg = fertResetAt ? `Acabaram nessa fazenda! Voltam em ${fmtWait(fertResetAt - Date.now())}` : 'Acabaram nessa fazenda por hoje.';
+      else msg = 'Toque numa plantação crescendo · cada um acelera 35%';
+    }
+    visitBar.classList.toggle('empty', left === 0);
+    visitBar.innerHTML = `<div class="mfv-title">🌱 <b>Fertilizante</b> <span class="mfv-count">${left == null ? '…' : left}/${FERT_MAX}</span></div><div class="mfv-bags">${bags}</div><small>${msg}</small>`;
+  }
+  function flyBag(to, done) {
+    const bags = visitBar?.querySelectorAll('.mfv-bags img:not(.used)'), from = bags && bags[bags.length - 1];
+    if (!from || !from.animate) { done(); return; }
+    const r = from.getBoundingClientRect(), img = document.createElement('img');
+    img.src = FERT_IMG; img.className = 'mf-fert-fly'; img.style.left = (r.left + r.width / 2) + 'px'; img.style.top = (r.top + r.height / 2) + 'px';
+    (document.getElementById('mf-visit-cover') || document.body).appendChild(img);
+    const dx = to.x - (r.left + r.width / 2), dy = to.y - (r.top + r.height / 2);
+    const an = img.animate([
+      { transform: 'translate(0,0) scale(1)', opacity: 1 },
+      { transform: `translate(${dx * .5}px,${dy * .5 - 80}px) scale(1.15) rotate(-12deg)`, opacity: 1, offset: .55 },
+      { transform: `translate(${dx}px,${dy}px) scale(.5) rotate(10deg)`, opacity: 0 }], { duration: 650, easing: 'ease-in' });
+    an.onfinish = () => { img.remove(); done(); };
   }
   window.MFVisit = {
     async init(cover) {
-      if (!FR()?.fertilize || !window.MFHost?.visitingUid?.()) return;
+      const owner = window.MFHost?.visitingUid?.();
+      if (!FR()?.fertilize || !owner) return;
       visitBar = document.createElement('div'); visitBar.id = 'mf-visit-bar'; cover.appendChild(visitBar); renderVisitBar();
-      try { const r = await FR().fertilizeLeft(); fertLeft = r.left; renderVisitBar(); } catch (e) { fertLeft = null; renderVisitBar('Fertilização indisponível agora.'); }
+      try {
+        const r = await FR().fertilizeLeft(owner);
+        fertLeft = r.left; fertResetAt = r.resetIn ? Date.now() + r.resetIn : 0; renderVisitBar();
+      } catch (e) { fertLeft = null; renderVisitBar('Fertilizante indisponível agora.'); }
+      clearInterval(fertTimer); fertTimer = setInterval(() => { if (fertLeft === 0) renderVisitBar(); }, 30000);
     },
     async tap(x, y) {
       const F = FR(), owner = window.MFHost?.visitingUid?.(); if (!F?.fertilize || !owner || fertBusy) return;
@@ -745,13 +786,16 @@
       if (String(t.cultura.tipo) === 'morta') { renderVisitBar('Essa plantação já secou, não dá para fertilizar.'); return; }
       if (t.cultura.etapa === 2) { renderVisitBar('Essa já está pronta para colher!'); return; }
       if (t.cultura.fertilizada) { renderVisitBar('Essa plantação já foi fertilizada.'); return; }
-      if (fertLeft === 0) { renderVisitBar('Você já usou as 5 fertilizações de hoje.'); return; }
+      if (fertLeft === 0) { renderVisitBar(); return; }
       fertBusy = true;
       try {
         const res = await F.fertilize(owner, { gx: t.gx, gy: t.gy });
-        fertLeft = res.left; boost(t); const q = tileScreen(t); sparkleAt(q.x, q.y, host);
-        renderVisitBar(`Fertilizada! +35% de crescimento · restam ${fertLeft} de 5 hoje`);
-      } catch (e) { renderVisitBar(e?.message || 'Não deu para fertilizar.'); }
+        const q = tileScreen(t);
+        await new Promise(ok => flyBag(q, ok));
+        fertLeft = res.left; if (res.resetIn) fertResetAt = Date.now() + res.resetIn;
+        boost(t); sparkleAt(q.x, q.y, host);
+        renderVisitBar(fertLeft ? `Fertilizada! +35% de crescimento` : undefined);
+      } catch (e) { if (/fertilizantes nessa fazenda/.test(e?.message || '')) fertLeft = 0; renderVisitBar(e?.message || 'Não deu para fertilizar.'); }
       finally { fertBusy = false; }
     },
   };

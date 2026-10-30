@@ -1,11 +1,12 @@
 import {nextDocument,clearLegacySaves} from './persistence.js?v=account-v2';
-import {startFriends,stopFriends,publishProfile,api as friendsApi} from './friends.js?v=1';
+import {startFriends,stopFriends,publishProfile,api as friendsApi} from './friends.js?v=2';
 const $=id=>document.getElementById(id);
 const config=window.MINI_FAZENDA_FIREBASE;
 let sdk,auth,db,user,sessionId,revision=0,epoch=0;
 let ready=false,connected=false,sessionActive=false,stopped=false,visiting=false,suspending=false,visitingUid=null;
 let bridge=null,initialState=null,ownState=null,pending=null,saving=null,lastText='',lastKey=null;
 let stopConnection,stopSession,resolveConnection,connectionReady,projectionTimer;
+let clockOffset=0; // diferença entre o relógio do aparelho e o do servidor (anti-troca de data)
 function status(text){$('sync').textContent=text}
 function gate(text){$('farms').close();$('gate').hidden=false;$('message').textContent=text}
 function freeze(){ready=false;sessionActive=false;stopped=true;pending=null;clearTimeout(projectionTimer);$('game-container').replaceChildren();bridge=null;$('toolbar').hidden=true}
@@ -121,6 +122,18 @@ window.MFOnline={
   friends:friendsApi,
   myCode:()=>friendsApi.myCode(),
   changed:()=>queueMicrotask(checkpoint),
+  // Relógio do servidor: mudar a data do celular não adianta o jogo.
+  clockOffset:()=>clockOffset,
+  async serverTime(){
+    if(!sdk||!db||!user)return Date.now()+clockOffset;
+    try{
+      const r=sdk.ref(db,`clock/${user.uid}`);
+      await sdk.set(r,sdk.serverTimestamp());
+      const v=Number((await sdk.get(r)).val());
+      if(Number.isFinite(v)&&v>0)return v;
+    }catch(e){console.warn('[relógio]',e)}
+    return Date.now()+clockOffset; // regras antigas: usa a diferença informada pelo Firebase
+  },
   attach(api){
     if(stopped)return;
     bridge=api;ready=true;
@@ -133,7 +146,7 @@ function mount(state,visit){
   $('farm-title').textContent=visit?`Visitando: ${state.farmName||'Fazenda'}`:state?.farmName||'Minha fazenda';
   gate(visit?'Abrindo visita…':'Carregando sua fazenda…');
   const frame=document.createElement('iframe');frame.title=visit?'Visita à fazenda (somente visualização)':'Minha fazenda';
-  frame.src='game.html?v=amigos-1';frame.allow='fullscreen';$('game-container').replaceChildren(frame);
+  frame.src='game.html?v=cerca-1';frame.allow='fullscreen';$('game-container').replaceChildren(frame);
   status(visit?'Somente visualização':'Online');
 }
 async function reconnect(run){
@@ -278,6 +291,7 @@ async function init(){
   const [app,authentication,database]=await Promise.all([import(base+'firebase-app.js'),import(base+'firebase-auth.js'),import(base+'firebase-database.js')]);
   sdk={...authentication,...database};const instance=app.initializeApp(config);
   auth=sdk.getAuth(instance);db=sdk.getDatabase(instance);
+  sdk.onValue(sdk.ref(db,'.info/serverTimeOffset'),s=>{clockOffset=Number(s.val())||0});
   // A autenticação pertence à aba, para que encerrar a sessão antiga não encerre a nova.
   await sdk.setPersistence(auth,sdk.browserSessionPersistence);
   $('login').disabled=false;

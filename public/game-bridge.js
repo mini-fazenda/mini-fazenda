@@ -7,6 +7,11 @@
   }
   const host = parent.MFOnline;
   window.MFHost = host;
+  // Todo o jogo passa a usar a hora do servidor (plantações, recompensas, pedidos).
+  if (typeof host.clockOffset === 'function') {
+    const realNow = Date.now.bind(Date);
+    Date.now = () => realNow() + (Number(host.clockOffset()) || 0);
+  }
   // Unifique o saldo usado pelas vendas antigas e pelo save da engine.
   Object.defineProperty(window,'moedas',{configurable:true,get:()=>moedas,set:value=>{if(Number.isFinite(value))moedas=value}});
   const clone = value => JSON.parse(JSON.stringify(value));

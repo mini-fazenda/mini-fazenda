@@ -145,15 +145,17 @@
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid",
-        ".validate": "newData.hasChildren(['start','n']) && newData.child('n').isNumber() && newData.child('n').val() >= 1 && newData.child('n').val() <= 5 && newData.child('start').isNumber() && newData.child('start').val() <= now + 60000 && (!data.exists() || (newData.child('start').val() === data.child('start').val() && newData.child('n').val() === data.child('n').val() + 1) || (newData.child('start').val() >= data.child('start').val() + 86400000 && newData.child('n').val() === 1))",
-        "start": {
-          ".validate": "newData.isNumber()"
-        },
-        "n": {
-          ".validate": "newData.isNumber()"
-        },
-        "$other": {
-          ".validate": false
+        "$owner": {
+          ".validate": "newData.hasChildren(['start','n']) && newData.child('n').isNumber() && newData.child('n').val() >= 1 && newData.child('n').val() <= 5 && newData.child('start').isNumber() && newData.child('start').val() <= now + 60000 && (!data.exists() || (newData.child('start').val() === data.child('start').val() && newData.child('n').val() === data.child('n').val() + 1) || (newData.child('start').val() >= data.child('start').val() + 86400000 && newData.child('n').val() === 1))",
+          "start": {
+            ".validate": "newData.isNumber()"
+          },
+          "n": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
         }
       }
     },
@@ -163,7 +165,7 @@
         "$from": {
           "$id": {
             ".write": "auth != null && ((auth.uid === $from && $from !== $owner && newData.exists() && !data.exists() && root.child('friends').child($owner).child($from).exists()) || (auth.uid === $owner && !newData.exists()))",
-            ".validate": "newData.hasChildren(['gx','gy','at','name']) && (newData.parent().parent().parent().parent().child('fertUsage').child($from).child('n').val() !== root.child('fertUsage').child($from).child('n').val() || newData.parent().parent().parent().parent().child('fertUsage').child($from).child('start').val() !== root.child('fertUsage').child($from).child('start').val())",
+            ".validate": "newData.hasChildren(['gx','gy','at','name']) && (newData.parent().parent().parent().parent().child('fertUsage').child($from).child($owner).child('n').val() !== root.child('fertUsage').child($from).child($owner).child('n').val() || newData.parent().parent().parent().parent().child('fertUsage').child($from).child($owner).child('start').val() !== root.child('fertUsage').child($from).child($owner).child('start').val())",
             "gx": {
               ".validate": "newData.isNumber()"
             },
@@ -181,6 +183,13 @@
             }
           }
         }
+      }
+    },
+    "clock": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.isNumber() && newData.val() === now"
       }
     }
   }
