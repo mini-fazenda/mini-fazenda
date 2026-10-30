@@ -4989,8 +4989,8 @@ if (img && img.complete && img.naturalWidth > 0) {
   const drawY = anchor.y - drawH + TILE_H * 0.9;
   const key='obj-'+(t._mfGifId||(t._mfGifId=++window.__mfGifSequence));
   const liveSheep=t.animal?.tipo==='ovelha'&&t.animal.etapa===2;
-  if (!(window.MFAdapter && (liveSheep?window.MFAdapter.spritePlace(key,animalFrame,anchor.x,drawY+drawH,drawW,drawH):window.MFAdapter.gifPlace(key,t.imgSrc,anchor.x,drawY+drawH,drawW,drawH)))) {
-    ctx.drawImage(img, drawX, drawY, drawW, drawH);
+  if (!(window.MFAdapter && (liveSheep?window.MFAdapter.spritePlace(key,animalFrame,anchor.x,drawY+drawH,drawW,drawH,t.animal?.flipped?-1:1):window.MFAdapter.gifPlace(key,t.imgSrc,anchor.x,drawY+drawH,drawW,drawH,t.animal?.flipped?-1:1)))) {
+    if(t.animal?.flipped){ctx.save();ctx.translate(anchor.x,0);ctx.scale(-1,1);ctx.drawImage(img,-drawW/2,drawY,drawW,drawH);ctx.restore();}else ctx.drawImage(img, drawX, drawY, drawW, drawH);
   }
   // O PNG do animal já foi desenhado no canvas. Só quando ele
   // realmente cruza a área visual de um humanoide à frente do canvas
@@ -5008,7 +5008,7 @@ if (img && img.complete && img.naturalWidth > 0) {
       const actorTop=actorFoot-ah, actorBottom=actorFoot;
       // Interseção de retângulos visíveis, não distância por tiles.
       if(drawX>=actorRight || drawX+drawW<=actorLeft || drawY>=actorBottom || drawY+drawH<=actorTop)continue;
-      window.MFAdapter.frontAnimalPlace('front-'+key,t.imgSrc,anchor.x,drawY+drawH,drawW,drawH,item.footY);
+      window.MFAdapter.frontAnimalPlace('front-'+key,t.imgSrc,anchor.x,drawY+drawH,drawW,drawH,item.footY,t.animal?.flipped?-1:1);
       break;
     }
   }
@@ -5122,7 +5122,7 @@ const anchor = gridToScreen(
 );
 const drawX = anchor.x - drawW / 2;
 const drawY = anchor.y - drawH + TILE_H * 0.9;
-if(!window.MFBarn?.drawSprite(ctx,estruturaMovendo,anchor,img)&&!window.MFCropSprites?.drawSprite(ctx,estruturaMovendo,anchor,img))ctx.drawImage(img, drawX, drawY, drawW, drawH);
+if(!window.MFBarn?.drawSprite(ctx,estruturaMovendo,anchor,img)&&!window.MFCropSprites?.drawSprite(ctx,estruturaMovendo,anchor,img)){if(estruturaMovendo.animal?.flipped){ctx.save();ctx.translate(anchor.x,0);ctx.scale(-1,1);ctx.drawImage(img,-drawW/2,drawY,drawW,drawH);ctx.restore();}else ctx.drawImage(img, drawX, drawY, drawW, drawH);}
   }
 
   ctx.restore();
@@ -5429,6 +5429,7 @@ function setFarmMoveMode(active) {
   if(btnMover)btnMover.title=active?'Mover: selecione, arraste ou toque no destino':'Seta: clique para ativar mover';
   if(!active)window.MFFences?.stop?.();
   moveHint();
+  window.MFMoveControls?.update?.();
   requestRedraw();
 }
 if(btnMover)btnMover.addEventListener('click',e=>{
@@ -7395,10 +7396,10 @@ function gifPlace(key,src,worldX,worldY,w,h,flip=1,z=5){
  if(!isGif(src))return false;
  return spritePlace(key,src,worldX,worldY,w,h,flip,worldY);
 }
-function frontAnimalPlace(key,src,worldX,worldY,w,h,footY=worldY){
+function frontAnimalPlace(key,src,worldX,worldY,w,h,footY=worldY,flip=1){
  // Cópia de animal PNG somente quando ocorre oclusão com um humanoide;
  // prioridade determinada por Y, não por z-index fixo.
- return spritePlace(key,src,worldX,worldY,w,h,1,footY);
+ return spritePlace(key,src,worldX,worldY,w,h,flip,footY);
 }
 function gifBegin(){frame++}function gifEnd(){for(const [key,val] of gifCache)if(val.frame!==frame)val.img.style.display='none'}
 function apply(p,opts={}){project=merge(copy(def),p||{});
@@ -7796,7 +7797,7 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 <script src="sheep-animation.js?v=suave-2"></script>
 <script src="animal-indicators.js?v=hidpi-1"></script>
 <script src="fence-art.js?v=1"></script>
-<script src="fences.js?v=level-gifts-2"></script>
+<script src="fences.js?v=compact-move-3"></script>
 <script src="barn.js?v=hidpi-1"></script>
 <script>
 // Sair do modo colocar: Esc ou botão direito (sementes e itens continuam em seleção contínua até cancelar).
@@ -7814,6 +7815,7 @@ canvas.addEventListener('contextmenu', e => { if (window.MFCancelPlacing()) e.pr
 <script src="ajustes-celular.js?v=3"></script>
 <script src="tutorial.js?v=hidpi-1"></script>
 <script src="save-runtime.js?v=1"></script>
+<script src="move-controls.js?v=1"></script>
 <script src="level-rewards-core.js?v=1"></script>
 <script src="level-rewards.js?v=1"></script>
 <script src="game-bridge.js?v=level-rewards-4"></script>
