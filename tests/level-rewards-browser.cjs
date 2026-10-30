@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');const {chromium,webkit}=require('playwright');const ios=process.env.MF_BROWSER==='webkit';
-(async()=>{const browser=await (ios?webkit:chromium).launch({headless:true,...(!ios&&process.env.MF_CHROMIUM_PATH?{executablePath:process.env.MF_CHROMIUM_PATH}:{}),args:['--no-sandbox']});try{
+(async()=>{const browser=await (ios?webkit:chromium).launch({headless:true,...(!ios&&process.env.MF_CHROMIUM_PATH?{executablePath:process.env.MF_CHROMIUM_PATH}:{}),...(!ios?{args:['--no-sandbox']}: {})});try{
  const page=await browser.newPage({viewport:{width:844,height:390},isMobile:true,hasTouch:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/firebase-config.js',r=>r.fulfill({contentType:'application/javascript',body:'window.MINI_FAZENDA_FIREBASE=null;'}));await page.goto('http://localhost:8080');
  await page.evaluate(()=>{window.testPlaying=false;window.testState=null;window.testAttached=false;window.MFOnline={isVisiting:()=>false,playing:()=>testPlaying,bootState:()=>testState,changed(){},attach:a=>{window.testAPI=a;testAttached=true},fail:e=>{throw e}};document.getElementById('gate').hidden=true;const f=document.createElement('iframe');f.src='game.html';document.getElementById('game-container').append(f);});
