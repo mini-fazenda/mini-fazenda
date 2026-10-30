@@ -1,8 +1,9 @@
 import {nextDocument,clearLegacySaves} from './persistence.js?v=account-v2';
+import {startFriends,stopFriends,publishProfile,api as friendsApi} from './friends.js?v=1';
 const $=id=>document.getElementById(id);
 const config=window.MINI_FAZENDA_FIREBASE;
 let sdk,auth,db,user,sessionId,revision=0,epoch=0;
-let ready=false,connected=false,sessionActive=false,stopped=false,visiting=false,suspending=false;
+let ready=false,connected=false,sessionActive=false,stopped=false,visiting=false,suspending=false,visitingUid=null;
 let bridge=null,initialState=null,ownState=null,pending=null,saving=null,lastText='',lastKey=null;
 let stopConnection,stopSession,resolveConnection,connectionReady,projectionTimer;
 function status(text){$('sync').textContent=text}
@@ -47,6 +48,7 @@ function scheduleProjection(state,version,run){
       await sdk.update(sdk.ref(db),{
         [`directory/${uid}`]:{name:(state.farmName||'Minha fazenda').slice(0,12),level:state.playerLevel||1,updatedAt:sdk.serverTimestamp()}
       });
+      void publishProfile(state);
     }catch(e){console.warn('Atualização de visita',e)}
   },500);
 }
@@ -114,7 +116,10 @@ window.MFOnline={
   requestFullscreen:requestHostFullscreen,
   exitFullscreen:exitHostFullscreen,
   isVisiting:()=>visiting,playing,
+  visitingUid:()=>visiting?visitingUid:null,
   bootState:()=>initialState,
+  friends:friendsApi,
+  myCode:()=>friendsApi.myCode(),
   changed:()=>queueMicrotask(checkpoint),
   attach(api){
     if(stopped)return;
@@ -128,7 +133,7 @@ function mount(state,visit){
   $('farm-title').textContent=visit?`Visitando: ${state.farmName||'Fazenda'}`:state?.farmName||'Minha fazenda';
   gate(visit?'Abrindo visita…':'Carregando sua fazenda…');
   const frame=document.createElement('iframe');frame.title=visit?'Visita à fazenda (somente visualização)':'Minha fazenda';
-  frame.src='game.html?v=mobile-20261029';frame.allow='fullscreen';$('game-container').replaceChildren(frame);
+  frame.src='game.html?v=amigos-1';frame.allow='fullscreen';$('game-container').replaceChildren(frame);
   status(visit?'Somente visualização':'Online');
 }
 async function reconnect(run){
@@ -145,7 +150,7 @@ async function boot(account){
   stopConnection?.();stopSession?.();clearTimeout(projectionTimer);
   ready=false;sessionActive=false;connected=false;stopped=false;bridge=null;pending=null;saving=null;
   user=account;ownState=null;lastText='';$('game-container').replaceChildren();$('toolbar').hidden=true;
-  if(!user){$('login').hidden=false;gate('Entre com sua conta Google para continuar.');return}
+  if(!user){stopFriends();$('login').hidden=false;gate('Entre com sua conta Google para continuar.');return}
   $('login').hidden=true;gate('Conectando à sua fazenda…');
   connectionReady=new Promise(resolve=>{resolveConnection=resolve});
   let claimed=false;
@@ -178,6 +183,7 @@ async function boot(account){
     if(run===epoch&&!stopped&&snap.val()!==sessionId)void disconnectPrevious();
   },fail);
   mount(ownState,false);
+  void startFriends({sdk,db,uid:user.uid,visit:visitFarm,applyFertilize}).then(()=>{if(run===epoch&&ownState)void publishProfile(ownState)}).catch(e=>console.warn('[amigos]',e));
 }
 async function drain(){
   checkpoint();suspending=true;gate('Aguarde…');
@@ -204,6 +210,24 @@ $('home').onclick=async()=>{
     revision=remote?.revision||0;ownState=remote?.state||null;lastText='';mount(ownState,false);
   }catch(e){fail(e)}
 };
+// Fertilizações dos amigos: só aplica com a própria fazenda aberta e o jogo pronto.
+function applyFertilize(list){
+  if(!ready||visiting||!bridge||stopped)return false;
+  const game=$('game-container').querySelector('iframe')?.contentWindow;
+  if(!game?.MFFertilize)return false;
+  try{game.MFFertilize.apply(list);queueMicrotask(checkpoint);return true}catch(e){console.warn('[fertilizar]',e);return true}
+}
+// Abre a fazenda de outra pessoa em modo visita (somente olhar).
+async function visitFarm(uid){
+  if(!user||uid===user.uid||!connected||!sessionActive||stopped)return false;
+  try{
+    if(!await drain())return false;
+    const data=(await sdk.get(sdk.ref(db,`publicFarms/${uid}`))).val();
+    if(stopped)return false;
+    if(!data?.state){suspending=false;$('gate').hidden=true;throw new Error('Esta fazenda ainda não está disponível.')}
+    visitingUid=uid;mount(data.state,true);return true;
+  }catch(e){suspending=false;if(connected&&!stopped)$('gate').hidden=true;status(e.message);throw e}
+}
 function row(uid,farm){
   if(uid===user.uid)return;
   const el=document.createElement('div');el.className='farm-row';
@@ -229,7 +253,12 @@ async function listFarms(reset=false){
   $('more').hidden=entries.length<=30;
   if(!entries.length&&!lastKey)$('farm-list').textContent='Ainda não há outras fazendas publicadas.';
 }
-$('neighbors').onclick=async()=>{try{$('farms').showModal();await listFarms(true)}catch(e){$('farm-list').textContent='Não foi possível carregar as fazendas.'}};
+$('neighbors').onclick=async()=>{
+  // A janela de amigos fica dentro do jogo; a lista antiga só aparece se o jogo não tiver carregado.
+  const game=$('game-container').querySelector('iframe')?.contentWindow;
+  if(game?.MFFriendsUI){game.MFFriendsUI.open();return}
+  try{$('farms').showModal();await listFarms(true)}catch(e){$('farm-list').textContent='Não foi possível carregar as fazendas.'}
+};
 $('more').onclick=()=>listFarms().catch(e=>status(e.message));
 $('login').onclick=async()=>{
   $('login').disabled=true;

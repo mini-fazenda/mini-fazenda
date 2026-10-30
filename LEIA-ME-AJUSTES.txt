@@ -1,0 +1,250 @@
+MINI FAZENDA - AJUSTES DE CENARIO E SELECAO
+
+COMO TESTAR
+1. Extraia este ZIP em uma pasta separada.
+2. Abra Testar-Local.bat e mantenha a janela aberta.
+3. O jogo abre no navegador, sem login. Este modo nao salva na conta.
+4. Se ja houver um servidor aberto na porta 8080, feche a janela antiga primeiro.
+5. Se aparecer a versao antiga, recarregue com Ctrl+F5.
+
+ALTERACOES
+- Cascata e tunel substituidos pelos PNGs locais em public/assets/ambiente/.
+- Imagens acompanham a camera e o zoom, mantendo as proporcoes.
+- Carregamento das imagens atualiza o cache de fundo automaticamente.
+- Vegetacao menos densa; arvores um pouco maiores, incluindo coqueiros.
+- Exclusao considera toda a copa para nao cobrir rio, ponte, estrada, cascata e tunel.
+- Marcacao da fila com borda verde e degrade interno, sem contorno branco.
+- Fila e ordem das acoes preservadas.
+- O tempo de colheita permanece em 1300 ms, iniciado somente ao chegar ao canteiro.
+- Corrigida uma referencia nula caso o alvo da tarefa seja removido.
+
+VALIDACAO
+- 12 testes existentes passaram.
+- Teste da logica com 30 colheitas: ordem preservada, espera pela chegada e tempo completo de cada colheita.
+- Scripts inline e ambient.js compilam sem erro.
+- Cenario e destaque conferidos em renderizacao Canvas.
+- Nao foi possivel executar a interface completa em um navegador neste ambiente.
+
+CONFIRA NO SEU COMPUTADOR
+- Enfileire varios canteiros e acompanhe o verde desaparecer na ordem das tarefas.
+- Escolha um canteiro distante: a barra so deve comecar quando a personagem chegar.
+- Aproxime e afaste a camera para conferir cascata, tunel e vegetacao.
+
+PARA PUBLICAR
+Os arquivos de site continuam em public. Este pacote nao foi enviado ao GitHub nem publicado.
+O database.rules.json original foi mantido sem alteracoes.
+
+REVISAO 2 - INTERACAO DOS CANTEIROS
+- Brilho suave antes do clique em terra vazia e plantacoes.
+- Reconhecimento da parte alta da planta pelo pixel visivel.
+- Verde da fila mais discreto, com borda esfumada.
+- Mover usa cursor de pegar/arrastar, sem as quatro setas.
+- Clique de mover separado de plantar/colher.
+- Cantero vazio pode ser selecionado e movido.
+- Testada a movimentacao de canteiro vazio e o bloqueio de sobreposicao.
+
+REVISAO 3 - RECOMPENSAS E CONTROLES
+- Botao da seta alterna entre selecao e mover, com contorno aceso no modo mover.
+- Contorno verde ajustado a ancora e proporcao do PNG da terra; mais grosso e escuro.
+- Verde somente em acoes disponiveis ou enfileiradas; crescimento usa apenas brilho informativo.
+- Saldo compacto no canto superior direito e oculto ao abrir a loja.
+- Botao de presente abre Recompensas diarias em painel azul e titulo amarelo.
+- Dias: 200 moedas / 3 trigos / 5 cenouras / 400 moedas / 4 morangos / 6 espinafres / previa do bau.
+- Produtos vao para o inventario, nao sao sementes.
+- Um resgate por dia de Brasilia; faltar um dia nao apaga a sequencia.
+- Salvo junto com a conta online. No teste local, o progresso continua apenas nesta aba.
+- Dia 7 e somente imagem, ainda sem resgate ou plantas raras.
+- Lista de premios editavel em public/daily-rewards.js. Nao troca automaticamente toda semana.
+- 14 testes automatizados passaram, alem da simulacao de 30 tarefas e movimentacao.
+- Interface completa ainda precisa ser conferida no navegador do seu computador.
+
+REVISAO 4 - FERRAMENTAS AUTOMATICAS E TERRENOS
+- Cursor acompanha o estado atual sem precisar mexer o mouse: planta pronta -> foice; terra seca -> arar; terra arada -> seta.
+- Colher continua deixando terra seca. A fila e o tempo de execucao foram preservados.
+- Sem limite de terrenos por quantidade ou nivel. Custos e espaco fisico continuam valendo.
+- Conferidos cursor automatico, separacao do modo mover e permissao com 100 terrenos.
+
+REVISAO 5 - INTERFACE COMPACTA
+- Avisos de moedas e estrelas menores, sem alterar valores, custos ou niveis.
+- Estrela amarela substitui o texto XP no aviso.
+- ID pequeno abaixo do nome, com copiar preservado.
+- Seta dentro da mesma moldura verde dos demais botoes.
+- 14 testes passaram; conferir aparencia no navegador local.
+
+REVISAO 6 - VENDAS DO MINI BAU
+- Removido o menos vermelho dos slots; janela antiga de Mini Negocios desativada.
+- Rodape: Vender, Vender tudo e Cancelar durante selecao.
+- Vender ativa a selecao: clique nos produtos, ajuste quantidades e clique em Vender selecao.
+- Vender tudo vende todos os produtos e quantidades atuais imediatamente.
+- Resumo mostra produto, quantidade, moedas por produto e total recebido.
+- Mesma precificacao de venda anterior; moedas e estrelas configuradas preservadas.
+- 17 testes passaram, incluindo vendas parciais, totais e bloqueio de repeticao/quantidades invalidas.
+- Interface completa precisa de conferencia no navegador local.
+
+REVISAO 7 - AMIGOS, CELEIRO E OBJETOS
+- Teste local inicia sem amigos ou solicitacoes ficticias. Barra mostra tres vagas com silhueta e numero.
+- Celeiro (icone de celeiro): produtos das colheitas e animais, venda por selecao ou total.
+- MiniBau (icone de bau): objetos e decoracoes guardados. Inventario antigo de produtos preservado no Celeiro.
+- Para guardar: ative mover, pegue uma decoracao e clique em Guardar no MiniBau.
+- Para recolocar: abra MiniBau, clique em Colocar e escolha um espaco livre. Nao paga novamente. Esc cancela sem perder o objeto.
+- Canteiros, plantacoes e animais nao sao armazenados como decoracao.
+- Objetos guardados entram no save da conta. No teste local os dados continuam apenas nesta aba.
+- Recompensa diaria abre ao entrar, apos escolher personagem, se houver resgate disponivel. Botao de presente continua abrindo a tela.
+- Dia 7 permanece previa de bau, sem premio efetivo.
+- Testes de guarda unica e restauracao do inventario de objetos passaram; 17 testes existentes passaram.
+- Conferir interface completa no navegador do seu computador.
+
+REVISAO 8 - PEDIDOS, ECONOMIA E SUBMENU DA SETA
+- Seta principal sempre volta ao modo automatico. A setinha pequena acima abre Mover objetos.
+- Mover so e ativado ao selecionar essa opcao. Icone de quatro direcoes na moldura verde e cursor visivel.
+- Canteiros vazios e plantados continuam podendo ser movidos, sem sobrepor outros.
+- Recompensas diarias reutilizam a arte existente da loja para trigo, cenoura e morango.
+- Cinco pedidos por dia: 5 cenouras + 5 espinafres (+200); 10 + 10 (+300); 5 + 5 + 1 trigo (+300); 5 cenouras + 5 trigos (+350); 8 trigos (+400).
+- Pagamento soma o valor de venda de cada unidade mais o bonus. Segundo pedido: 2260 + 300 = 2560 moedas.
+- Pedidos usam apenas culturas disponiveis. Botao Entregar disponiveis usa o Celeiro; Aceitar libera ao entregar tudo.
+- Texto e botoes dos pedidos ficam dentro do painel. Progresso diario e salvo com a conta.
+- Precos e estrelas ajustados provisoriamente. Tempos de crescimento mantidos.
+  Cultura       Compra   Venda/unidade   Estrelas de colheita
+  Cenoura          55              90       1
+  Espinafre       100             136       1
+  Trigo           200             400       4
+  Milho           350            1800       7
+  Abacaxi         500            2200       8
+  Morango         400            1900       7
+  Beterraba       750            3600      12
+  Cafe           1000            4200      14
+  Melancia        650            3300      12
+  Cana           1200            7000      20
+  Feijao         2000           14000      35
+  Soja           3500           28000      60
+  Cebola         5000           35000      80
+- A quantidade colhida por canteiro permanece a configuracao anterior. Venda e por unidade no Celeiro.
+- 21 testes automatizados passaram, mais simulacao de fila de 30 colheitas e movimentacao de canteiro vazio.
+- Nao foi possivel executar a interface completa em navegador neste ambiente. Conferir no teste local.
+
+REVISAO 9 - MINI CELEIRO E AREA INICIAL
+- Mini Celeiro com titulo centralizado, telhado e moldura vermelha de madeira.
+- Removida a imagem antiga do MiniBau dessa janela (incluindo a estrela desenhada no fundo).
+- Vender e Vender tudo abaixo da grade, sem sobrepor os produtos. Estoque e logica de venda preservados.
+- Area minima de plantio: 20x20 em vez de 16x16. Quatro quadradinhos extras por eixo isometrico: dois canteiros de 2x2 para baixo-esquerda e dois para baixo-direita.
+- Estrada, carro e posicoes atuais das plantacoes mantidos.
+- Saves menores recebem area minima de 20x20; expansoes ja maiores sao preservadas.
+- Expansoes pagas existentes continuam; nenhum novo sistema de compra de area foi criado nesta revisao.
+- 21 testes passaram, simulacao de fila passou, verificacao do tamanho inicial e preservacao de saves maiores passou.
+- Aparencia precisa ser conferida no navegador local.
+
+REVISAO 10 - COLHEITAS EQUILIBRADAS, VACA E OVELHA
+Esta tabela substitui os valores provisorios da revisao 8.
+- Custo por plantio; venda por unidade no Celeiro. A loja mostra o total da colheita.
+  Cultura       Compra   Quantidade   Venda/unid.   Venda total
+  Cenoura           50       5           14             70
+  Espinafre        100       1          140            140
+  Trigo            200       6           50            300
+  Milho            350       6          100            600
+  Abacaxi          500       5          170            850
+  Morango          400       3          220            660
+  Beterraba        750       4          375           1500
+  Cafe            1000       5          400           2000
+  Melancia         650       4          325           1300
+  Cana            1200       1         2400           2400
+  Feijao          2000       1         4400           4400
+  Soja            3500       1         8750           8750
+  Cebola          5000       1        12500          12500
+- Tempos e estrelas das culturas mantidos. Quantidade centralizada para nao multiplicar os drops duas vezes.
+- Pedidos do carro recalculam produtos pelos novos precos, mantendo os bonus. Pedido 2: 1540 + 300 = 1840.
+- Saldo e estoque existentes preservados; produtos antigos passam a vender pelo preco novo.
+- Vaca e ovelha disponiveis no nivel 1, em Animais na loja. Vaca custa 750; ovelha, 550.
+- Ambas crescem em 5 minutos. Depois, a vaca produz 1 leite a cada 15 minutos; a ovelha, 1 la a cada 30 minutos.
+- Venda por unidade: leite 60 moedas; la 100 moedas. Coleta rende respectivamente 1 e 2 estrelas.
+- Mouse universal: balde sobre vaca pronta, tesoura sobre ovelha pronta. Clique entra na fila.
+- Personagem chega ao animal e executa coleta de 1,3 segundo. Produto entra no Mini Celeiro para vender.
+- Animais permanecem no mapa e recomecam o ciclo; nao precisam ser comprados novamente.
+- Producao usa horario persistente, inclusive ao reabrir o save; acumula no maximo um lote pronto.
+- GIF da vaca e arte da ovelha existentes reutilizados; movimento leve de descanso na ovelha.
+- Temporizador antigo de leite a cada 10 segundos e coleta instantanea removidos.
+- 26 testes automatizados passaram; fila de 30 colheitas e movimentacao verificadas. Cursores renderizados e conferidos.
+- Interface completa ainda precisa ser conferida no navegador local.
+
+REVISAO 11 - AVISO SOBRE ANIMAIS PRONTOS
+- Baldinho acima da vaca quando o leite esta pronto; tesoura acima da ovelha quando a la esta pronta.
+- Baloes com contorno verde e movimento suave, visiveis sem passar o mouse.
+- Acompanham zoom, camera e posicao do animal; somem depois da coleta ou ao retirar o animal.
+- Sem bloquear cliques nos animais e sem alterar ciclos ou recompensas.
+- 27 testes passaram, incluindo exibicao sem hover e remocao apos coleta.
+
+REVISAO 12 - CERCAS CONECTADAS
+- Mini Loja > Construcoes: madeira com flores (50), madeira com arame (50), branca (80 moedas por trecho).
+- Cercas acompanham as duas direcoes da grade isometrica; retas e cantos compartilham os mesmos postes.
+- Comprar entra em colocacao: clique na borda do quadradinho ou segure e arraste para varios trechos.
+- Direcao automatica escolhe a borda mais proxima. Botao Direcao ou tecla R alterna entre automatica e as duas direcoes.
+- Concluir ou Esc encerra a colocacao. Nao cobra novamente sobre um trecho ja ocupado.
+- Mover objetos: clique na cerca e depois no novo trecho. Use R para mudar direcao se quiser.
+- Durante mover, Guardar no MiniBau recolhe a cerca. O trator tambem recolhe cercas para o MiniBau.
+- MiniBau mostra a quantidade guardada de cada cerca; Colocar reutiliza sem pagar novamente.
+- Cercas ficam nas bordas, sem consumir os quadradinhos dos canteiros. Nesta etapa sao decorativas e nao alteram os caminhos dos personagens.
+- Cercas e estoque de cercas sao salvos com a fazenda. Visitas continuam sem alteracoes.
+- 32 testes automatizados passaram, mais simulacoes de clique, arrasto, cobranca unica e movimentacao.
+- Retas, cantos e os tres estilos foram renderizados e conferidos. Interface completa ainda precisa de conferencia no navegador local.
+
+REVISAO 13 - PAISAGISMO E ENCAIXE DO CENARIO
+- Entorno mais aberto, com menos arvores e clareiras maiores.
+- Copas redondas brilhantes substituidas por copas alongadas, pinheiros e coqueiros de folhas abertas.
+- Coqueiros maiores no primeiro plano inferior e pequenos grupos de arbustos baixos nas laterais.
+- Pedras pequenas acompanham as duas margens do rio, deixando a ponte livre.
+- Copas evitam a area de plantio, estrada, rio e as imagens da cachoeira e do tunel.
+- Saida da agua da arte da cachoeira alinhada ao inicio do rio; largura do rio cresce suavemente nessa juncao.
+- Boca do tunel usa o ponto da estrada como ancora e a mesma inclinacao da via. Halo externo da imagem recortado na composicao.
+- Faixa de circulos verdes na montanha removida; tons de rocha aproximados do tunel e da cascata.
+- Tamanho da fazenda, estrada, plantacoes, cercas e regras do jogo mantidos.
+- Conferidas renderizacoes do entorno e da vista geral de 20x20, alem da coincidencia do ponto de saida da cachoeira com o rio.
+- 32 testes automatizados e simulacao da fila de colheita passaram. Interface completa ainda precisa de conferencia no navegador local.
+
+REVISAO 14 - PREMIO DE NIVEL, ANIMAIS E CELULAR DEITADO
+- Premio por subir de nivel fixo em 200 moedas em todos os niveis (antes 600 no nivel 2 e crescendo).
+- Comprar animal coloca um so e sai do modo colocar. Antes, cada toque comprava outro animal.
+- Esc ou botao direito do mouse cancelam o modo colocar (sementes, itens e animais).
+- Celular deitado (telas baixas): Recompensas diarias com os 7 dias e o botao Resgatar visiveis;
+  Mini Celeiro em 8 colunas x 3 linhas com Vender e Vender tudo visiveis; Configuracoes em duas colunas.
+- Mini Celeiro e Configuracoes ficam acima da barra de amigos e do menu.
+- Ajustes de celular ficam em public/ajustes-celular.js.
+- Teste host-browser atualizado para fechar a recompensa diaria antes de visitar.
+- 32 testes automatizados e os 6 testes de navegador passaram. Conferido em 844x390, 740x360 e 1280x800.
+
+REVISAO 15 - TEMPOS DAS PLANTACOES
+  Cultura            Antes     Agora
+  Cenoura Organica   5 min     5 min
+  Espinafre          5 min     5 min
+  Trigo              1h30      30 min
+  Milho              3h        2h
+  Morango            3h        2h
+  Abacaxi            3h        2h
+  Melancia           6h        4h
+  Beterraba          6h        4h
+  Cafe               6h        4h
+  Cana Doce          12h       8h
+  Feijao             16h       12h
+  Soja               2 dias    18h
+  Cebola Fantastica  2 dias    18h
+- Precos, venda e estrelas mantidos.
+- Plantacoes que ja estao crescendo passam a usar o tempo novo ao abrir o jogo.
+- 32 testes passaram; tempos conferidos na loja e numa plantacao em crescimento.
+
+REVISAO 16 - TUTORIAL E PONTE
+- Tutorial no primeiro login, depois da escolha do personagem e da recompensa diaria.
+  Fazendeira com balao "Passo X de 5" e seta amarela apontando o que tocar:
+  1 Colher as plantacoes prontas; 2 Arar a terra seca; 3 Abrir a Loja, comprar Cenoura Organica e plantar;
+  4 Criar canteiro novo com a enxada; 5 Abrir o Mini Celeiro e Vender tudo; Parabens + botao verde Concluir.
+- Botao "Pular tutorial" em todos os passos. Progresso salvo na conta; saves antigos nao veem o tutorial.
+- No celular deitado e com Loja/Celeiro abertos o balao fica pequeno no topo para nao cobrir o jogo.
+- Arquivo: public/tutorial.js (textos de cada passo editaveis ali).
+- Ponte refeita em arco, na largura da estrada, com as pontas apoiadas no chao e cabeceiras de pedra.
+  O caminhao sobe e desce acompanhando o arco.
+- Tutorial percorrido do inicio ao fim em 1280x800 e 844x390. 32 testes e 6 testes de navegador passaram.
+
+REVISAO 17 - NIVEIS MAIS LENTOS E TEMPOS DAS PRIMEIRAS PLANTAS
+- Estrelas para passar de nivel: 100, 200, 350, 550, 800, 1100, 1450, 1850, 2300, 2800 (niveis 1 a 10);
+  depois, +500 a cada nivel (3300, 3800...).
+- Moedas de bonus ao subir: 50 ate o nivel 10; 100 do nivel 11 ao 20; acima do 20 continua 100.
+  Faixas editaveis em progression.rewardBands no game.html.
+- Tempos: Cenoura 10 min, Espinafre 20 min, Trigo 40 min, Milho 1h, Abacaxi 2h (Morango continua 2h).
+- Texto do tutorial atualizado para "Cenoura pronta em 10 minutos".
