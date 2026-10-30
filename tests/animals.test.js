@@ -47,3 +47,11 @@ test('não apaga a plantação nem concede estrelas se o inventário recusar a c
  const tile={gx:1,gy:1,imgSrc:'espinafre-final.png',cultura:{tipo:'espinafre',etapa:2}};
  assert.equal(env.tryHarvestAtTile(tile),false);assert.equal(tile.cultura.tipo,'espinafre');assert.equal(tile.imgSrc,'espinafre-final.png');assert.equal(stars,0);
 });
+test('compra de vaca/ovelha já tem primeira coleta e intervalo começa depois dela',()=>{
+ for(const [tipo,cfg]of Object.entries(MFAnimalProduction.types)){
+  const now=1800000000000,animal={tipo,startTime:now,totalTime:300000,etapa:0};
+  assert.equal(MFAnimalProduction.start(animal,now),true);assert.equal(MFAnimalProduction.sync(animal,now).ready,true);
+  const saved=JSON.parse(JSON.stringify(animal));assert.equal(MFAnimalProduction.collect(saved,now).amount,1);assert.equal(MFAnimalProduction.collect(saved,now),null);
+  assert.equal(MFAnimalProduction.sync(saved,now+cfg.cycle-1).ready,false);assert.equal(MFAnimalProduction.sync(saved,now+cfg.cycle).ready,true);
+ }
+});
