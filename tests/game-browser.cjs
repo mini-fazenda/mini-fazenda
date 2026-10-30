@@ -14,6 +14,55 @@ const {chromium}=require('playwright');
  await page.waitForFunction(()=>window.attached);await page.waitForTimeout(1500);
  let frame=page.frames().find(f=>f.url().endsWith('game.html'));
  console.log('initial',await page.evaluate(()=>{const s=testAPI.capture();return {moedas:s.moedas,level:s.playerLevel,terrenos:s.terrenos.length}}));
+ // Movimento em celular: toque seleciona, segundo toque posiciona e a câmera permanece imóvel.
+ await frame.evaluate(()=>{
+   if(!window.MFMoveControls||!window.MFFences?.selectMoveAt)throw Error('Controles de mover não carregaram');
+   const o={gx:10,gy:5,w:1,h:1,imgSrc:'',visualScale:1};
+   terrenos.push(o);setFarmMoveMode(true);
+   const screen=(gx,gy)=>{
+     const p=gridToScreen(gx,gy),r=canvas.getBoundingClientRect();
+     return {x:r.left+(p.x*zoom+canvas.width/2+offsetX)*r.width/canvas.width,
+             y:r.top+(p.y*zoom+canvas.height/3+offsetY)*r.height/canvas.height};
+   };
+   const a=screen(10,5),b=screen(12,5),ox=offsetX,oy=offsetY;
+   window.MFMoveControls.touchStart(a.x,a.y);window.MFMoveControls.touchEnd(a.x,a.y);
+   if(estruturaMovendo!==o)throw Error('Primeiro toque não selecionou objeto');
+   window.MFMoveControls.touchStart(b.x,b.y);window.MFMoveControls.touchEnd(b.x,b.y);
+   if(o.gx!==12||o.gy!==5)throw Error('Segundo toque não reposicionou objeto');
+   if(offsetX!==ox||offsetY!==oy)throw Error('Câmera moveu durante seleção');
+   window.MFMoveControls.touchStart(b.x,b.y);
+   const d=screen(13,5);window.MFMoveControls.touchMove(d.x,d.y);window.MFMoveControls.touchEnd(d.x,d.y);
+   if(o.gx!==13||o.gy!==5)throw Error('Arrastar objeto selecionado falhou');
+   // Área inválida/ocupada: não perde objeto e não conclui seleção.
+   terrenos.push({gx:14,gy:5,w:1,h:1,imgSrc:''});
+   window.MFMoveControls.touchStart(d.x,d.y);window.MFMoveControls.touchEnd(d.x,d.y);
+   const occupied=screen(14,5);
+   window.MFMoveControls.touchStart(occupied.x,occupied.y);window.MFMoveControls.touchEnd(occupied.x,occupied.y);
+   if(o.gx!==13||estruturaMovendo!==o)throw Error('Destino ocupado deveria manter seleção');
+   setFarmMoveMode(false);terrenos.splice(terrenos.indexOf(o),1);
+   terrenos.splice(terrenos.findIndex(x=>x.gx===14&&x.gy===5&&x.imgSrc===''),1);
+   const old=window.MFFences.capture(),coins=moedas;moedas=99999;
+   window.MFFences.start('flowers');
+   const start=screen(10,4.5);
+   canvas.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true,button:0,clientX:start.x,clientY:start.y}));
+   const added=window.MFFences.capture().segments.find(e=>!old.segments.some(a=>MFFenceCore.key(a)===MFFenceCore.key(e)));
+   if(!added)throw Error('Cerca de teste não foi criada');
+   window.MFFences.stop();setFarmMoveMode(true);
+   const midpoint=e=>{const ends=MFFenceCore.ends(e),a=gridToScreen(ends[0].gx-.5,ends[0].gy-.5),b=gridToScreen(ends[1].gx-.5,ends[1].gy-.5);
+     const r=canvas.getBoundingClientRect();
+     return {x:r.left+((a.x+b.x)/2*zoom+canvas.width/2+offsetX)*r.width/canvas.width,
+             y:r.top+(((a.y+b.y)/2-17)*zoom+canvas.height/3+offsetY)*r.height/canvas.height};};
+   const p=midpoint(added);
+   canvas.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,button:0,clientX:p.x,clientY:p.y}));
+   if(!window.MFFences.isMoveSelected())throw Error('Clique em mover não selecionou a cerca');
+   const moved={...added,gx:added.gx+2,gy:added.gy+2};
+   const q=midpoint(moved);
+   canvas.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,button:0,clientX:q.x,clientY:q.y}));
+   if(window.MFFences.isMoveSelected()||!window.MFFences.capture().segments.some(e=>MFFenceCore.key(e)===MFFenceCore.key(moved)))
+     throw Error('Segundo clique não moveu a cerca');
+   window.MFFences.restore(old);moedas=coins;setFarmMoveMode(false);
+ });
+ console.log('PASS: toque/arraste de objetos sem pan; cerca selecionável e movível');
  await frame.evaluate(()=>{
   moedas=4321;playerXP=237;playerLevel=3;window.__farmName='Recanto';
   player.gx=7;player.gy=8;
