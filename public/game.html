@@ -1710,6 +1710,7 @@ document.addEventListener("DOMContentLoaded", function() {
       clientY: y,
       button: 0
     };
+    canvas.dispatchEvent(new MouseEvent('mousemove', opts));
     canvas.dispatchEvent(new MouseEvent('mousedown', opts));
     canvas.dispatchEvent(new MouseEvent('mouseup', opts));
     canvas.dispatchEvent(new MouseEvent('click', opts));
@@ -2278,7 +2279,7 @@ let zoom = 1.0;
 const MIN_ZOOM = 0.25, MAX_ZOOM = 1;
 
 // sprite resources (externos)
-const PA_SRC = 'https://i.postimg.cc/d1kdvT9d/pa.png';
+const PA_SRC = 'assets/2a42eaeaca5ad4540099-pa.png';
 const FOICE_SRC = 'assets/3f2959e898593fc5d408-foice.png';
 const TERRA_SECA_SRC = 'assets/90ef7652824df981f954-terra-seca.png';
 const TERRA_ARADA_SRC = 'assets/f85800574c3422a19492-terra-arada.png';
@@ -5036,25 +5037,6 @@ if (img && img.complete && img.naturalWidth > 0) {
         ctx.restore();
       }
 
-      if (player.acaoAtual && player.acaoAtual.tipo === 'arar' && player.acaoAtual.state === 'ararando') {
-        const t = player.acaoAtual.alvo;
-        const anchor = gridToScreen(t.gx + (t.w - 1) / 2, t.gy + (t.h - 1) / 2);
-        const ax = (canvas.width / 2 + offsetX) + anchor.x * zoom;
-        const ay = (canvas.height / 3 + offsetY) + anchor.y * zoom;
-        const prog = player.acaoAtual.progress || 0;
-        const barW = 80, barH = 12;
-        ctx.save();
-        ctx.setTransform(1,0,0,1,0,0);
-        ctx.globalAlpha = 0.95;
-        ctx.fillStyle = '#3b2a1f';
-        ctx.fillRect(ax - barW / 2, ay - 150, barW, barH);
-        ctx.fillStyle = player.acaoAtual.job && player.acaoAtual.job !== 'arar' ? '#5fd13a' : '#a67c52';
-        ctx.fillRect(ax - barW / 2 + 2, ay - 150 + 2, (barW - 4) * prog, barH - 4);
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(ax - barW / 2, ay - 150, barW, barH);
- ctx.restore();
- }
 } else if (item.kind === 'truck') {
    // caminhão de vendas é desenhado via DOM (img separado), nada no canvas aqui
 }
@@ -7922,6 +7904,7 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 <script src="pointer-menu.js?v=1"></script>
 <script src="barn-ui.js?v=1"></script>
 <script src="animal-tools.js?v=1"></script>
+<script src="job-feedback.js?v=1"></script>
 <script src="sheep-animation.js?v=suave-2"></script>
 <script src="animal-indicators.js?v=1"></script>
 <script src="fence-art.js?v=1"></script>
