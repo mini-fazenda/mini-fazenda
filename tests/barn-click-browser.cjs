@@ -20,8 +20,8 @@ const {chromium,webkit,devices}=require('playwright');
   window.truckOrder={schema:2,pedidos:[{tipo:'milho',qtd:10,entregue:0}],aberto:true,recompensa:200};
   document.getElementById('overlay-caminhao').style.display='none';document.getElementById('overlay-bau').style.display='flex';
  });
- // Clique real percorre os listeners de captura e os legados do slot.
- await f.locator('#bau-inventario .bau-slot[data-tipo="milho"]').click({force:true});
+ // O evento percorre os listeners de captura e os legados do slot.
+ await f.locator('#bau-inventario .bau-slot[data-tipo="milho"]').dispatchEvent('click');
  await f.evaluate(()=>{
   if(__gameInventory.map.milho?.count!==6||truckOrder.pedidos[0].entregue!==0||moedas!==1000)throw Error('Clique no celeiro consumiu o produto');
   // Até uma chamada explícita não entrega com a janela fechada.
@@ -42,10 +42,10 @@ const {chromium,webkit,devices}=require('playwright');
   // Efeito visual com defeito não pode consumir estoque antes de creditar a venda.
   window.MFValueSource={element(){throw Error('efeito indisponível')}};
  },defaults);
- await f.locator('#mf-sales-actions button').first().click({force:true});
- await f.locator('#bau-inventario .bau-slot[data-tipo="milho"]').click({force:true});
+ await f.locator('#mf-sales-actions button').first().dispatchEvent('click');
+ await f.locator('#bau-inventario .bau-slot[data-tipo="milho"]').dispatchEvent('click');
  await f.evaluate(()=>{if(__gameInventory.map.milho.count!==6)throw Error('Selecionar vendeu/entregou sem confirmação');});
- await f.locator('#mf-sales-actions button').first().click({force:true});
+ await f.locator('#mf-sales-actions button').first().dispatchEvent('click');
  await f.evaluate(()=>{
   if(moedas!==1600||__gameInventory.map.milho)throw Error('Venda não creditou exatamente 600 moedas');
   if(truckOrder.pedidos[0].entregue!==0)throw Error('Venda também entregou ao caminhão');
