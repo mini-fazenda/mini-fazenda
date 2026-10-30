@@ -76,10 +76,9 @@ export const query=r=>r,orderByKey=()=>{},limitToFirst=()=>{},startAfter=()=>{};
  await page.waitForFunction(()=>testCloud['farms/rodrigo']?.state.moedas===9877);
  console.log('PASS: conflito de revisão da mesma conta foi recuperado');
  // Save legado sem farmName: a cópia pública precisa ter nome para visitas.
- await page.evaluate(()=>{window.__saveOriginalCapture=testAPI.capture;testAPI.capture=()=>({...window.__saveOriginalCapture(),farmName:undefined});});
- await page.evaluate(()=>MFOnline.changed());
+ await f.evaluate(()=>{window.__farmName='';saveGameState('legacy-no-name')});
  await page.waitForFunction(()=>testCloud['publicFarms/rodrigo']?.state?.farmName==='Minha fazenda');
- await page.evaluate(()=>{testAPI.capture=window.__saveOriginalCapture;});
+ await f.evaluate(()=>{window.__farmName='Conta';saveGameState('restore-name')});
  console.log('PASS: projeção pública de save antigo sem nome');
 
  if(await page.locator('#backup,#recover,#use-cloud').count())throw Error('Interface de backup permaneceu');
