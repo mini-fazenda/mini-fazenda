@@ -248,3 +248,13 @@ REVISAO 17 - NIVEIS MAIS LENTOS E TEMPOS DAS PRIMEIRAS PLANTAS
   Faixas editaveis em progression.rewardBands no game.html.
 - Tempos: Cenoura 10 min, Espinafre 20 min, Trigo 40 min, Milho 1h, Abacaxi 2h (Morango continua 2h).
 - Texto do tutorial atualizado para "Cenoura pronta em 10 minutos".
+
+REVISAO 18 - ORDEM DA LOJA, ARROZ E OVELHA PASTANDO
+- Sementes (Todos e categorias) ordenadas primeiro pelo tempo de crescimento, sem agrupar por nivel antes do tempo.
+- Arroz na categoria Graos: 24 horas, compra 7000, uma unidade por colheita, venda total 10500 (lucro 3500 = 50%).
+- Sementes na agua ao plantar; plantas verdes a partir de 50%; arroz dourado ao completar 24h. Artes extraidas da folha enviada.
+- Arroz concede 100 estrelas na colheita; nao concede novamente esse valor no plantio.
+- Ovelha ocupa 1x1 quadradinho e fica menor. Saves existentes recebem o novo tamanho sem perder idade ou producao de la.
+- Animacao de pastar com 18 quadros enviados: descanso, cabeca baixa, mastigacao e retorno. Ciclo aproximado de 20 segundos, desencontrado entre animais.
+- 37 testes automatizados passaram, incluindo ordem por tempo, economia e estagios do arroz, preservacao da ovelha e animacao.
+- Quadros e transparencias conferidos. Teste completo no navegador nao executado: download do Chromium falhou neste ambiente.

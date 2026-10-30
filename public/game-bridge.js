@@ -62,6 +62,7 @@
       const saved=data.terrenos?.[i];
       if(saved?.animal){
         Object.assign(t.animal,clone(saved.animal));
+        window.MFSheepAnimation?.normalize(t);
         if(t.animal.tipo==='vaca' && t.animal.etapa===2)window.__VacaMilk?.startVacaMilkLoop(t);
       }
     });

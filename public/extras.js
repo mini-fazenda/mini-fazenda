@@ -258,7 +258,7 @@
     { k: 'veiculos', l: 'Veículos' },
     { k: 'upgrades', l: 'Upgrades' },
   ];
-  const SUB = { morango: 'frutas', abacaxi: 'frutas', melancia: 'frutas', cenoura: 'vegetais', beterraba: 'vegetais', soja: 'vegetais', espinafre: 'vegetais', cebola: 'vegetais', cana: 'vegetais', feijao: 'vegetais', milho: 'graos', trigo: 'graos', cafe: 'graos' };
+  const SUB = { arroz: 'graos', morango: 'frutas', abacaxi: 'frutas', melancia: 'frutas', cenoura: 'vegetais', beterraba: 'vegetais', soja: 'vegetais', espinafre: 'vegetais', cebola: 'vegetais', cana: 'vegetais', feijao: 'vegetais', milho: 'graos', trigo: 'graos', cafe: 'graos' };
   const CAT = { plantacoes: 'sementes', sementes: 'sementes', animais: 'animais', arvores: 'arvores', construcoes: 'construcoes', decoracoes: 'decoracoes', veiculos: 'veiculos', mini: 'upgrades', upgrades: 'upgrades', promo: 'promo' };
   // unidades que cada colheita manda para o Mini Baú (igual ao jogo)
   const YIELD = { milho: 6, cenoura: 5, morango: 3, trigo: 6, beterraba: 4, abacaxi: 5, cafe: 5, melancia: 4 };
@@ -370,7 +370,7 @@
       const b = document.createElement('button'); b.type = 'button'; b.className = 'mfs-sub' + (state.sub === k ? ' on' : ''); b.textContent = l;
       b.addEventListener('click', () => { state.sub = k; state.page = 0; state.sel = null; render(); }); subs.appendChild(b);
     }
-    let list = readItems().filter(i => i.tab === state.tab).sort((a, b) => (a.level - b.level) || (a.grow - b.grow) || (a.price - b.price));
+    let list = readItems().filter(i => i.tab === state.tab).sort((a, b) => state.tab === 'sementes' ? (a.grow - b.grow) || (a.level - b.level) || (a.price - b.price) : (a.level - b.level) || (a.grow - b.grow) || (a.price - b.price));
     if (tab.subs && state.sub !== 'todos') list = list.filter(i => i.sub === state.sub);
     if (!list.length) {
       body.innerHTML = `<div class="mfs-empty"><div class="big">🚧</div><div class="t1">Em construção</div><div class="t2">Esta parte da loja chega em breve. Aguarde as novidades!</div></div>`;
