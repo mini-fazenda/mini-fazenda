@@ -34,8 +34,9 @@
  function finish(selection){
   if(visitor())return;
   try{
+   try{window.MFValueSource?.element?.(box,'venda');}catch(e){console.warn('[efeito da venda]',e);}
    const result=MFSalesCore.sell(inv().map,selection,quote);
-   window.MFValueSource?.element(box,'venda');moedas+=result.total;if(result.stars)addXP(result.stars);
+   moedas+=result.total;if(result.stars)addXP(result.stars);
    document.getElementById('valor-moedas').textContent=moedas;
    for(const row of result.rows){const slot=inv().slots[row.slotIndex];if(slot)window.MFRenderInventorySlot(slot,row.left?row.type:'',row.left,row.imgSrc);}
    window.MFGameAudio?.event('sell');reset();window.MFHost?.changed?.('inventory-sale');requestRedraw();
@@ -52,7 +53,8 @@
  all.onclick=()=>{const selection={};for(const [type,item] of Object.entries(inv()?.map||{}))if(item.count>0)selection[type]=item.count;finish(selection);};
  cancel.onclick=reset;
  document.getElementById('bau-inventario').addEventListener('click',e=>{
-  if(!selecting)return;e.stopImmediatePropagation();
+  e.stopImmediatePropagation();
+  if(!selecting)return;
   if(e.target.closest('.mf-sale-qty'))return;
   const slot=e.target.closest('.bau-slot'),type=slot?.dataset.tipo,item=inv()?.map[type];if(!item)return;
   if(selected[type]){delete selected[type];slot.classList.remove('mf-sale-selected');slot.querySelector('.mf-sale-qty')?.remove();}
