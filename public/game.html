@@ -917,7 +917,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const 
 @media(max-width:600px){#loja-content .mf-shop-arrow{width:31px;height:42px;font-size:25px}#loja-content #mf-shop-prev{left:-3%}#loja-content #mf-shop-next{right:-3%}#loja-content #mf-shop-page{bottom:5%;font-size:12px}}
 </style>
 <script src="render-resolution.js?v=1"></script>
-<script src="plot-ground.js?v=1"></script>
+<script src="plot-ground.js?v=2"></script>
 <script src="crop-sprites.js?v=2"></script>
 <script src="farm-economy.js?v=girassol-4"></script>
 <script src="growth-time.js?v=1"></script>
@@ -4954,7 +4954,7 @@ function isSoloOuCulturaTerreno(item) {
   });
 
 
-  window.MFPlotGround?.drawJoins(ctx,terrenos,gridToScreen,modoMover?estruturaMovendo:null);
+  window.MFPlotGround?.drawJoins?.(ctx,terrenos,gridToScreen,modoMover?estruturaMovendo:null);
 
   // desenha em ordem
   for (const item of drawables) {

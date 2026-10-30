@@ -19,6 +19,12 @@ const {chromium,webkit}=require('playwright');
    terrenos.push({gx:5,gy:5,w:2,h:2,imgSrc:TERRA_ARADA_SRC,cultura:{tipo:'cenoura',startTime:Date.now()-300000,totalTime:600000,etapa:0}});
    reapplyGrowthFromTime(terrenos[0]);draw();
   });
+  await f.evaluate(()=>{
+   const before=JSON.stringify(getTerrenosSnapshot()),original=MFPlotGround.drawJoins;
+   try{delete MFPlotGround.drawJoins;draw();if(JSON.stringify(getTerrenosSnapshot())!==before)throw Error('Save alterado');}
+   finally{MFPlotGround.drawJoins=original;}
+  });
+  console.log('PASS: módulo antigo em cache não interrompe desenho nem altera plantações');
   await f.evaluate(()=>preload(MFAdapter.project.items['item-espinafre'].stage0));
   await f.waitForFunction(()=>{const i=preload(MFAdapter.project.items['item-espinafre'].stage0);return i.complete&&i.naturalWidth>0;});
   await f.evaluate(()=>{
