@@ -5,11 +5,15 @@ const config=window.MINI_FAZENDA_FIREBASE;
 let sdk,auth,db,user,sessionId,revision=0,epoch=0;
 let ready=false,connected=false,sessionActive=false,stopped=false,visiting=false,suspending=false,visitingUid=null;
 let bridge=null,initialState=null,ownState=null,pending=null,saving=null,lastText='',lastKey=null;
-let stopConnection,stopSession,resolveConnection,connectionReady,projectionTimer;
+let stopConnection,stopSession,resolveConnection,connectionReady,projectionTimer,retryTimer,reconnectTimer;
+let retryDelay=1000,loginAttempt=false;
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const transient=e=>['unavailable','database/network-error','network-request-failed','auth/network-request-failed','disconnected'].some(x=>String(e?.code||'').includes(x));
+function retryPending(){if(stopped||!pending)return;clearTimeout(retryTimer);status('Sincronização pendente…');retryTimer=setTimeout(()=>{if(stopped)return;if(connected&&sessionActive)void flush().catch(e=>{console.warn('[sync retry]',e);retryPending()});else retryPending()},retryDelay);retryDelay=Math.min(retryDelay*2,30000)}
 let clockOffset=0; // diferença entre o relógio do aparelho e o do servidor (anti-troca de data)
 function status(text){$('sync').textContent=text}
 function gate(text){$('farms').close();$('gate').hidden=false;$('message').textContent=text}
-function freeze(){ready=false;sessionActive=false;stopped=true;pending=null;clearTimeout(projectionTimer);$('game-container').replaceChildren();bridge=null;$('toolbar').hidden=true}
+function freeze(){ready=false;sessionActive=false;stopped=true;pending=null;clearTimeout(retryTimer);clearTimeout(reconnectTimer);clearTimeout(projectionTimer);$('game-container').replaceChildren();bridge=null;$('toolbar').hidden=true}
 function fail(error){
   if(stopped)return;
   console.error(error);freeze();gate('Não foi possível conectar à fazenda. Recarregue a página para tentar novamente.');
@@ -28,7 +32,7 @@ function checkpoint(){
     if(text===lastText)return;
     lastText=text;ownState=state;pending={id:crypto.randomUUID(),state};
     // Alterações são enviadas imediatamente. Não há gravação do progresso no navegador.
-    void flush().catch(fail);
+    void flush().catch(e=>{console.warn('[save]',e);retryPending()});
   }catch(e){fail(e)}
 }
 function publicState(state){
@@ -57,6 +61,7 @@ async function flush(){
   if(saving)return saving;
   if(!pending||!connected||!sessionActive||stopped||visiting||!ready)return;
   const run=epoch,uid=user.uid,token=sessionId;
+  let failed=false;
   const operation=(async()=>{
     while(pending&&connected&&sessionActive&&!stopped&&run===epoch){
       const record=pending,base=revision;
@@ -66,24 +71,30 @@ async function flush(){
       },{applyLocally:false});
       if(run!==epoch||stopped||!sessionActive)return;
       if(!result.committed&&result.snapshot.val()?.saveId!==record.id){
-        await disconnectPrevious();return;
+        const currentToken=(await sdk.get(sdk.ref(db,`sessions/${uid}`))).val();
+        if(currentToken!==token){await disconnectPrevious();return}
+        throw new Error('save/revision-conflict');
       }
       revision=result.snapshot.val().revision;
       if(pending?.id===record.id)pending=null;
       ownState=record.state;
       $('farm-title').textContent=record.state.farmName||'Minha fazenda';
-      status('Online');scheduleProjection(record.state,revision,run);
+      retryDelay=1000;clearTimeout(retryTimer);status('Online');scheduleProjection(record.state,revision,run);
     }
   })();
   saving=operation;
   try{await operation}
   catch(e){
+    failed=true;
     if(run!==epoch||stopped)return;
-    if(e.code==='PERMISSION_DENIED'||e.code==='permission-denied'){await disconnectPrevious();return}
+    if(e.code==='PERMISSION_DENIED'||e.code==='permission-denied'){
+      const currentToken=await sdk.get(sdk.ref(db,`sessions/${uid}`)).then(s=>s.val()).catch(()=>null);
+      if(currentToken&&currentToken!==token){await disconnectPrevious();return}
+    }
     throw e;
   }finally{
     if(saving===operation)saving=null;
-    if(pending&&connected&&sessionActive&&!stopped&&run===epoch)queueMicrotask(()=>flush().catch(fail));
+    if(!failed&&pending&&connected&&sessionActive&&!stopped&&run===epoch)queueMicrotask(()=>flush().catch(e=>{console.warn('[sync]',e);retryPending()}));
   }
 }
 
@@ -156,11 +167,11 @@ async function reconnect(run){
     if(token!==sessionId){await disconnectPrevious();return}
     sessionActive=true;
     if(ready){$('gate').hidden=true;await flush();if(!visiting)checkpoint()}
-  }catch(e){if(run===epoch&&connected)fail(e)}
+  }catch(e){if(run===epoch&&connected&&!stopped){console.warn('[reconnect]',e);status('Reconectando…');clearTimeout(reconnectTimer);reconnectTimer=setTimeout(()=>{if(run===epoch&&connected&&!stopped)void reconnect(run)},3000)}}
 }
 async function boot(account){
   const run=++epoch;
-  stopConnection?.();stopSession?.();clearTimeout(projectionTimer);
+  stopConnection?.();stopSession?.();clearTimeout(projectionTimer);clearTimeout(retryTimer);clearTimeout(reconnectTimer);retryDelay=1000;
   ready=false;sessionActive=false;connected=false;stopped=false;bridge=null;pending=null;saving=null;
   user=account;ownState=null;lastText='';$('game-container').replaceChildren();$('toolbar').hidden=true;
   if(!user){stopFriends();$('login').hidden=false;gate('Entre com sua conta Google para continuar.');return}
@@ -178,7 +189,7 @@ async function boot(account){
     }
     connected=true;resolveConnection?.();
     if(claimed)void reconnect(run);
-  },fail);
+  },e=>{console.warn('[connection listener]',e);status('Conexão indisponível');});
   await connectionReady;
   if(run!==epoch)return;
   sessionId=crypto.randomUUID();
@@ -193,8 +204,8 @@ async function boot(account){
   revision=remote?.revision||0;ownState=remote?.state||null;
   claimed=true;sessionActive=true;
   stopSession=sdk.onValue(sdk.ref(db,`sessions/${user.uid}`),snap=>{
-    if(run===epoch&&!stopped&&snap.val()!==sessionId)void disconnectPrevious();
-  },fail);
+    if(run===epoch&&!stopped&&snap.val()!==null&&snap.val()!==sessionId)void disconnectPrevious();
+  },e=>{console.warn('[session listener]',e);status('Verificando sessão…')});
   mount(ownState,false);
   void startFriends({sdk,db,uid:user.uid,visit:visitFarm,applyFertilize}).then(()=>{if(run===epoch&&ownState)void publishProfile(ownState)}).catch(e=>console.warn('[amigos]',e));
 }
@@ -276,9 +287,17 @@ $('more').onclick=()=>listFarms().catch(e=>status(e.message));
 $('login').onclick=async()=>{
   $('login').disabled=true;
   try{await sdk.signInWithPopup(auth,new sdk.GoogleAuthProvider())}
-  catch(e){gate('Não foi possível entrar. Tente novamente.')}finally{$('login').disabled=false}
+  catch(e){
+    console.warn('[Google login]',e?.code,e);
+    if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment'].includes(e?.code)){
+      gate('O navegador bloqueou a janela Google. Redirecionando para entrar…');
+      try{await sdk.signInWithRedirect(auth,new sdk.GoogleAuthProvider());return}catch(err){console.warn('[redirect]',err)}
+    }
+    const messages={'auth/unauthorized-domain':'Este domínio não está autorizado no Firebase.','auth/popup-closed-by-user':'Login cancelado. Tente novamente.','auth/network-request-failed':'Falha de rede ao abrir o Google. Confira sua conexão e tente novamente.','auth/cancelled-popup-request':'Já existe uma tentativa de login em andamento.'};
+    gate(messages[e?.code]||`Não foi possível entrar com Google (${e?.code||'erro desconhecido'}).`);
+  }finally{$('login').disabled=false}
 };
-setInterval(checkpoint,200);
+setInterval(checkpoint,1000);
 // Sem beforeunload/preventDefault: fechar ou recarregar nunca abre confirmação.
 window.addEventListener('pagehide',()=>{checkpoint();void flush().catch(()=>{})});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){checkpoint();void flush().catch(()=>{})}});
@@ -293,8 +312,17 @@ async function init(){
   auth=sdk.getAuth(instance);db=sdk.getDatabase(instance);
   sdk.onValue(sdk.ref(db,'.info/serverTimeOffset'),s=>{clockOffset=Number(s.val())||0});
   // A autenticação pertence à aba, para que encerrar a sessão antiga não encerre a nova.
-  await sdk.setPersistence(auth,sdk.browserSessionPersistence);
+  try{await sdk.setPersistence(auth,sdk.browserSessionPersistence)}catch(e){console.warn('[auth persistence]',e)}
+  try{await sdk.getRedirectResult(auth)}catch(e){console.warn('[Google redirect]',e?.code);gate(`Falha ao concluir login Google (${e?.code||'erro desconhecido'}).`)}
   $('login').disabled=false;
-  sdk.onAuthStateChanged(auth,account=>{void boot(account).catch(fail)});
+  sdk.onAuthStateChanged(auth,account=>{void boot(account).catch(e=>{
+    console.warn('[Firebase initial connection]',e);
+    if(stopped)return;
+    if(transient(e)||!navigator.onLine){
+      gate('A conexão com Firebase falhou. Tentando novamente…');
+      clearTimeout(reconnectTimer);
+      reconnectTimer=setTimeout(()=>{if(auth.currentUser?.uid===account?.uid)void boot(account).catch(fail)},5000);
+    }else fail(e);
+  })});
 }
 init().catch(fail);
