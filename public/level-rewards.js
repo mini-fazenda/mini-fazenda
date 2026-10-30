@@ -1,0 +1,59 @@
+(function(){
+ 'use strict';
+ const model=MFLevelRewardCore.create(),clone=x=>JSON.parse(JSON.stringify(x));let selected=-1,dismissed=0,busy=false;
+ const names={cenoura:'Cenouras',trigo:'Trigos',milho:'Milhos',espinafre:'Espinafres',morango:'Morangos',cana:'Cana',feijao:'Feijão',abacaxi:'Abacaxis',melancia:'Melancias',girassol:'Girassol',beterraba:'Beterrabas',cafe:'Café',soja:'Soja',cebola:'Cebola',arroz:'Arroz',limao:'Limões',maca:'Maçãs',laranja:'Laranjas',acerola:'Acerolas',leite:'Leites',la:'Lãs'};
+ const animalIcons={porco:'assets/5a04907c65978f207fce-porco-comum-filhote.png',cavalo:'assets/e375e2186a21b02b736c-cavalo-comum.png',bodejunino:'assets/30e3e5f44df11a44680d-item-bode.png'};
+ const animalAdults={porco:'assets/5d820c33f8e145765192-porco-grande.png',cavalo:'assets/ac18ea13efbc45a828a2-cavalo-grande.png',bodejunino:'assets/61d611a88ff96785d0eb-bode-junino.png'};
+ const visiting=()=>!!window.MFHost?.isVisiting?.();
+ function info(r){const cfg=window.MFAdapter?.project?.items?.['item-'+r.id]||{},card=document.getElementById('item-'+r.id),coin='assets/ffd360086159ad51164a-icone-moedas.png';
+  if(r.kind==='coins')return {name:r.qty.toLocaleString('pt-BR')+' moedas',icon:coin,destination:'Para seu saldo'};
+  if(r.kind==='fence'){const f=MFFenceCore.catalog[r.id];return {name:r.qty+' × '+f.name,icon:f.icon,destination:'Para o MiniBaú'};}
+  if(r.kind==='product')return {name:r.qty+' × '+(names[r.id]||r.id),icon:cfg.lootIcon||window.LOOT_SPRITES?.[r.id]||card?.querySelector('img')?.src||cfg.icon||'',destination:'Para o Celeiro'};
+  return {name:'1 × '+(cfg.name||card?.querySelector('span')?.textContent?.trim()||r.id),icon:animalIcons[r.id]||cfg.icon||cfg.shopImg||card?.querySelector('img')?.src||cfg.imgSrc||'',destination:'Para o MiniBaú'};
+ }
+ function object(r){const cfg=window.MFAdapter.project.items['item-'+r.id]||{},card=document.getElementById('item-'+r.id);if(!card)throw Error('Prêmio indisponível.');
+  if(r.id==='celeiro')return MFBarnCore.start(0,0,0);
+  const t={itemId:'item-'+r.id,name:info(r).name.replace(/^1 × /,''),imgSrc:cfg.imgSrc||card.dataset.img,w:Number(cfg.w||card.dataset.w)||2,h:Number(cfg.h||card.dataset.h)||2,visualScale:Number(cfg.visualScale)||1};
+  if(r.id.startsWith('arvore-'))MFFruitTrees.start(t);
+  else if(ANIMAL_ADULT[r.id]){const c=ANIMAL_ADULT[r.id],now=Date.now();t.animal={tipo:r.id,etapa:2,startTime:now-c.totalTime,totalTime:c.totalTime};t.imgSrc=animalAdults[r.id]||c.adultImg;MFAnimalProduction.start(t.animal,now);}
+  return t;
+ }
+ function grant(r,bonus){
+  const before={coins:moedas,inventory:getInventorySimpleSnapshot(),objects:MFObjects.capture(),fences:MFFences.capture()};
+  try{
+   if(r.kind==='product'){window.addToInventory(r.id,r.qty,info(r).icon);if((getInventorySimpleSnapshot()[r.id]?.count||0)!==(before.inventory[r.id]?.count||0)+r.qty)throw Error('Libere espaço no Celeiro para receber.');}
+   else if(r.kind==='object'){if(!MFObjects.add(object(r)))throw Error('Não foi possível guardar o presente.');}
+   else if(r.kind==='fence'){if(!MFFences.grant(r.id,r.qty))throw Error('Não foi possível guardar as cercas.');}
+   window.MFValueSource?.actor('player','nivel');moedas+=bonus+(r.kind==='coins'?r.qty:0);if(moedasSpan)moedasSpan.textContent=moedas;
+  }catch(e){moedas=before.coins;restoreInventoryFromSimple(before.inventory);MFObjects.restore(before.objects);MFFences.restore(before.fences);if(moedasSpan)moedasSpan.textContent=moedas;throw e;}
+ }
+ const style=document.createElement('style');style.textContent=`
+ #mf-level[hidden],#mf-level-badge[hidden]{display:none!important}#mf-level{position:fixed;inset:0;z-index:70000;background:#132716b8;backdrop-filter:blur(3px);display:grid;place-items:center;padding:12px;box-sizing:border-box}
+ #mf-level .ml-panel{position:relative;box-sizing:border-box;width:min(780px,94vw);max-height:94dvh;overflow:auto;border:7px solid #79421e;border-radius:28px;background:radial-gradient(ellipse at 8% 10%,#ffffff55 0 13%,transparent 14%),linear-gradient(#40b9f3,#168dd1);box-shadow:inset 0 0 0 4px #ffd975,0 18px 60px #0008;text-align:center;padding:18px 24px;color:#613016;font-family:Amfost,Arial,sans-serif;animation:ml-enter .22s ease-out}
+ #mf-level h2{display:inline-block;margin:0 35px 6px;padding:9px 24px;border:4px solid #75401e;border-radius:18px;background:linear-gradient(#ffc25f,#ce792e);box-shadow:inset 0 2px #ffdd8b,0 4px #683417;font-size:46px;color:#ffe248;text-shadow:2px 3px #613316,-1px -1px #613316;line-height:1.1}
+ #mf-level .ml-intro{color:#fff8d6;font-size:22px;margin:9px 0 14px;text-shadow:1px 2px #744422}
+ #mf-level .ml-close{position:absolute;right:12px;top:12px;width:40px;height:40px;border:3px solid #9b251d;border-radius:50%;background:linear-gradient(#ff8070,#dd3029);color:white;font:bold 29px Arial;cursor:pointer}
+ #mf-level .ml-options{display:grid;grid-template-columns:1fr 1fr;gap:18px}#mf-level .ml-card{position:relative;border:4px solid #d49b35;border-radius:22px;background:linear-gradient(#fff8d7,#ffe8a8);box-shadow:inset 0 0 0 2px #fff4b6,0 5px #966028;cursor:pointer;color:#613016;padding:12px;font-family:inherit;min-width:0}
+ #mf-level .ml-card[aria-pressed=true]{border-color:#63ae23;box-shadow:0 0 0 4px #bcff68,inset 0 0 0 2px #fffae6,0 5px #377e21}#mf-level .ml-card img{width:100%;height:145px;object-fit:contain;filter:drop-shadow(0 5px 3px #7e491e33)}#mf-level .ml-name{display:block;font-size:25px;margin:6px 0}#mf-level .ml-dest{display:block;font:600 12px Arial;color:#9c6a38}#mf-level .ml-check{position:absolute;top:8px;right:9px;width:25px;height:25px;background:#65b335;border-radius:50%;color:white;font:700 22px Arial}#mf-level .ml-card[aria-pressed=false] .ml-check{visibility:hidden}
+ #mf-level .ml-bonus{display:flex;align-items:center;justify-content:center;gap:10px;width:fit-content;margin:17px auto 12px;padding:7px 18px;border:2px solid #ffe797;border-radius:30px;background:#176ca7;color:#fff6bb;font-size:21px}#mf-level .ml-bonus img{width:34px;height:34px;object-fit:contain}
+ #mf-level .ml-claim{border:4px solid #35771b;border-radius:22px;background:linear-gradient(#a5e535,#4eab18);box-shadow:inset 0 2px #d8ff83,0 4px #285b15;color:white;text-shadow:2px 2px #3b6c18;font:32px Amfost,Arial;padding:7px 40px;cursor:pointer}#mf-level .ml-claim:disabled{filter:grayscale(.6);opacity:.7;cursor:default}#mf-level .ml-message{margin:10px 0 0;font:13px Arial;color:white;min-height:0}#mf-level .ml-message:empty{display:none}body:has(#mf-level:not([hidden])) #mf-feedback-layer{visibility:hidden}
+ #mf-level-badge{position:fixed;left:12px;top:190px;z-index:1400;border:3px solid #986224;border-radius:13px;background:linear-gradient(#ffe478,#f0aa28);color:#613016;font:18px Amfost,Arial;padding:8px 12px;cursor:pointer;box-shadow:0 3px #734319}
+ @keyframes ml-enter{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+ @media(max-height:500px){#mf-level .ml-panel{padding:10px 18px;border-width:5px;border-radius:20px;width:min(650px,94vw)}#mf-level h2{font-size:30px;padding:5px 20px;border-width:3px}#mf-level .ml-intro{font-size:17px;margin:5px 0 8px}#mf-level .ml-card{padding:5px 10px;border-radius:15px;border-width:3px}#mf-level .ml-card img{height:79px}#mf-level .ml-name{font-size:20px;margin:1px 0}#mf-level .ml-bonus{font-size:16px;margin:10px auto 7px;padding:3px 15px}#mf-level .ml-bonus img{width:23px;height:23px}#mf-level .ml-claim{font-size:23px;padding:4px 35px}#mf-level .ml-message{margin-top:6px;font-size:11px}#mf-level .ml-close{top:8px;right:8px;width:32px;height:32px;font-size:24px}#mf-level-badge{top:145px;font-size:15px}}
+ @media(max-width:480px){#mf-level .ml-panel{padding:16px 12px}#mf-level h2{font-size:29px;margin:0 24px 5px;padding:7px 12px}#mf-level .ml-intro{font-size:19px}#mf-level .ml-options{gap:10px}#mf-level .ml-card{padding:8px 5px;border-width:3px}#mf-level .ml-card img{height:110px}#mf-level .ml-name{font-size:20px}#mf-level .ml-bonus{font-size:17px;padding:6px 10px}#mf-level .ml-claim{font-size:28px;padding:8px 25px}}
+ @media(prefers-reduced-motion:reduce){#mf-level .ml-panel{animation:none}}
+ `;document.head.append(style);
+ const panel=document.createElement('div');panel.id='mf-level';panel.hidden=true;panel.innerHTML='<section class="ml-panel" role="dialog" aria-modal="true" aria-labelledby="ml-title"><button class="ml-close" aria-label="Escolher depois">×</button><h2 id="ml-title">Subiu de Nível!</h2><p class="ml-intro"></p><div class="ml-options" role="group" aria-label="Presentes disponíveis"></div><div class="ml-bonus"><img alt=""><span></span></div><button class="ml-claim" disabled>Escolher e receber</button><p class="ml-message" role="status"></p></section>';document.body.append(panel);
+ const badge=document.createElement('button');badge.id='mf-level-badge';badge.hidden=true;document.body.append(badge);
+ function render(){const e=model.current();badge.hidden=!e||visiting();badge.textContent=e?'★ Recompensa · Nível '+e.level:'';if(!e){panel.hidden=true;return;}
+  panel.querySelector('.ml-intro').textContent='Nível '+e.level+'! Escolha um dos presentes:';const cards=panel.querySelector('.ml-options');cards.replaceChildren();
+  e.options.forEach((r,i)=>{const d=info(r),b=document.createElement('button');b.className='ml-card';b.type='button';b.setAttribute('aria-pressed',String(selected===i));const img=document.createElement('img');img.src=d.icon;img.alt='';const name=document.createElement('strong');name.className='ml-name';name.textContent=d.name;const dest=document.createElement('small');dest.className='ml-dest';dest.textContent=d.destination;const check=document.createElement('span');check.className='ml-check';check.textContent='✓';b.append(check,img,name,dest);b.onclick=()=>{selected=i;render();};cards.append(b);});
+  panel.querySelector('.ml-bonus img').src='assets/ffd360086159ad51164a-icone-moedas.png';panel.querySelector('.ml-bonus span').textContent='Bônus garantido: +'+e.bonus.toLocaleString('pt-BR')+' moedas';panel.querySelector('.ml-claim').disabled=selected<0||busy;
+ }
+ function open(){if(visiting()||!model.current())return;selected=-1;panel.querySelector('.ml-message').textContent='';render();panel.hidden=false;panel.querySelector('.ml-card').focus();}
+ function close(){dismissed=model.current()?.level||0;panel.hidden=true;badge.focus();}
+ panel.querySelector('.ml-close').onclick=close;badge.onclick=open;panel.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();}else if(e.key==='Tab'){const nodes=[...panel.querySelectorAll('button:not(:disabled)')],first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
+ panel.querySelector('.ml-claim').onclick=()=>{if(busy||visiting()||selected<0)return;if(!window.MFHost?.playing?.()){panel.querySelector('.ml-message').textContent='Aguarde a conexão para receber.';return;}busy=true;const e=model.current();try{if(model.claim(e.level,selected,grant)){selected=-1;panel.hidden=true;window.MFHost.changed('level-reward');requestRedraw();render();}}catch(err){panel.querySelector('.ml-message').textContent=err.message;}finally{busy=false;render();}};
+ window.MFLevelRewards={capture:()=>model.capture(),restore:(s,level)=>{model.restore(s,level);selected=-1;dismissed=0;panel.hidden=true;render();},earned:level=>{if(visiting())return;if(model.earned(level)){window.MFHost?.changed?.('level-earned');render();}},open};
+ setInterval(()=>{const e=model.current();if(e&&e.level!==dismissed&&panel.hidden&&!document.hidden&&window.MFHost?.playing?.()&&!document.querySelector('#mf-char.on')&&document.getElementById('mf-daily')?.hidden!==false)open();},300);
+})();

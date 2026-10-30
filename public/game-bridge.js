@@ -61,6 +61,7 @@
       storedObjects:window.MFObjects?.capture() || [],
       fences:window.MFFences?.capture() || {},
       dailyRewards:clone(window.MFDaily?.capture() || {}),
+      levelRewards:window.MFLevelRewards?.capture()||null,
       tutorial:window.MFTutorial?.capture() || null,
       actionQueue:filaAcoes.map(t=>({gx:t.gx,gy:t.gy,...(t._job?{job:clone(t._job)}:{})})),
       loot: lootParticles.map(p=>simple(p))
@@ -81,6 +82,7 @@
     activeSeconds=data.activeSeconds || 0;
     window.MFMissions.restore(data.missions || {});
     window.MFDaily?.restore(data.dailyRewards || {});
+    window.MFLevelRewards?.restore(data.levelRewards,data.playerLevel||1);
     window.MFObjects?.restore(data.storedObjects || []);
     window.MFFences?.restore(data.fences || {});
     window.MFTutorial?.restore(data.tutorial, false);
