@@ -1,6 +1,6 @@
 import {nextDocument,clearLegacySaves} from './persistence.js?v=account-v3';
 import {redeemTestCredit} from './test-credit.js?v=1';
-import {startFriends,stopFriends,publishProfile,api as friendsApi} from './friends.js?v=2';
+import {startFriends,stopFriends,publishProfile,api as friendsApi} from './friends.js?v=permissao-fert-1';
 const $=id=>document.getElementById(id);
 const config=window.MINI_FAZENDA_FIREBASE;
 let sdk,auth,db,user,sessionId,revision=0,epoch=0;
@@ -166,7 +166,7 @@ function mount(state,visit){
   $('farm-title').textContent=visit?`Visitando: ${state.farmName||'Fazenda'}`:state?.farmName||'Minha fazenda';
   gate(visit?'Abrindo visita…':'Carregando sua fazenda…');
   const frame=document.createElement('iframe');frame.title=visit?'Visita à fazenda (somente visualização)':'Minha fazenda';
-  frame.src='game.html?v=porcentagem-tempo-1';frame.allow='fullscreen';$('game-container').replaceChildren(frame);
+  frame.src='game.html?v=fertilizar-permissoes-1';frame.allow='fullscreen';$('game-container').replaceChildren(frame);
   status(visit?'Somente visualização':'Online');
 }
 async function reconnect(run){

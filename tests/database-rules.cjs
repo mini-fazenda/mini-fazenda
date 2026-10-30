@@ -2,7 +2,7 @@
 for (const k of ['HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy']) delete process.env[k];
 process.env.NODE_USE_ENV_PROXY='0';
 const {initializeTestEnvironment,assertSucceeds,assertFails}=require('@firebase/rules-unit-testing');
-const {ref,set,get,query,orderByKey,limitToFirst,runTransaction}=require('firebase/database');
+const {ref,set,get,query,orderByKey,limitToFirst,runTransaction,update}=require('firebase/database');
 const fs=require('fs');
 (async()=>{
  const env=await initializeTestEnvironment({projectId:'demo-mini-fazenda',database:{host:'127.0.0.1',port:9000,rules:fs.readFileSync('database.rules.json','utf8')}});
@@ -36,6 +36,16 @@ const fs=require('fs');
  const result=await assertSucceeds(runTransaction(ref(own,'farms/owner'),current=>nextDocument(current,{sessionId:'session-2',revision:2,id:'id-3',state,timestamp:3}),{applyLocally:false}));
  if(!result.committed)throw new Error('transaction not committed');
  await assertSucceeds(runTransaction(ref(own,'farms/owner'),current=>nextDocument(current,{sessionId:'session-2',revision:2,id:'id-3',state,timestamp:3}),{applyLocally:false}));
+ await env.withSecurityRulesDisabled(async context=>{await set(ref(context.database(),'friends'),{owner:{other:1},other:{owner:1}});});
+ await assertSucceeds(get(ref(other,'friends/other/owner')));
+ await assertSucceeds(get(ref(other,'fertUsage/other/owner')));
+ const now=Date.now();
+ for(let n=1;n<=5;n++)await assertSucceeds(update(ref(other),{'fertUsage/other/owner':{start:now,n},['fertilize/owner/other/event'+n]:{gx:n,gy:2,at:now,name:'Amigo'}}));
+ await assertFails(update(ref(other),{'fertUsage/other/owner':{start:now,n:6},'fertilize/owner/other/sixth':{gx:6,gy:2,at:now,name:'Amigo'}}));
+ await assertFails(set(ref(other,'fertilize/owner/other/no-quota'),{gx:1,gy:1,at:now,name:'Amigo'}));
+ await assertSucceeds(get(ref(own,'fertilize/owner')));
+ await assertSucceeds(set(ref(own,'fertilize/owner/other/event1'),null));
+ console.log('PASS: amigos fertilizam cinco vezes com quota atômica; sexta e envio sem quota negados; dono recebe e confirma.');
  console.log('PASS: 21 verificações de regras, isolamento de contas, visita, paginação, sessão e transação.');
  }finally{await env.cleanup()}
 })().catch(e=>{console.error(e);process.exitCode=1});

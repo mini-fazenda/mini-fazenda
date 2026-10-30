@@ -805,7 +805,7 @@
       try {
         const r = await FR().fertilizeLeft(owner);
         fertLeft = r.left; fertResetAt = r.resetIn ? Date.now() + r.resetIn : 0; renderVisitBar();
-      } catch (e) { fertLeft = null; renderVisitBar('Fertilizante indisponível agora.'); }
+      } catch (e) { fertLeft = null; renderVisitBar(e?.message || 'Fertilizante indisponível agora.'); }
       clearInterval(fertTimer); fertTimer = setInterval(() => { if (fertLeft === 0) renderVisitBar(); }, 30000);
     },
     async tap(x, y) {

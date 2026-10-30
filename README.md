@@ -105,3 +105,26 @@ Com `npm run serve` aberto em outro terminal, execute `npm run test:browser`. Os
 Referências usadas: [login Google](https://firebase.google.com/docs/auth/web/google-signin), [gravações e transações](https://firebase.google.com/docs/database/web/read-and-write), [funcionamento offline](https://firebase.google.com/docs/database/web/offline-capabilities) e [regras de acesso](https://firebase.google.com/docs/database/security).
 
 O arquivo VALIDACAO.md registra as verificações executadas nesta entrega. Login Google em produção e teste com duas contas reais dependem da configuração Firebase.
+
+## Fertilização bloqueada pelo Firebase
+
+A publicação no GitHub Pages atualiza o jogo, mas **não publica as regras do Realtime Database**.
+Se a amizade funciona e o Firebase nega a consulta de `fertUsage` ou o envio para `fertilize`,
+confira as regras publicadas no projeto `mini-fazenda-9b007`.
+
+1. Abra Firebase Console → projeto Mini Fazenda → Realtime Database → **Regras**.
+2. Use o conteúdo completo de [`database.rules.json`](database.rules.json) deste repositório.
+3. Clique em **Publicar** e recarregue o jogo.
+
+Isso altera permissões, sem apagar o banco. Mantenha as regras completas: elas também protegem
+saves, sessões e amizades. Não libere leitura/escrita global.
+
+Alternativa pelo terminal, já autenticado na conta administradora:
+
+```sh
+firebase deploy --only database --project mini-fazenda-9b007
+```
+
+O teste do emulador verifica cinco fertilizações por amigo, envio atômico com o contador,
+bloqueio da sexta e de evento sem contador, leitura pelo dono e confirmação do recebimento.
+A mensagem do jogo distingue verificação da amizade, consulta do limite e envio.

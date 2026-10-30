@@ -109,6 +109,14 @@ function friendly(e) {
   return e?.message || 'Algo deu errado. Tente de novo.';
 }
 
+function fertilizeError(e, stage) {
+  if(e?.code==='PERMISSION_DENIED'||/permission/i.test(e?.message||'')){
+    console.warn('[fertilizar] permissão negada:',stage,e);
+    return new Error('O Firebase bloqueou '+stage+' da fertilização. É preciso conferir as regras do banco no servidor.');
+  }
+  return new Error(e?.message||'Não foi possível fertilizar. Tente novamente.');
+}
+
 export const api = {
   myCode: () => myCode,
   refresh: () => refreshProfiles(),
@@ -150,7 +158,7 @@ export const api = {
   async fertilizeLeft(owner) {
     if (!ctx || !owner) return { left: 0, resetIn: 0 };
     const { sdk, db, uid } = ctx;
-    const u = (await sdk.get(sdk.ref(db, `fertUsage/${uid}/${owner}`))).val();
+    let u;try {u=(await sdk.get(sdk.ref(db, `fertUsage/${uid}/${owner}`))).val();}catch(e){throw fertilizeError(e,'a consulta do limite');}
     if (!u || Date.now() - (Number(u.start) || 0) >= DAY) return { left: FERT_PER_DAY, resetIn: 0 };
     return { left: Math.max(0, FERT_PER_DAY - (Number(u.n) || 0)), resetIn: Math.max(0, (Number(u.start) || 0) + DAY - Date.now()) };
   },
@@ -159,20 +167,23 @@ export const api = {
     if (!ctx) throw new Error('Entre na sua conta para fertilizar.');
     const { sdk, db, uid } = ctx;
     if (owner === uid) throw new Error('Essa é a sua fazenda.');
+    let stage='a verificação da amizade';
     try {
       const isFriend = (await sdk.get(sdk.ref(db, `friends/${uid}/${owner}`))).val();
       if (!isFriend) throw new Error('Só dá para fertilizar a fazenda de amigos.');
+      stage='a consulta do limite';
       const u = (await sdk.get(sdk.ref(db, `fertUsage/${uid}/${owner}`))).val(), now = Date.now();
       let usage;
       if (!u || now - (Number(u.start) || 0) >= DAY) usage = { start: now, n: 1 };
       else if ((Number(u.n) || 0) < FERT_PER_DAY) usage = { start: Number(u.start), n: (Number(u.n) || 0) + 1 };
       else { const h = Math.ceil(((Number(u.start) || 0) + DAY - now) / 3600000); throw new Error(`Você já usou os ${FERT_PER_DAY} fertilizantes nessa fazenda. Volte em ${h}h.`); }
+      stage='o envio';
       const id = now.toString(36) + Math.random().toString(36).slice(2, 7);
       await sdk.update(sdk.ref(db), {
         [`fertUsage/${uid}/${owner}`]: usage,
         [`fertilize/${owner}/${uid}/${id}`]: { gx: Math.floor(plot.gx), gy: Math.floor(plot.gy), at: sdk.serverTimestamp(), name: String(me?.name || myName || 'Amigo').slice(0, 12) },
       });
       return { left: FERT_PER_DAY - usage.n, resetIn: usage.start + DAY - now };
-    } catch (e) { throw new Error(friendly(e)); }
+    } catch (e) { throw fertilizeError(e,stage); }
   },
 };
