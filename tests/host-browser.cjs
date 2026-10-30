@@ -48,7 +48,7 @@ export const query=r=>r,orderByKey=()=>{},limitToFirst=()=>{},startAfter=()=>{};
  });
  await page.waitForFunction(()=>window.__testFullscreenRequests===1);
  await page.setViewportSize({width:600,height:320});
- const controls=await page.evaluate(()=>['neighbors','logout'].map(id=>{
+ const controls=await page.evaluate(()=>['logout'].map(id=>{
    const el=document.getElementById(id),r=el.getBoundingClientRect();
    return {id,width:r.width,height:r.height,left:r.left,right:r.right,visibility:getComputedStyle(el).visibility};
  }));
@@ -59,14 +59,14 @@ export const query=r=>r,orderByKey=()=>{},limitToFirst=()=>{},startAfter=()=>{};
  await page.setViewportSize({width:360,height:640});
  const portrait=await page.evaluate(()=>{
    const warning=document.getElementById('mf-rotate-warning');
-   const friends=document.getElementById('neighbors');
+   const friends=document.getElementById('logout');
    const exit=document.getElementById('logout');
    return {warning:getComputedStyle(warning).display,passThrough:getComputedStyle(warning).pointerEvents,buttonZ:Number(getComputedStyle(document.getElementById('toolbar')).zIndex),warningZ:Number(getComputedStyle(warning).zIndex),friends:getComputedStyle(friends).visibility,logout:getComputedStyle(exit).visibility};
  });
  if(portrait.warning!=='flex'||portrait.passThrough!=='none'||portrait.buttonZ<=portrait.warningZ||portrait.friends!=='visible'||portrait.logout!=='visible')
    throw Error('Controles inacessíveis em retrato: '+JSON.stringify(portrait));
  await page.setViewportSize({width:1280,height:720});
- console.log('PASS: tela cheia solicitada pelo host; Amigos e Sair dentro do viewport mobile');
+ console.log('PASS: tela cheia solicitada pelo host; Sair dentro do viewport mobile');
  await f.evaluate(()=>{moedas=9876;window.__farmName='Conta';saveGameState('test')});
  await page.waitForFunction(()=>testCloud['farms/rodrigo']?.state.moedas===9876);
  console.log('PASS: salvamento automático por conta');

@@ -129,7 +129,7 @@ window.MFOnline={
 };
 function mount(state,visit){
   ready=false;bridge=null;initialState=state;visiting=visit;suspending=false;
-  $('toolbar').hidden=false;$('home').hidden=!visit;$('neighbors').hidden=visit;
+  $('toolbar').hidden=false;$('home').hidden=!visit;$('neighbors').hidden=true; // Amigos agora fica só na barra de baixo do jogo
   $('farm-title').textContent=visit?`Visitando: ${state.farmName||'Fazenda'}`:state?.farmName||'Minha fazenda';
   gate(visit?'Abrindo visita…':'Carregando sua fazenda…');
   const frame=document.createElement('iframe');frame.title=visit?'Visita à fazenda (somente visualização)':'Minha fazenda';

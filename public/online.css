@@ -33,3 +33,6 @@ body:has(#farms[style*="display: flex"]) :is(#mf-bounds,#mf-truck-markers),body:
  #toolbar #logout{font-size:12px}
 }
 @media (max-width:370px){#toolbar #neighbors,#toolbar #home{max-width:58px}#toolbar #logout{font-size:11px;padding:6px 7px}}
+
+/* botão Amigos do topo removido: os amigos ficam na barra de baixo do jogo */
+#toolbar #neighbors{display:none!important}
