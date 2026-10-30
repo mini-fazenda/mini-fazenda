@@ -921,7 +921,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const 
 <script src="crop-sprites.js?v=2"></script>
 <script src="farm-economy.js?v=girassol-4"></script>
 <script src="growth-time.js?v=1"></script>
-<script src="fertilizer-core.js?v=1"></script>
+<script src="fertilizer-core.js?v=block-12h"></script>
 <script src="animal-production.js?v=1"></script>
 <script src="fences-core.js?v=atlas-1"></script>
 </head>
@@ -3753,22 +3753,22 @@ function reapplyGrowthFromTime(t){
  const crop=t.cultura,type=String(crop.tipo||'').toLowerCase(),stages=CROP_STAGE_TABLE[type];if(!stages)return;
  if(!Array.isArray(t._timers))t._timers=[];
  for(const id of t._timers)clearTimeout(id);t._timers.length=0;
+ window.MFFertilizerCore?.bind(t);
  const settings=window.MFAdapter?.project?.items?.['item-'+type]||{};
- const total=Math.max(100,Number(crop.fertilizedDuration)||Number(settings.growTime)||Number(crop.totalTime)||CROP_TIME_TABLE[type]||20000);
+ const total=Math.max(100,Number(settings.growTime)||Number(crop.totalTime)||CROP_TIME_TABLE[type]||20000);
  crop.totalTime=total;
  if(window.MFGrowthTime)window.MFGrowthTime.normalize(crop,{totalTime:total,firstRatio:CROP_FIRST_RATIO[type]||.35});
  else if(!crop.startTime||crop.startTime<1e11)crop.startTime=Date.now();
- if(!crop.fertKey&&window.MFFertilizerCore)crop.fertKey=MFFertilizerCore.key(t);
  const first=Math.round(total*(CROP_FIRST_RATIO[type]||.35));
  function sync(){
   if(t.cultura!==crop)return;
-  const elapsed=Math.max(0,Date.now()-crop.startTime);
+  const elapsed=window.MFFertilizerCore?MFFertilizerCore.elapsed(crop):Math.max(0,Date.now()-crop.startTime);
   const stage=elapsed>=total?2:elapsed>=first?1:0;
   if(crop.etapa!==stage||t.imgSrc!==stages[stage]){crop.etapa=stage;t.imgSrc=stages[stage];preload(stages[stage]);requestRedraw()}
  }
- sync();const elapsed=Date.now()-crop.startTime;
- if(elapsed<first)t._timers.push(setTimeout(sync,Math.max(0,first-elapsed)));
- if(elapsed<total)t._timers.push(setTimeout(sync,Math.max(0,total-elapsed)));
+ sync();const elapsed=window.MFFertilizerCore?MFFertilizerCore.elapsed(crop):Date.now()-crop.startTime;
+ if(elapsed<first)t._timers.push(setTimeout(sync,window.MFFertilizerCore?MFFertilizerCore.delay(crop,first):Math.max(0,first-elapsed)));
+ if(elapsed<total)t._timers.push(setTimeout(sync,window.MFFertilizerCore?MFFertilizerCore.delay(crop,total):Math.max(0,total-elapsed)));
 }
 
 // Colheita (retorna terra-seca, que precisa ser arada novamente; dá XP) — mantém spawnLoot (drop animado)
@@ -6462,9 +6462,9 @@ function syncAllGrowth(now){
     if (!t.cultura) return;
     const crop=t.cultura,tipo=String(crop.tipo||'').toLowerCase(),stages=CROP_STAGE_TABLE[tipo];
     if(!stages)return;
-    const total=Number(crop.fertilizedDuration)||Number(window.MFAdapter?.project?.items?.['item-'+tipo]?.growTime)||crop.totalTime||CROP_TIME_TABLE[tipo];
+    const total=Number(window.MFAdapter?.project?.items?.['item-'+tipo]?.growTime)||crop.totalTime||CROP_TIME_TABLE[tipo];
     window.MFGrowthTime?.normalize(crop,{totalTime:total,firstRatio:CROP_FIRST_RATIO[tipo]||.35});
-    const elapsed=Date.now()-crop.startTime,first=total*(CROP_FIRST_RATIO[tipo]||.35),stage=elapsed>=total?2:elapsed>=first?1:0;
+    const elapsed=window.MFFertilizerCore?MFFertilizerCore.elapsed(crop):Date.now()-crop.startTime,first=total*(CROP_FIRST_RATIO[tipo]||.35),stage=elapsed>=total?2:elapsed>=first?1:0;
     if(crop.etapa!==stage||t.imgSrc!==stages[stage])reapplyGrowthFromTime(t);
   });
 }
@@ -7788,7 +7788,7 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 })();
 </script>
 
-<script src="extras.js?v=stars-3"></script>
+<script src="extras.js?v=block-12h"></script>
 <script src="sales-core.js?v=1"></script>
 <script src="inventory-sales.js?v=estoque-4"></script>
 <script src="daily-state.js?v=2"></script>
@@ -7799,7 +7799,7 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 <script src="barn-ui.js?v=1"></script>
 <script src="animal-tools.js?v=1"></script>
 <script src="job-feedback.js?v=hidpi-1"></script>
-<script src="growth-info.js?v=hidpi-1"></script>
+<script src="growth-info.js?v=block-12h"></script>
 <script src="sheep-animation.js?v=suave-2"></script>
 <script src="animal-indicators.js?v=hidpi-1"></script>
 <script src="fence-art.js?v=1"></script>

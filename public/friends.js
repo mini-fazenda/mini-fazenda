@@ -183,7 +183,8 @@ export const api = {
       else { const h = Math.ceil(((Number(u.start) || 0) + DAY - now) / 3600000); throw new Error(`Você já usou os ${FERT_PER_DAY} fertilizantes nessa fazenda. Volte em ${h}h.`); }
       if(!/^[a-zA-Z0-9_-]{1,180}$/.test(plot.key||''))throw new Error('Atualize o jogo antes de adubar.');
       stage='a consulta da plantação';
-      if((await sdk.get(sdk.ref(db,`fertilizedPlots/${owner}/${plot.key}`))).val())throw new Error('Essa plantação já foi adubada. Escolha outra.');
+      const previous=(await sdk.get(sdk.ref(db,`fertilizedPlots/${owner}/${plot.key}`))).val();
+      if(previous&&Number(previous.at)+12*3600000>now)throw new Error('Esse bloco já está adubado por 12 horas. Escolha outro.');
       stage='o envio';
       const id = now.toString(36) + Math.random().toString(36).slice(2, 7);
       await sdk.update(sdk.ref(db), {

@@ -2,16 +2,16 @@
 (function(root){
  function describe(t,now=Date.now(),items=root.MFAdapter?.project?.items||{}){
   if(!t)return null;
-  let name,start,total,remaining;
+  let name,start,total,remaining,progress;
   if(t.fruitTree){const cfg=root.MFFruitTrees?.config(t);if(!cfg)return null;name=cfg.treeName;start=t.fruitTree.startTime;total=cfg.cycle;}
-  else if(t.cultura&&t.cultura.tipo!=='morta'){const c=t.cultura,entry=items['item-'+c.tipo]||{};name=entry.name||c.tipo;start=c.startTime;total=entry.growTime||c.totalTime;}
+  else if(t.cultura&&t.cultura.tipo!=='morta'){const c=t.cultura,entry=items['item-'+c.tipo]||{};name=entry.name||c.tipo;start=c.startTime;total=entry.growTime||c.totalTime;if(root.MFFertilizerCore){progress=Math.min(1,root.MFFertilizerCore.elapsed(c,now)/total);remaining=root.MFFertilizerCore.delay(c,total,now);}}
   else if(t.animal){const a=t.animal,cfg=root.MFAnimalProduction?.types[a.tipo],entry=items['item-'+a.tipo]||{},matureAt=Number(a.startTime)+Number(a.totalTime);
    if(now<matureAt){name=(entry.name||({vaca:'Vaca',ovelha:'Ovelha'}[a.tipo])||a.tipo)+' · crescimento';start=a.startTime;total=a.totalTime;}
    else if(cfg){name=cfg.name;total=cfg.cycle;const readyAt=Number(a.production?.readyAt);remaining=Math.max(0,(Number.isFinite(readyAt)?readyAt:matureAt+total)-now);}
    else return null;
   }else return null;
   total=Math.max(1,Number(total)||1);if(remaining===undefined)remaining=Math.max(0,total-Math.max(0,now-Number(start)));
-  const ready=remaining<=0,percent=ready?100:Math.min(99,Math.max(0,Math.floor(100*(1-remaining/total))));return {name,percent,remaining,ready};
+  const ready=remaining<=0,percent=ready?100:Math.min(99,Math.max(0,Math.floor(100*(progress??(1-remaining/total)))));return {name,percent,remaining,ready};
  }
  function format(ms){const seconds=Math.max(0,Math.ceil(ms/1000)),hours=Math.floor(seconds/3600),minutes=Math.floor(seconds%3600/60),s=seconds%60;return hours?hours+'h '+minutes+'min':minutes?minutes+'min '+s+'s':s+'s';}
  root.MFGrowthInfo={describe,format};if(typeof document==='undefined')return;

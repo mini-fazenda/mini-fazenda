@@ -165,7 +165,7 @@
         "$from": {
           "$id": {
             ".write": "auth != null && ((auth.uid === $from && $from !== $owner && newData.exists() && !data.exists() && root.child('friends').child($owner).child($from).exists()) || (auth.uid === $owner && !newData.exists()))",
-            ".validate": "newData.hasChildren(['gx','gy','at','name']) && (newData.parent().parent().parent().parent().child('fertUsage').child($from).child($owner).child('n').val() !== root.child('fertUsage').child($from).child($owner).child('n').val() || newData.parent().parent().parent().parent().child('fertUsage').child($from).child($owner).child('start').val() !== root.child('fertUsage').child($from).child($owner).child('start').val()) && newData.hasChild('key') && !root.child('fertilizedPlots').child($owner).child(newData.child('key').val()).exists() && newData.parent().parent().parent().parent().child('fertilizedPlots').child($owner).child(newData.child('key').val()).child('event').val() === $id",
+            ".validate": "newData.hasChildren(['gx','gy','at','name']) && (newData.parent().parent().parent().parent().child('fertUsage').child($from).child($owner).child('n').val() !== root.child('fertUsage').child($from).child($owner).child('n').val() || newData.parent().parent().parent().parent().child('fertUsage').child($from).child($owner).child('start').val() !== root.child('fertUsage').child($from).child($owner).child('start').val()) && newData.hasChild('key') && (!root.child('fertilizedPlots').child($owner).child(newData.child('key').val()).exists() || root.child('fertilizedPlots').child($owner).child(newData.child('key').val()).child('at').val() + 43200000 <= now) && newData.parent().parent().parent().parent().child('fertilizedPlots').child($owner).child(newData.child('key').val()).child('event').val() === $id",
             "gx": {
               ".validate": "newData.isNumber()"
             },
@@ -199,8 +199,8 @@
       "$owner": {
         ".read": "auth != null",
         "$key": {
-          ".write": "auth != null && !data.exists() && newData.exists() && auth.uid !== $owner && root.child('friends').child($owner).child(auth.uid).exists()",
-          ".validate": "newData.hasChildren(['gx','gy','at','name','from','event']) && newData.child('from').val() === auth.uid && $key.matches(/^[a-zA-Z0-9_-]{1,180}$/) && newData.parent().parent().parent().child('fertilize').child($owner).child(auth.uid).child(newData.child('event').val()).child('key').val() === $key",
+          ".write": "auth != null && (!data.exists() || data.child('at').val() + 43200000 <= now) && newData.exists() && auth.uid !== $owner && root.child('friends').child($owner).child(auth.uid).exists()",
+          ".validate": "newData.hasChildren(['gx','gy','at','name','from','event']) && newData.child('from').val() === auth.uid && $key.matches(/^[a-zA-Z0-9_-]{1,180}$/) && newData.parent().parent().parent().child('fertilize').child($owner).child(auth.uid).child(newData.child('event').val()).child('key').val() === $key && $key === 'block_' + newData.child('gx').val() + '_' + newData.child('gy').val()",
           "gx": {
             ".validate": "newData.isNumber()"
           },
