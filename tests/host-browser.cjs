@@ -12,6 +12,9 @@ const mock=require('./firebase-mock.cjs');
  if(await page.locator('iframe').count())throw Error('Jogo abriu antes do login');
  await page.locator('#login').click();await page.waitForFunction(()=>document.querySelector('#gate').hidden);
  let f=page.frames().find(f=>f.url().includes('game.html'));
+ const hostVersion=await page.locator('script[src*="online.js?v="]').getAttribute('src');
+ if(new URL(f.url()).searchParams.get('v')!==new URL(hostVersion,'http://localhost:8080').searchParams.get('v'))throw Error('Jogo reutilizou versão antiga no cache');
+ console.log('PASS: iframe usa a versão publicada do host, sem URL fixa de cache');
  // Conta nova: escolhe o personagem antes de jogar.
  await f.waitForFunction(()=>window.MFCharacter);await f.evaluate(()=>window.MFCharacter.choose('menino'));
  // O clique de tela cheia dentro do iframe deve acionar o documento pai.
