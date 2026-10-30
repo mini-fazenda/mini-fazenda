@@ -921,6 +921,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const 
 <script src="crop-sprites.js?v=2"></script>
 <script src="farm-economy.js?v=girassol-4"></script>
 <script src="growth-time.js?v=1"></script>
+<script src="fertilizer-core.js?v=1"></script>
 <script src="animal-production.js?v=1"></script>
 <script src="fences-core.js?v=atlas-1"></script>
 </head>
@@ -3753,10 +3754,11 @@ function reapplyGrowthFromTime(t){
  if(!Array.isArray(t._timers))t._timers=[];
  for(const id of t._timers)clearTimeout(id);t._timers.length=0;
  const settings=window.MFAdapter?.project?.items?.['item-'+type]||{};
- const total=Math.max(100,Number(settings.growTime)||Number(crop.totalTime)||CROP_TIME_TABLE[type]||20000);
+ const total=Math.max(100,Number(crop.fertilizedDuration)||Number(settings.growTime)||Number(crop.totalTime)||CROP_TIME_TABLE[type]||20000);
  crop.totalTime=total;
  if(window.MFGrowthTime)window.MFGrowthTime.normalize(crop,{totalTime:total,firstRatio:CROP_FIRST_RATIO[type]||.35});
  else if(!crop.startTime||crop.startTime<1e11)crop.startTime=Date.now();
+ if(!crop.fertKey&&window.MFFertilizerCore)crop.fertKey=MFFertilizerCore.key(t);
  const first=Math.round(total*(CROP_FIRST_RATIO[type]||.35));
  function sync(){
   if(t.cultura!==crop)return;
@@ -6460,7 +6462,7 @@ function syncAllGrowth(now){
     if (!t.cultura) return;
     const crop=t.cultura,tipo=String(crop.tipo||'').toLowerCase(),stages=CROP_STAGE_TABLE[tipo];
     if(!stages)return;
-    const total=Number(window.MFAdapter?.project?.items?.['item-'+tipo]?.growTime)||crop.totalTime||CROP_TIME_TABLE[tipo];
+    const total=Number(crop.fertilizedDuration)||Number(window.MFAdapter?.project?.items?.['item-'+tipo]?.growTime)||crop.totalTime||CROP_TIME_TABLE[tipo];
     window.MFGrowthTime?.normalize(crop,{totalTime:total,firstRatio:CROP_FIRST_RATIO[tipo]||.35});
     const elapsed=Date.now()-crop.startTime,first=total*(CROP_FIRST_RATIO[tipo]||.35),stage=elapsed>=total?2:elapsed>=first?1:0;
     if(crop.etapa!==stage||t.imgSrc!==stages[stage])reapplyGrowthFromTime(t);
@@ -7786,7 +7788,7 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 })();
 </script>
 
-<script src="extras.js?v=hidpi-1"></script>
+<script src="extras.js?v=visit-fert-2"></script>
 <script src="sales-core.js?v=1"></script>
 <script src="inventory-sales.js?v=estoque-4"></script>
 <script src="daily-state.js?v=2"></script>
@@ -7819,4 +7821,4 @@ canvas.addEventListener('contextmenu', e => { if (window.MFCancelPlacing()) e.pr
 <script src="ajustes-celular.js?v=3"></script>
 <script src="tutorial.js?v=hidpi-1"></script>
 <script src="save-runtime.js?v=1"></script>
-<script src="game-bridge.js?v=runtime-1"></script>
+<script src="game-bridge.js?v=visit-fert-2"></script>
