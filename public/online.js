@@ -31,12 +31,16 @@ function checkpoint(){
     const state=bridge.capture(),text=JSON.stringify(state);
     if(text===lastText)return;
     lastText=text;ownState=state;pending={id:crypto.randomUUID(),state};
+    // Cópia de emergência somente desta aba para recargas durante falhas de rede.
+    try{sessionStorage.setItem('mf-recovery-v2:'+user.uid,JSON.stringify({state,revision,at:Date.now()}))}catch(e){console.warn('[recovery storage]',e)}
     // Alterações são enviadas imediatamente. Não há gravação do progresso no navegador.
     void flush().catch(e=>{console.warn('[save]',e);retryPending()});
   }catch(e){fail(e)}
 }
 function publicState(state){
-  return {...state,inventory:{},moedas:0,truckOrder:null,loot:[],player:{...state.player,path:[]},aradora:{...state.aradora,path:[],fila:[]}};
+  // Saves anteriores podem não conter farmName. O Firebase exige string em publicFarms.
+  const farmName=typeof state.farmName==='string'&&state.farmName.trim()?state.farmName.slice(0,12):'Fazenda';
+  return {...state,farmName,inventory:{},moedas:0,truckOrder:null,loot:[],player:{...state.player,path:[]},aradora:{...state.aradora,path:[],fila:[]}};
 }
 function scheduleProjection(state,version,run){
   clearTimeout(projectionTimer);
@@ -73,11 +77,15 @@ async function flush(){
       if(!result.committed&&result.snapshot.val()?.saveId!==record.id){
         const currentToken=(await sdk.get(sdk.ref(db,`sessions/${uid}`))).val();
         if(currentToken!==token){await disconnectPrevious();return}
+        // Outra gravação da mesma sessão foi confirmada: atualiza a revisão e tenta novamente.
+        const remoteRevision=Number(result.snapshot.val()?.revision);
+        if(Number.isSafeInteger(remoteRevision)&&remoteRevision>revision){revision=remoteRevision;continue}
         throw new Error('save/revision-conflict');
       }
       revision=result.snapshot.val().revision;
       if(pending?.id===record.id)pending=null;
       ownState=record.state;
+      try{const k='mf-recovery-v2:'+uid,s=JSON.parse(sessionStorage.getItem(k)||'null');if(s&&JSON.stringify(s.state)===JSON.stringify(record.state))sessionStorage.removeItem(k)}catch{}
       $('farm-title').textContent=record.state.farmName||'Minha fazenda';
       retryDelay=1000;clearTimeout(retryTimer);status('Online');scheduleProjection(record.state,revision,run);
     }
@@ -202,6 +210,15 @@ async function boot(account){
   const remote=(await sdk.get(sdk.ref(db,`farms/${user.uid}`))).val();
   if(run!==epoch||stopped)return;
   revision=remote?.revision||0;ownState=remote?.state||null;
+  // Recuperação conservadora: nunca substitui um save remoto mais novo.
+  try{
+    const recovery=JSON.parse(sessionStorage.getItem('mf-recovery-v2:'+user.uid)||'null');
+    if(recovery?.state&&Number(recovery.revision)===revision&&Date.now()-recovery.at<86400000){
+      ownState=recovery.state;
+      lastText='';
+      console.warn('[recovery] progresso pendente desta aba restaurado');
+    }else if(recovery)sessionStorage.removeItem('mf-recovery-v2:'+user.uid);
+  }catch(e){console.warn('[recovery]',e)}
   claimed=true;sessionActive=true;
   stopSession=sdk.onValue(sdk.ref(db,`sessions/${user.uid}`),snap=>{
     if(run===epoch&&!stopped&&snap.val()!==null&&snap.val()!==sessionId)void disconnectPrevious();
@@ -215,7 +232,7 @@ async function drain(){
     if(!connected||!sessionActive)throw new Error('Aguarde a conexão voltar.');
     await flush();
     if(stopped)return false;
-    while(pending){await flush();if(stopped)return false}
+    if(pending)throw new Error('Ainda há progresso sem confirmação do servidor. Aguarde a sincronização antes de visitar amigos.');
     return true;
   }catch(e){suspending=false;if(connected)$('gate').hidden=true;throw e}
 }

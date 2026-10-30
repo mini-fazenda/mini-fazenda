@@ -70,11 +70,22 @@ export const query=r=>r,orderByKey=()=>{},limitToFirst=()=>{},startAfter=()=>{};
  await f.evaluate(()=>{moedas=9876;window.__farmName='Conta';saveGameState('test')});
  await page.waitForFunction(()=>testCloud['farms/rodrigo']?.state.moedas===9876);
  console.log('PASS: salvamento automático por conta');
+ // Conta com revisão remota mais alta na mesma sessão: deve recuperar sem perder a alteração.
+ await page.evaluate(()=>{testCloud['farms/rodrigo'].revision+=1;});
+ await f.evaluate(()=>{moedas=9877;saveGameState('revision-retry')});
+ await page.waitForFunction(()=>testCloud['farms/rodrigo']?.state.moedas===9877);
+ console.log('PASS: conflito de revisão da mesma conta foi recuperado');
+ // Save legado sem farmName: a cópia pública precisa ter nome para visitas.
+ await f.evaluate(()=>{window.__farmName='';saveGameState('legacy-no-name')});
+ await page.waitForFunction(()=>testCloud['publicFarms/rodrigo']?.state?.farmName==='Fazenda');
+ await f.evaluate(()=>{window.__farmName='Conta';saveGameState('restore-name')});
+ console.log('PASS: projeção pública de save antigo sem nome');
+
  if(await page.locator('#backup,#recover,#use-cloud').count())throw Error('Interface de backup permaneceu');
  await page.evaluate(()=>localStorage.setItem('mf-online:demo:rodrigo',JSON.stringify({pending:true,baseRevision:999,state:{moedas:1}})));
  await page.reload();await page.waitForFunction(()=>document.querySelector('#gate').hidden);
  f=page.frames().find(f=>f.url().includes('game.html'));
- if(await f.evaluate(()=>moedas)!==9876)throw Error('Save local prevaleceu sobre a conta');
+ if(await f.evaluate(()=>moedas)!==9877)throw Error('Save local prevaleceu sobre a conta');
  if(await page.evaluate(()=>localStorage.getItem('mf-online:demo:rodrigo'))!==null)throw Error('Save antigo não foi removido');
  if(dialogs.length)throw Error('Confirmação ao recarregar');
  console.log('PASS: reload sem confirmação, ignora e limpa save local antigo');
