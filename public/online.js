@@ -1,4 +1,5 @@
-import {nextDocument,clearLegacySaves} from './persistence.js?v=account-v2';
+import {nextDocument,clearLegacySaves} from './persistence.js?v=account-v3';
+import {redeemTestCredit} from './test-credit.js?v=1';
 import {startFriends,stopFriends,publishProfile,api as friendsApi} from './friends.js?v=2';
 const $=id=>document.getElementById(id);
 const config=window.MINI_FAZENDA_FIREBASE;
@@ -219,6 +220,15 @@ async function boot(account){
       console.warn('[recovery] progresso pendente desta aba restaurado');
     }else if(recovery)sessionStorage.removeItem('mf-recovery-v2:'+user.uid);
   }catch(e){console.warn('[recovery]',e)}
+  // Resgate autenticado, atômico e único, antes de abrir o jogo ou permitir saves.
+  if(ownState){
+    try{
+      const credit=await redeemTestCredit({sdk,db,uid:user.uid,sessionId,revision,active:()=>run===epoch&&!stopped});
+      if(run!==epoch||stopped)return;
+      if(credit){revision=credit.revision;ownState={...ownState,moedas:ownState.moedas+credit.amount};lastText='';}
+    }catch(e){console.warn('[crédito de teste]',e)}
+  }
+  if(run!==epoch||stopped)return;
   claimed=true;sessionActive=true;
   stopSession=sdk.onValue(sdk.ref(db,`sessions/${user.uid}`),snap=>{
     if(run===epoch&&!stopped&&snap.val()!==null&&snap.val()!==sessionId)void disconnectPrevious();
