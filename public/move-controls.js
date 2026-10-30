@@ -16,7 +16,9 @@
  turn.onclick=()=>{if(fence())document.querySelector('#mf-fence-toolbar [data-rotate]')?.click();else if(estruturaMovendo?.animal){estruturaMovendo.animal.flipped=!estruturaMovendo.animal.flipped;requestRedraw();window.MFHost?.changed?.('animal-rotation');}else document.getElementById('mf-barn-rotate')?.click();update();};
  store.onclick=()=>{if(fence())document.querySelector('#mf-fence-toolbar [data-store]')?.click();else document.getElementById('mf-store-selected')?.click();update();};
  dock.querySelector('[data-done]').onclick=()=>{setFarmMoveMode(false);const old=document.getElementById('mf-barn-rotate');if(old)old.hidden=true;update();};
+ function positionMenu(){const menu=document.getElementById('mf-fence-menu');if(!menu||menu.hidden)return;const a=document.getElementById('mf-amigos')?.getBoundingClientRect(),b=document.getElementById('mf-menu')?.getBoundingClientRect(),left=a?.right+8||12,right=b?.left-8||innerWidth-12,gap=right-left;menu.style.top='auto';menu.style.left=gap>=300?(left+right)/2+'px':'50%';menu.style.bottom=gap>=300?'max(12px,env(safe-area-inset-bottom))':Math.max(a?innerHeight-a.top:0,b?innerHeight-b.top:0)+10+'px';}
  function update(){
+  positionMenu();
   const on=!!modoMover&&!window.MFHost?.isVisiting?.();document.body.classList.toggle('mf-moving-compact',on);dock.hidden=!on;if(!on)return;
   const selected=fence()||!!estruturaMovendo;hint.hidden=selected;turn.hidden=store.hidden=!selected;
   turn.disabled=!fence()&&!window.MFBarnCore?.is(estruturaMovendo)&&!estruturaMovendo?.animal;turn.title=turn.disabled?'Este objeto tem uma única orientação':'Alternar rotação';
