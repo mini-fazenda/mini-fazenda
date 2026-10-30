@@ -13,7 +13,9 @@ const {chromium,webkit}=require('playwright');
    document.getElementById('gate').hidden=true;const f=document.createElement('iframe');f.src='game.html';document.getElementById('game-container').append(f);
   });
   await page.waitForFunction(()=>window.testAttached);const f=page.frames().find(f=>f.url().includes('game.html'));
+  await f.waitForFunction(()=>window.MFCharacter);
   await f.evaluate(()=>{
+   MFCharacter.choose('menino');
    MFTutorial.restore({step:5,done:true},false);document.querySelectorAll('#mf-char,#mf-daily').forEach(el=>{el.classList.remove('on');el.hidden=true;el.style.display='none';});
    terrenos=[];filaAcoes=[];player.path=[];player.acaoAtual=null;offsetX=0;offsetY=-35;zoom=.6;
    terrenos.push({gx:5,gy:5,w:2,h:2,imgSrc:TERRA_ARADA_SRC,cultura:{tipo:'cenoura',startTime:Date.now()-300000,totalTime:600000,etapa:0}});
