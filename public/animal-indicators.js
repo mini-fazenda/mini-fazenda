@@ -11,7 +11,7 @@
  @media(prefers-reduced-motion:reduce){.mf-animal-ready span{animation:none}}
  `;document.head.append(style);
  const icons={},markers=new Map(),tops=new Map();
- function icon(tool){if(icons[tool])return icons[tool];const c=document.createElement('canvas');c.width=96;c.height=96;const g=c.getContext('2d');g.scale(2,2);window.MFAnimalTools.draw(g,tool,23,23);return icons[tool]=c.toDataURL();}
+ function icon(tool){if(tool==='harvest')return spriteFoice.src;if(icons[tool])return icons[tool];const c=document.createElement('canvas');c.width=96;c.height=96;const g=c.getContext('2d');g.scale(2,2);window.MFAnimalTools.draw(g,tool,23,23);return icons[tool]=c.toDataURL();}
  function visibleTop(src,img){
   if(tops.has(src))return tops.get(src);
   if(!img?.complete||!img.naturalWidth)return 0;
@@ -23,7 +23,7 @@
   const shown=new Set(),rect=canvas.getBoundingClientRect();
   for(const t of terrenos){
    if(modoMover&&estruturaMovendo===t)continue;
-   const state=window.MFAnimalProduction.sync(t.animal);if(!state?.ready)continue;
+   const fruit=window.MFFruitTrees?.sync(t);const state=fruit?{...fruit,tool:'harvest'}:window.MFAnimalProduction.sync(t.animal);if(!state?.ready)continue;
    const img=preload(t.imgSrc);if(!img?.naturalWidth)continue;
    const vs=window.MFAdapter?.scaleForStructure?.(t,Number(t.visualScale)||1)??(Number(t.visualScale)||1);
    const w=TILE_W*(t.w||1)*vs,h=w*img.naturalHeight/img.naturalWidth;

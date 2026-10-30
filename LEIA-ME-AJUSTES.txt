@@ -297,3 +297,11 @@ REVISAO 23 - CELEIRO CONSTRUIVEL E OVELHA ESTAVEL
 - Artes das duas posicoes recortadas da folha enviada; sem fundo magenta ou fragmentos da linha seguinte.
 - Ovelha usa duas poses estaveis com transicoes curtas e mastigacao minima, eliminando a alternancia repetida de desenhos diferentes durante o descanso.
 - 49 testes unitarios e regressao local Chromium/toque passaram; inclui custo, personagem livre, giro, prazo, save, estrelas unicas e toque no predio abrindo vendas. CI tambem executa WebKit/iOS.
+
+REVISAO 24 — ARVORES FRUTIFERAS PERMANENTES
+Mini Loja > Árvores: limoeiro 3000/30min/150 estrelas/300 por coleta;
+macieira 4000/40min/180 estrelas/400; laranjeira 5000/50min/215 estrelas/500;
+aceroleira 6000/60min/250 estrelas/600. Cada lote é uma unidade de fruta no celeiro.
+Compra uma vez, estrelas na colheita, retorno do custo em dez vendas.
+Artes fornecidas: início, 50% e pronta; foice e aviso de coleta. Árvore permanece
+no terreno e reinicia após colher. Relógio persiste ao sair, mover ou guardar.

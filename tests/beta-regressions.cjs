@@ -80,6 +80,41 @@ const {chromium,webkit,devices}=require('playwright');
  await f.locator('#game').tap({position:tap});
  await f.waitForFunction(()=>document.getElementById('overlay-bau').style.display==='flex');
  await reload();f=frame();await f.evaluate(()=>{const xp=playerXP;parent.testPlaying=true;MFBarn.tick();parent.testPlaying=false;if(playerXP!==xp)throw Error('Estrelas da obra repetiram após reload');});
+ await f.evaluate(()=>{
+  terrenos=[];filaAcoes=[];player.acaoAtual=null;player.path=[];moedas=30000;clearInventoryFromSave();modoMover=false;modoColocar=false;spawnedTiles.clear();
+  const initial=playerXP;let i=0;
+  for(const [type,c]of Object.entries(MFFruitTrees.types)){
+   const card=document.getElementById('item-arvore-'+type);if(card?.dataset.category!=='arvores')throw Error('Árvore fora da loja');
+   card.click();if(!trySpawnProprioAt(4+i*3,4))throw Error('Não comprou árvore '+type);const t=terrenos.at(-1);i++;
+   if(!t.fruitTree||playerXP!==initial)throw Error('Ciclo ausente ou estrelas cobradas ao comprar');
+   t.fruitTree.startTime=Date.now()-c.cycle*.6;MFFruitTrees.sync(t);if(t.imgSrc!==c.stages[1])throw Error('Arte de 50% incorreta');
+  }
+  if(moedas!==12000)throw Error('Compra das árvores incorreta');window.MFCancelPlacing();
+ });
+ await reload();f=frame();await f.evaluate(()=>{
+  const award=addXP;let awarded=0;addXP=n=>{awarded+=n;award(n);};let stars=0;
+  for(const t of terrenos){const c=MFFruitTrees.config(t);if(!t.fruitTree||MFFruitTrees.state(t).stage!==1)throw Error('Árvore não persistiu');t.fruitTree.startTime-=c.cycle;MFFruitTrees.sync(t);if(farmPointerAction(t)!=='harvest')throw Error('Cursor não virou foice');if(!MFJobs.queue(t,'tree'))throw Error('Não enfileirou coleta');stars+=c.stars;}
+  for(let i=0;i<4;i++){const a=player.acaoAtual;if(!a)throw Error('Fila perdida');player.gx=a.alvo.gx;player.gy=a.alvo.gy;player.path=[];a.state='ararando';a.startTime=performance.now()-a.duration-10;processArar();}
+  addXP=award;if(awarded!==stars)throw Error('Estrelas de coleta incorretas: '+awarded+'/'+stars);
+  for(const t of terrenos){const c=MFFruitTrees.config(t);if(t.imgSrc!==c.stages[0]||collectTreeFruit(t))throw Error('Árvore morreu ou coleta duplicou');if(__gameInventory.map[t.fruitTree.tipo]?.count!==1)throw Error('Fruta não entrou no celeiro');}
+  const coins=moedas;document.querySelector('#mf-sales-actions button:nth-child(2)').click();if(moedas!==coins+1800)throw Error('Frutas devem vender por 300+400+500+600');
+ });
+ await reload();f=frame();await f.evaluate(()=>{if(terrenos.length!==4||terrenos.some(t=>!t.fruitTree||MFFruitTrees.state(t).stage!==0)||Object.keys(__gameInventory.map).length)throw Error('Ciclo ou venda não persistiu');});
+ console.log('PASS: quatro árvores na loja, compra, 50%, save, foice, fila, estrelas, venda e reinício sem duplicação');
+ await f.evaluate(()=>{
+  window.MFCancelPlacing();setFarmMoveMode(false);document.querySelectorAll('#overlay-bau,#overlay-loja').forEach(el=>el.style.display='none');document.getElementById('mf-sale-summary').hidden=true;
+  document.querySelectorAll('#mf-char,#mf-daily').forEach(el=>{el.classList.remove('on');el.hidden=true;el.style.display='none';});MFTutorial.restore({step:5,done:true},false);
+  const t=terrenos[0];t.fruitTree.startTime-=MFFruitTrees.config(t).cycle;MFFruitTrees.sync(t);offsetX=0;offsetY=-75;zoom=.6;requestRedraw();
+ });
+ await f.waitForFunction(()=>{const im=preload(terrenos[0].imgSrc);return im.complete&&im.naturalWidth>0;});
+ const treeTap=await f.evaluate(()=>{const t=terrenos[0],p=gridToScreen(t.gx+.5,t.gy+.5);return {x:canvas.width/2+offsetX+p.x*zoom,y:canvas.height/3+offsetY+(p.y-70)*zoom};});
+ await f.locator('#game').tap({position:treeTap});
+ await f.waitForFunction(()=>player.acaoAtual?.job==='tree'||filaAcoes.some(t=>t._job?.kind==='tree'));
+ await f.evaluate(()=>{
+  const t=terrenos[1],saved={...t.fruitTree};if(!MFObjects.store(t))throw Error('Não guardou árvore');
+  const stored=MFObjects.capture().at(-1);if(stored.fruitTree.startTime!==saved.startTime||stored.fruitTree.tipo!==saved.tipo)throw Error('MiniBaú perdeu ciclo da árvore');
+ });
+ console.log('PASS: toque real na árvore madura inicia a coleta com foice');
  if(errors.length)throw Error(errors.join('\n'));console.log('PASS: celeiro 200 moedas, obra autônoma 5min, giro, save, 5 estrelas únicas e toque abre vendas ('+(ios?'WebKit/iOS':'Chromium/toque')+')');
  await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
