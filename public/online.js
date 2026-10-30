@@ -105,7 +105,10 @@ async function publishProjection(){
         saveId:target.saveId||'',updatedAt:sdk.serverTimestamp()};
     },{applyLocally:false});
     if(target.run!==epoch||stopped)return;
-    if((Number(result.snapshot.val()?.revision)||0)<target.version)throw new Error('projection/not-confirmed');
+    const projected=Number(result.snapshot.val()?.revision)||0;
+    if(projected<target.version)throw new Error('projection/not-confirmed');
+    // Outra sessão já publicou uma versão mais recente: não rebaixe o diretório.
+    if(projected>target.version)return;
     await sdk.set(sdk.ref(db,`directory/${uid}`),{
       name:(target.state.farmName||'Minha fazenda').slice(0,12),
       level:target.state.playerLevel||1,updatedAt:sdk.serverTimestamp()
@@ -333,6 +336,8 @@ async function drain(){
   try{
     if(!connected||!sessionActive)throw new Error('Aguarde a conexão voltar.');
     await flush();
+    // Não cancele a publicação pública ao trocar de fazenda imediatamente após salvar.
+    if(projectionTarget)await publishProjection();
     if(stopped)return false;
     if(pending)throw new Error('Ainda há progresso sem confirmação do servidor. Aguarde a sincronização antes de visitar amigos.');
     return true;
