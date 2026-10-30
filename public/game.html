@@ -5174,7 +5174,7 @@ if(!window.MFBarn?.drawSprite(ctx,placingItem,anchor,img))ctx.drawImage(img, dra
 function drawCursorOverlay() {
   if (!lastMouse) return;
   ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.setTransform(MFViewport.ratio, 0, 0, MFViewport.ratio, 0, 0);
 
   if(lastMouse.animalTool){window.MFAnimalTools?.draw(ctx,lastMouse.animalTool,lastMouse.clientX,lastMouse.clientY);}
   else if (lastMouse.scythe) {
@@ -5918,7 +5918,7 @@ function updateLoots(dt) {
 function drawLoots() {
   if (!ctx) return;
   ctx.save();
-  ctx.setTransform(1,0,0,1,0,0);
+  ctx.setTransform(MFViewport.ratio,0,0,MFViewport.ratio,0,0);
   for (let i = 0; i < lootParticles.length; i++) {
     const p = lootParticles[i];
     const fadeFactor = 2.5;
