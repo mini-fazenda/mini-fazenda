@@ -4966,6 +4966,7 @@ if(t.fruitTree)window.MFFruitTrees?.sync(t);
 const animalFrame=window.MFBarn?.src(t)||window.MFNatureAssets?.srcFor(t)||window.MFSheepAnimation?.src(t)||t.imgSrc;
 const img = preload(animalFrame);
 
+if(img?.complete&&img.naturalWidth&&window.MFBarn?.drawSprite(ctx,t,anchor,img))continue;
 const targetW = TILE_W * (t.w || 1);
 if (img && img.complete && img.naturalWidth > 0) {
   const scale = targetW / img.naturalWidth;
@@ -5110,7 +5111,7 @@ const anchor = gridToScreen(
 );
 const drawX = anchor.x - drawW / 2;
 const drawY = anchor.y - drawH + TILE_H * 0.9;
-ctx.drawImage(img, drawX, drawY, drawW, drawH);
+if(!window.MFBarn?.drawSprite(ctx,estruturaMovendo,anchor,img))ctx.drawImage(img, drawX, drawY, drawW, drawH);
   }
 
   ctx.restore();
@@ -5145,7 +5146,7 @@ const drawH = img.naturalHeight * scale * vs;
 const anchor = gridToScreen(clampX + (placingItem.w - 1) / 2, clampY + (placingItem.h - 1) / 2);
 const drawX = anchor.x - drawW / 2;
 const drawY = anchor.y - drawH + TILE_H * 0.9;
-ctx.drawImage(img, drawX, drawY, drawW, drawH);
+if(!window.MFBarn?.drawSprite(ctx,placingItem,anchor,img))ctx.drawImage(img, drawX, drawY, drawW, drawH);
       }
     }
     ctx.restore();
@@ -6564,6 +6565,7 @@ function terrainAtPointer(x, y) {
   for (let i = terrenos.length - 1; i >= 0; i--) {
     const t = terrenos[i], img = imgCache[t.imgSrc];
     if (!img?.complete || !img.naturalWidth) continue;
+    if(window.MFBarn?.is(t)){if(window.MFBarn.hit(t,img,x,y))return t;continue;}
     const scale = TILE_W * (t.w || 1) / img.naturalWidth;
     const vs = window.MFAdapter?.scaleForStructure?.(t, Number(t.visualScale) || 1) ?? (Number(t.visualScale) || 1);
     const w = img.naturalWidth * scale * vs, h = img.naturalHeight * scale * vs;
@@ -7175,7 +7177,7 @@ document.addEventListener('DOMContentLoaded', () => {
 @keyframes mf-exit{from{opacity:1;scale:1}to{opacity:0;scale:.83}}
 #cards-grid .card-item::after{color:var(--mf-price-color,#000)!important}
 </style>
-<script src="barn-core.js?v=1"></script>
+<script src="barn-core.js?v=encaixe-2"></script>
 <script src="farm-boundary.js?v=1"></script>
 <script src="nature-assets.js?v=1"></script>
 <script src="birds.js?v=1"></script>
@@ -7836,7 +7838,7 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 <script src="daily-state.js?v=2"></script>
 <script src="daily-rewards.js?v=3"></script>
 <script src="truck-ui.js?v=1"></script>
-<script src="object-storage.js?v=3"></script>
+<script src="object-storage.js?v=encaixe-4"></script>
 <script src="pointer-menu.js?v=1"></script>
 <script src="barn-ui.js?v=1"></script>
 <script src="animal-tools.js?v=1"></script>
@@ -7846,7 +7848,7 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 <script src="animal-indicators.js?v=1"></script>
 <script src="fence-art.js?v=1"></script>
 <script src="fences.js?v=atlas-1"></script>
-<script src="barn.js?v=1"></script>
+<script src="barn.js?v=encaixe-2"></script>
 <script>
 // Sair do modo colocar: Esc ou botão direito (sementes e itens continuam em seleção contínua até cancelar).
 window.MFCancelPlacing = function () {
