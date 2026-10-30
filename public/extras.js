@@ -166,9 +166,13 @@
   #mf-visit-bar .mfv-bags img.used{filter:grayscale(1) brightness(.6);opacity:.35;transform:scale(.82)}
   #mf-visit-bar small{display:block;font:700 12px Arial,sans-serif;color:#ffe9b0;margin-top:1px}
   #mf-visit-bar.empty{border-color:#8a8a8a}
-  .mf-fert-fly{position:fixed;z-index:7;width:46px;height:54px;pointer-events:none;margin:-27px 0 0 -23px}
+  #mf-visit-bar{pointer-events:auto!important;cursor:pointer}
+  #mf-visit-bar.holding{border-color:#9bff6b;box-shadow:0 0 0 3px #9bff6b88,0 6px 16px #0007}
+  #mf-fert-cursor{position:fixed;z-index:8;width:64px;height:64px;pointer-events:none;background:url(assets/fertilizante/saco.png) center/contain no-repeat;
+    transform:translate(-30%,-85%) rotate(-8deg);filter:drop-shadow(0 4px 3px #0006);display:none}
+  .mf-fert-pour{position:fixed;z-index:7;width:130px;height:130px;pointer-events:none;background:url(assets/fertilizante/despejar.webp) 0 0/auto 100% no-repeat}
   @media (max-width:900px),(max-height:500px){#mf-visit-bar{font-size:14px;padding:4px 10px 5px;border-radius:14px}
-    #mf-visit-bar .mfv-bags img,.mf-fert-fly{width:32px;height:38px}#mf-visit-bar .mfv-count{font-size:14px}#mf-visit-bar small{font-size:10.5px}}
+    #mf-visit-bar .mfv-bags img{width:32px;height:38px}#mf-fert-cursor{width:48px;height:48px}.mf-fert-pour{width:100px;height:100px}#mf-visit-bar .mfv-count{font-size:14px}#mf-visit-bar small{font-size:10.5px}}
   .mf-spark{position:fixed;z-index:6;pointer-events:none;font-size:26px;animation:mfSpark 1.2s ease-out forwards}
   @keyframes mfSpark{0%{transform:translate(-50%,-50%) scale(.4);opacity:0}20%{opacity:1}100%{transform:translate(calc(-50% + var(--dx)),calc(-50% - 70px)) scale(1.2);opacity:0}}
 
@@ -733,8 +737,9 @@
     }
   };
   // Visitante: barra com 5 fertilizantes POR AMIGO (voltam 24h depois do primeiro uso nessa fazenda).
-  const FERT_IMG = 'assets/fertilizante.svg', FERT_MAX = 5;
-  let visitBar = null, fertLeft = null, fertBusy = false, fertResetAt = 0, fertTimer = 0;
+  const FERT_IMG = 'assets/fertilizante/saco.png', FERT_POUR = 'assets/fertilizante/despejar.webp', FERT_FRAMES = 29, FERT_MAX = 5;
+  let visitBar = null, fertLeft = null, fertBusy = false, fertResetAt = 0, fertTimer = 0, holding = true, cursorEl = null;
+  try { new Image().src = FERT_POUR; } catch (e) { }
   function fmtWait(ms) {
     const m = Math.max(1, Math.ceil(ms / 60000)), h = Math.floor(m / 60);
     return h ? `${h}h ${String(m % 60).padStart(2, '0')}min` : `${m} min`;
@@ -748,29 +753,55 @@
     if (!msg) {
       if (left == null) msg = 'Carregando fertilizantes…';
       else if (left === 0) msg = fertResetAt ? `Acabaram nessa fazenda! Voltam em ${fmtWait(fertResetAt - Date.now())}` : 'Acabaram nessa fazenda por hoje.';
+      else if (!holding) msg = 'Toque aqui para pegar o fertilizante';
       else msg = 'Toque numa plantação crescendo · cada um acelera 35%';
     }
     visitBar.classList.toggle('empty', left === 0);
+    visitBar.classList.toggle('holding', holding && left > 0);
     visitBar.innerHTML = `<div class="mfv-title">🌱 <b>Fertilizante</b> <span class="mfv-count">${left == null ? '…' : left}/${FERT_MAX}</span></div><div class="mfv-bags">${bags}</div><small>${msg}</small>`;
+    syncCursor();
   }
-  function flyBag(to, done) {
-    const bags = visitBar?.querySelectorAll('.mfv-bags img:not(.used)'), from = bags && bags[bags.length - 1];
-    if (!from || !from.animate) { done(); return; }
-    const r = from.getBoundingClientRect(), img = document.createElement('img');
-    img.src = FERT_IMG; img.className = 'mf-fert-fly'; img.style.left = (r.left + r.width / 2) + 'px'; img.style.top = (r.top + r.height / 2) + 'px';
-    (document.getElementById('mf-visit-cover') || document.body).appendChild(img);
-    const dx = to.x - (r.left + r.width / 2), dy = to.y - (r.top + r.height / 2);
-    const an = img.animate([
-      { transform: 'translate(0,0) scale(1)', opacity: 1 },
-      { transform: `translate(${dx * .5}px,${dy * .5 - 80}px) scale(1.15) rotate(-12deg)`, opacity: 1, offset: .55 },
-      { transform: `translate(${dx}px,${dy}px) scale(.5) rotate(10deg)`, opacity: 0 }], { duration: 650, easing: 'ease-in' });
-    an.onfinish = () => { img.remove(); done(); };
+  // Cursor de saco de fertilizante (no PC). No celular a barra mostra que está "segurando".
+  const finePointer = () => !window.matchMedia || window.matchMedia('(pointer:fine)').matches;
+  function syncCursor(x, y) {
+    if (!cursorEl) return;
+    const on = holding && fertLeft > 0 && !fertBusy && finePointer();
+    cursorEl.style.display = on && cursorEl.dataset.in === '1' ? 'block' : 'none';
+    const cover = document.getElementById('mf-visit-cover'); if (cover) cover.style.cursor = on ? 'none' : '';
+    if (x != null) { cursorEl.style.left = x + 'px'; cursorEl.style.top = y + 'px'; }
+  }
+  // Animação: o saco vira em cima da plantação e cai a purpurina.
+  function pourAt(q) {
+    return new Promise(done => {
+      const host = document.getElementById('mf-visit-cover') || document.body;
+      const el = document.createElement('div'); el.className = 'mf-fert-pour'; host.appendChild(el);
+      const size = el.getBoundingClientRect().width || 130;
+      // na arte, o saco fica em (50%, 35%) e a terra cai perto de (45%, 85%)
+      el.style.left = (q.x - size * .40) + 'px'; el.style.top = (q.y - size * .86) + 'px';
+      const t0 = performance.now(), fps = 30; let soilDone = false;
+      (function step(now) {
+        const f = Math.floor((now - t0) / 1000 * fps);
+        if (f >= FERT_FRAMES) { el.remove(); if (!soilDone) done(); return; }
+        el.style.backgroundPositionX = (-f * size) + 'px';
+        if (!soilDone && f >= 14) { soilDone = true; done(); } // terra já caiu: aplica o efeito
+        requestAnimationFrame(step);
+      })(t0);
+    });
   }
   window.MFVisit = {
     async init(cover) {
       const owner = window.MFHost?.visitingUid?.();
       if (!FR()?.fertilize || !owner) return;
-      visitBar = document.createElement('div'); visitBar.id = 'mf-visit-bar'; cover.appendChild(visitBar); renderVisitBar();
+      visitBar = document.createElement('div'); visitBar.id = 'mf-visit-bar'; cover.appendChild(visitBar);
+      cursorEl = document.createElement('div'); cursorEl.id = 'mf-fert-cursor'; cover.appendChild(cursorEl);
+      // a barra não deixa o toque "vazar" para a plantação de baixo; tocar nela pega/solta o fertilizante
+      for (const ev of ['pointerdown', 'pointerup', 'click']) visitBar.addEventListener(ev, e => {
+        e.stopPropagation();
+        if (ev === 'click' && fertLeft > 0) { holding = !holding; renderVisitBar(); }
+      });
+      cover.addEventListener('pointermove', e => { if (cursorEl) { cursorEl.dataset.in = '1'; syncCursor(e.clientX, e.clientY); } });
+      cover.addEventListener('pointerleave', () => { if (cursorEl) { cursorEl.dataset.in = '0'; syncCursor(); } });
+      renderVisitBar();
       try {
         const r = await FR().fertilizeLeft(owner);
         fertLeft = r.left; fertResetAt = r.resetIn ? Date.now() + r.resetIn : 0; renderVisitBar();
@@ -779,6 +810,7 @@
     },
     async tap(x, y) {
       const F = FR(), owner = window.MFHost?.visitingUid?.(); if (!F?.fertilize || !owner || fertBusy) return;
+      if (!holding) { renderVisitBar(); return; }
       const r = canvas.getBoundingClientRect();
       const tile = screenPointToTile((x - r.left - canvas.width / 2 - offsetX) / zoom, (y - r.top - canvas.height / 3 - offsetY) / zoom);
       const t = findTerrainAt(tile.gx, tile.gy), host = document.getElementById('mf-visit-cover') || document.body;
@@ -787,16 +819,16 @@
       if (t.cultura.etapa === 2) { renderVisitBar('Essa já está pronta para colher!'); return; }
       if (t.cultura.fertilizada) { renderVisitBar('Essa plantação já foi fertilizada.'); return; }
       if (fertLeft === 0) { renderVisitBar(); return; }
-      fertBusy = true;
+      fertBusy = true; syncCursor();
       try {
         const res = await F.fertilize(owner, { gx: t.gx, gy: t.gy });
-        const q = tileScreen(t);
-        await new Promise(ok => flyBag(q, ok));
+        const q = { x, y }; // despeja onde o jogador tocou
+        await pourAt(q);
         fertLeft = res.left; if (res.resetIn) fertResetAt = Date.now() + res.resetIn;
         boost(t); sparkleAt(q.x, q.y, host);
         renderVisitBar(fertLeft ? `Fertilizada! +35% de crescimento` : undefined);
       } catch (e) { if (/fertilizantes nessa fazenda/.test(e?.message || '')) fertLeft = 0; renderVisitBar(e?.message || 'Não deu para fertilizar.'); }
-      finally { fertBusy = false; }
+      finally { fertBusy = false; syncCursor(); }
     },
   };
 

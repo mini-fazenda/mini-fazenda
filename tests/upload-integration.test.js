@@ -64,7 +64,8 @@ test('configurações mobile importadas e botões Amigos sempre acessíveis', ()
   const b=game.indexOf(';</script>',a);
   const project=JSON.parse(game.slice(a,b));
   assert.ok(project.mobileLayout?.elements?.['cards-grid']);
-  assert.ok(project.mobileLayout?.elements?.['caminhao-pedidos']);
+  // a tela de pedidos no celular é montada pelo ajustes-celular.js; posições fixas antigas quebravam o layout
+  assert.equal(project.mobileLayout?.elements?.['caminhao-pedidos']?.position, undefined);
   assert.notEqual(project.mobileLayout?.elements?.neighbors?.visible,false, 'Amigos não pode desaparecer');
   assert.equal(project.onlineUI?.buttons?.friends?.image,'assets/online-friends.png');
   assert.equal(project.onlineUI?.buttons?.home?.image,'assets/online-home.png');

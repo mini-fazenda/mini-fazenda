@@ -5,7 +5,7 @@
   'use strict';
   const css = `
   /* janelas sempre acima da barra de amigos e do menu */
-  #overlay-bau,#overlay-config{z-index:2050!important}
+  #overlay-bau,#overlay-config,#overlay-caminhao{z-index:2050!important}
   /* Celeiro: botões Vender / Vender tudo sempre visíveis (antes ficavam escondidos
      embaixo da rolagem em telas de notebook, e a venda não acontecia) */
   #overlay-bau #mf-sales-actions{position:sticky!important;bottom:0!important;z-index:30!important;background:#77381fee!important;border-radius:12px!important}
@@ -42,6 +42,27 @@
     #mf-sale-summary table{margin:8px 0!important}
     #mf-sale-summary td,#mf-sale-summary th{padding:4px 6px!important}
 
+    /* ---------- Pedidos do dia (caminhão) ---------- */
+    #overlay-caminhao{padding:4px!important;box-sizing:border-box!important}
+    #caminhao-content{width:min(720px,96vw)!important;height:auto!important;max-height:97vh!important;padding:6px 12px 8px!important;border-width:4px!important;border-radius:16px!important}
+    #caminhao-content{scale:1!important;display:flex!important;flex-direction:column!important}
+    #caminhao-ui{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;height:auto!important;display:flex!important;flex-direction:column!important}
+    #caminhao-content::before{font-size:22px!important;margin:0 44px 2px!important;line-height:1.1!important}
+    #caminhao-content .btn-fechar-overlay{position:absolute!important;top:2px!important;right:4px!important;transform:scale(.7)!important;transform-origin:top right!important;z-index:5!important}
+    #caminhao-pedidos{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))!important;gap:3px 8px!important;padding:5px 8px!important;margin:2px 0!important;max-height:42vh!important}
+    #caminhao-pedidos .mf-mission-title{grid-column:1/-1!important;font-size:16px!important;margin:0!important}
+    #caminhao-pedidos .pedido-linha{font-size:15px!important;padding:3px 6px!important;margin:0!important;gap:8px!important}
+    #caminhao-pedidos img{width:30px!important;height:30px!important}
+    #caminhao-pedidos .progresso{font-size:12px!important}
+    #caminhao-recompensa{font-size:15px!important;padding:4px 8px!important;margin:4px 0!important}
+    #mf-truck-help{font-size:11px!important;margin:2px 0!important}
+    #caminhao-actions{gap:8px!important}
+    #caminhao-actions img{width:84px!important}
+    #mf-truck-deliver{font-size:15px!important;padding:5px 12px!important}
+    #caminhao-ui{gap:4px!important;padding:0!important;margin:0!important}
+    #caminhao-ui > *{margin-top:0!important;margin-bottom:0!important}
+    #caminhao-content::before{margin-bottom:4px!important}
+
     /* ---------- Configurações ---------- */
     #overlay-config{align-items:center!important;padding:6px!important;box-sizing:border-box!important}
     #config-content{max-height:96vh!important;overflow:auto!important;justify-content:flex-start!important}
@@ -62,6 +83,7 @@
     .mf-cfg-line button{padding:6px 10px!important}
     .mf-cfg-ok{min-height:0!important}
   }
+  @media (max-height:320px){#mf-truck-help{display:none!important}#caminhao-content::before{font-size:18px!important}}
   @media (max-height:520px) and (max-width:700px){
     #mf-daily .daily-cards{grid-template-columns:repeat(4,minmax(0,1fr))!important}
     #overlay-bau #bau-inventario{grid-template-columns:repeat(8,minmax(0,1fr))!important}

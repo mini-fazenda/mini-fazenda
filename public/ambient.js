@@ -19,7 +19,7 @@
   const assetBase = new URL('./assets/ambiente/', document.currentScript.src);
   const scenery = {};
   let sceneryRevision = 0;
-  for (const [key, file] of [['fall', 'cascata.png'], ['tunnel', 'tunel.png']]) {
+  for (const [key, file] of []) { // túnel e cascata antigos: agora fazem parte da cena pintada
     const img = new Image();
     scenery[key] = img;
     img.onload = () => { sceneryRevision++; window.MFAdapter?.flush?.(); };
@@ -27,6 +27,35 @@
     img.src = new URL(file, assetBase).href;
   }
   const ready = img => img?.complete && img.naturalWidth > 0;
+  // Arte pintada (lagoa com túnel/ponte/cachoeira, serra do fundo, enfeites e chão).
+  const art = {};
+  for (const [key, file] of [['scene', 'cena.webp'], ['mount', 'montanhas.webp'], ['decor', 'enfeites.webp'], ['ground', 'chao.webp']]) {
+    const img = new Image(); art[key] = img;
+    img.onload = () => { sceneryRevision++; if (key === 'decor') { DECOR = null; LAYOUT_SIG = ''; } if (key === 'ground') GROUND = null; window.MFAdapter?.flush?.(); };
+    img.onerror = () => console.warn('[MF] Não foi possível carregar', file);
+    img.src = new URL(file, assetBase).href;
+  }
+  // Cena: pontos medidos na imagem (px). A imagem é levemente inclinada (k) para a estrada
+  // ficar no mesmo ângulo da grade isométrica.
+  const SCENE = {
+    S: 0.75, k: 0.04, exit: [1300, 973],
+    road: [[380, 555], [430, 582], [475, 640], [560, 660], [650, 680], [740, 712], [850, 760], [980, 800], [1080, 888], [1300, 973]],
+    tunnel: [380, 555], river: [450, 1000], fall: { x: 1150, top: 112, bot: 405, wTop: 60, wBot: 80 },
+  };
+  // Enfeites pintados: [tipo, x, y, w, h] no atlas
+  const DECOR_META = [["rockBig",0,0,202,133],["rockBig",204,0,149,107],["rockBig",355,0,118,129],["rockBig",475,0,143,76],["rockBig",620,0,105,80],["rockBig",727,0,87,62],["rock",816,0,172,80],["rock",990,0,155,77],["rock",1147,0,106,70],["rock",1255,0,101,63],["rock",0,135,111,75],["rock",113,135,72,43],["rock",187,135,74,52],["pebble",263,135,57,36],["pebble",322,135,72,30],["pebble",396,135,60,26],["pebble",458,135,73,41],["pebble",533,135,38,22],["pebble",573,135,50,29],["pebble",625,135,45,24],["pebble",672,135,42,26],["pebble",716,135,50,28],["pebble",768,135,51,33],["pebble",821,135,41,25],["flowerBush",864,135,97,67],["flowerBush",963,135,116,69],["flowerBush",1081,135,103,70],["flowerBush",1186,135,94,68],["flowerBush",1282,135,72,75],["flowerBush",0,212,52,57],["flowerBush",54,212,112,76],["flowerBush",168,212,108,95],["flower",278,212,67,51],["flower",347,212,87,56],["flower",436,212,82,66],["flower",520,212,106,61],["flower",628,212,92,58],["flower",722,212,90,59],["flower",814,212,77,50],["flower",893,212,51,37],["flower",946,212,47,29],["stump",995,212,111,62],["log",1108,212,123,70],["tuft",1233,212,57,45],["tuft",1292,212,48,36],["tuft",0,309,59,54],["tuft",61,309,50,50],["tuft",113,309,46,46],["tuft",161,309,43,43],["tuft",206,309,48,42],["tuft",256,309,79,68],["tuft",337,309,57,56]];
+  const DECOR_K = 0.545; // px do atlas -> px do mundo
+  let DECOR = null, GROUND = null;
+  function decorSprites() {
+    if (DECOR || !ready(art.decor)) return DECOR;
+    const out = {};
+    for (const [kind, x, y, w, h] of DECOR_META) {
+      const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(art.decor, x, y, w, h, 0, 0, w, h);
+      const W = w * DECOR_K, H = h * DECOR_K;
+      (out[kind] = out[kind] || []).push({ c, w: W, h: H, ax: W / 2, ay: H * 0.9 });
+    }
+    return (DECOR = out);
+  }
   function fallAssetRect(L) {
     const f=fallGeom(L),h=Math.max(250,(f.bot-f.top)/.74),w=h*1156/1360;
     // A saída de água do PNG, não o centro da queda, encosta no começo do rio.
@@ -163,9 +192,18 @@
   function build(info) {
     const { cols, rows, roadGy, truckFar } = info;
     let R = rng(7); // sementes fixas: expandir não embaralha o cenário
-    // rio: corre do pé da montanha (alto) para baixo-esquerda, depois do ponto onde o caminhão para
-    const riverBase = Math.min(-11.5, truckFar - 3.8);
-    const riverC = gy => riverBase - 0.9 * Math.sin(gy * 0.33) - 0.35 * Math.sin(gy * 0.9 + 1);
+    // ---- cena pintada: a saída da estrada da imagem encosta na estrada da fazenda ----
+    const gxE = -5.5, E = iso(gxE, roadGy), S = SCENE.S, K = SCENE.k;
+    const toW = (px, py) => { const u = px - SCENE.exit[0], v = py - SCENE.exit[1]; return { x: E.x + u * S, y: E.y + (v + K * u) * S }; };
+    const toGrid = q => ({ gx: (q.x / HW + q.y / HH) / 2, gy: (q.y / HH - q.x / HW) / 2 });
+    const corners = [[0, 0], [1448, 0], [0, 1086], [1448, 1086]].map(([x, y]) => toW(x, y));
+    const sceneRect = { x: Math.min(...corners.map(c => c.x)), y: Math.min(...corners.map(c => c.y)), w: 0, h: 0 };
+    sceneRect.w = Math.max(...corners.map(c => c.x)) - sceneRect.x; sceneRect.h = Math.max(...corners.map(c => c.y)) - sceneRect.y;
+    // estrada da imagem em coordenadas do mundo (para o caminhão seguir o desenho)
+    const roadW = SCENE.road.map(([x, y]) => toW(x, y));
+    // rio: nasce na saída do riacho da imagem e desce para baixo-esquerda
+    const RS = toGrid(toW(...SCENE.river));
+    const riverC = gy => RS.gx - 0.9 * (Math.sin(gy * 0.33) - Math.sin(RS.gy * 0.33)) - 0.35 * (Math.sin(gy * 0.9 + 1) - Math.sin(RS.gy * 0.9 + 1));
     const RIVER_W = 1.25, BANK_W = 1.75;
     const gyEnd = rows + 26;
     // montanha: linha da base em coordenada de tela (acima da borda de cima)
@@ -173,9 +211,8 @@
       const edge = x >= 0 ? -HH + x / 2 : -HH - x / 2;       // bordas de cima do losango
       return Math.min(edge - 250, -300 + Math.sin(x * 0.004) * 30) + Math.sin(x * 0.011) * 14;
     };
-    let gyTop = -30; // o rio nasce no pé da montanha
-    while (gyTop < 0) { const p = iso(riverC(gyTop), gyTop); if (p.y > mountBase(p.x) - 6) break; gyTop += 0.25; }
-    const fallTop = iso(riverC(gyTop), gyTop);   // onde o rio nasce (cachoeira)
+    const gyTop = RS.gy - 2.6; // começa por baixo da imagem, já com a largura cheia na saída
+    const fallTop = toW(SCENE.fall.x, SCENE.fall.bot);
     const mtnX0 = -9000, mtnX1 = 9000;
 
     // polígonos de água/margem
@@ -190,9 +227,8 @@
     for (let gy = gyTop + 1; gy < gyEnd; gy += 0.9 + R() * 0.8) { const c = riverC(gy) + (R() - 0.5) * RIVER_W * 1.2; ripples.push({ ...iso(c, gy), w: 10 + R() * 16 }); }
 
     // estrada de terra: atravessa a ponte e entra num túnel no pé da montanha
-    let tunnelGx = riverC(roadGy) - BANK_W - 3;
-    while (tunnelGx > -80) { const p = iso(tunnelGx, roadGy); if (p.y < mountBase(p.x) + 26) break; tunnelGx -= 0.25; }
-    const roadEnd = tunnelGx;
+    const tunnelGx = toW(...SCENE.tunnel).x / HW + roadGy;
+    const roadEnd = gxE - 0.6; // a estrada desenhada termina por baixo da imagem
     const road = new Path2D(), roadEdge = new Path2D();
     const roadPts = (off) => { const pts = []; const end = roadEnd; for (let gx = 0.2; gx >= end; gx -= 0.5) { const taper = 1; pts.push(iso(gx, roadGy + (off * (0.35 + 0.65 * taper)) + Math.sin(gx * 1.7) * 0.04)); } return pts; };
     const A = roadPts(-0.62), B = roadPts(0.62);
@@ -201,7 +237,7 @@
     roadEdge.moveTo(A2[0].x, A2[0].y); for (const q of A2) roadEdge.lineTo(q.x, q.y); for (let i = B2.length - 1; i >= 0; i--) roadEdge.lineTo(B2[i].x, B2[i].y); roadEdge.closePath();
     R = rng(13);
     const pebbles = []; for (let gx = -0.5; gx > roadEnd + 1; gx -= 0.35) if (R() < 0.6) pebbles.push({ ...iso(gx, roadGy + (R() - 0.5) * 1.0), r: 1.2 + R() * 1.6 });
-    const bridgeC = riverC(roadGy);
+    const bridgeC = toGrid(toW(650, 680)).gx;
 
     R = rng(17);
     // montanhas: duas camadas de serra contínua atrás da fazenda
@@ -238,9 +274,8 @@
     };
     const okLow = (gx, gy) => !nearTunnel(gx, gy, 0) && !inFarm(gx, gy, 0.4) && !nearRiver(gx, gy, 0.1) && !nearRoad(gx, gy, 0.05) && iso(gx, gy).y > mountBase(iso(gx, gy).x) + 10;
 
-    const sceneryLayout = { fallTop, mountains, tunnelGx, roadGy };
-    const clearAreas = [fallAssetRect(sceneryLayout), tunnelAssetRect(sceneryLayout)]
-      .map(r => ({ x: r.x - 18, y: r.y - 12, w: r.w + 36, h: r.h + 30 }));
+    // sem árvores procedurais por cima da cena pintada
+    const clearAreas = [{ x: sceneRect.x + sceneRect.w * 0.02, y: sceneRect.y, w: sceneRect.w * 0.96, h: sceneRect.h * 0.97 }];
     function clearProp(it) {
       const s = it.s, k = it.k;
       const bounds = { x: it.x - s.ax * k, y: it.y - s.ay * k, w: s.w * k, h: s.h * k };
@@ -272,14 +307,22 @@
         props.push({ kind, s: list[(R() * list.length) | 0], x: p.x, y: p.y, k: kind === 'palm' ? 1.12 + R() * 0.20 : 0.95 + R() * 0.30, flip: R() < 0.5, shadow: true });
       } else if (okLow(jx, jy) && R() < 0.20) {
         const p = iso(jx, jy), roll = R();
-        if (roll < 0.28 && !inLabelBand(jx, jy)) props.push({ s: SPRITES.bush[(R() * 5) | 0], x: p.x, y: p.y, k: 0.85 + R() * 0.5, flip: R() < 0.5, shadow: true });
+        const D = DECOR, pick = list => list[(R() * list.length) | 0];
+        if (D) {
+          if (roll < 0.22 && !inLabelBand(jx, jy)) props.push({ s: pick(R() < 0.08 ? (R() < 0.5 ? D.stump : D.log) : D.flowerBush), x: p.x, y: p.y, k: 0.8 + R() * 0.35, flip: R() < 0.5, shadow: true });
+          else if (roll < 0.34) props.push({ s: pick(R() < 0.3 ? D.rockBig : D.rock), x: p.x, y: p.y, k: 0.7 + R() * 0.35, flip: R() < 0.5 });
+          else if (roll < 0.52) low.push({ s: pick(D.flower), x: p.x, y: p.y, k: 0.7 + R() * 0.3, flip: R() < 0.5 });
+          else if (roll < 0.62) low.push({ s: pick(D.pebble), x: p.x, y: p.y, k: 0.8 + R() * 0.3, flip: R() < 0.5 });
+          else low.push({ s: pick(D.tuft), x: p.x, y: p.y, k: 0.75 + R() * 0.35, flip: R() < 0.5 });
+        }
+        else if (roll < 0.28 && !inLabelBand(jx, jy)) props.push({ s: SPRITES.bush[(R() * 5) | 0], x: p.x, y: p.y, k: 0.85 + R() * 0.5, flip: R() < 0.5, shadow: true });
         else if (roll < 0.36) props.push({ s: SPRITES.rock[(R() * 3) | 0], x: p.x, y: p.y, k: 0.7 + R() * 0.5, flip: R() < 0.5 });
         else if (roll < 0.6) low.push({ s: SPRITES.flower[(R() * 6) | 0], x: p.x, y: p.y, k: 1, flip: false });
         else low.push({ s: SPRITES.tuft[(R() * 4) | 0], x: p.x, y: p.y, k: 1 + R() * 0.4, flip: R() < 0.5 });
       }
     }
     // Pequenos grupos de arbustos nas laterais, separados por clareiras.
-    for(const [gx,gy]of [[-4,rows*.25],[-3.5,rows*.75],[cols+4,rows*.35],[cols+4.5,rows*.82],[cols*.4,rows+4.4]]){if(!okLow(gx,gy))continue;const p=iso(gx,gy);for(const [dx,dy,k]of [[0,0,1.1],[25,8,.75]])props.push({kind:'bush',s:SPRITES.bush[0],x:p.x+dx,y:p.y+dy,k,shadow:true});}
+    for(const [gx,gy]of [[-4,rows*.25],[-3.5,rows*.75],[cols+4,rows*.35],[cols+4.5,rows*.82],[cols*.4,rows+4.4]]){if(!okLow(gx,gy))continue;const p=iso(gx,gy);for(const [dx,dy,k]of [[0,0,1.1],[25,8,.75]])props.push({kind:'bush',s:DECOR?DECOR.flowerBush[(Math.abs(Math.round(gx*7+gy*3+dx))%DECOR.flowerBush.length)]:SPRITES.bush[0],x:p.x+dx,y:p.y+dy,k:DECOR?k*.8:k,shadow:true});}
     // Coqueiros maiores no primeiro plano, longe dos canteiros.
     for(const [gx,gy,k]of [[cols*.15,rows+8.7,1.25],[cols*.56,rows+9.4,1.5],[cols+8.6,rows*.2,1.25],[cols+9.2,rows*.65,1.5],[cols+7,rows+7,1.65]]){const p=iso(gx,gy);props.push({kind:'palm',s:SPRITES.palm[(Math.floor(gx+gy)%3)],x:p.x,y:p.y,k,flip:gx>cols,shadow:true});}
     // coqueiros perto da ponte
@@ -288,11 +331,11 @@
     // Aplica a mesma exclusão também aos coqueiros fixos e arbustos das margens.
     for (let i = props.length - 1; i >= 0; i--) if (!clearProp(props[i])) props.splice(i, 1);
     // Pedras nas duas margens: entram depois da exclusão das copas, pois pertencem à beira d'água.
-    R=rng(19);for(let gy=gyTop+2.8;gy<gyEnd;gy+=.8+R()*.35){if(Math.abs(gy-roadGy)<1.35)continue;for(const side of [-1,1]){if(R()<.12)continue;const p=iso(riverC(gy)+side*(BANK_W-.12),gy);const it={kind:'bankRock',s:SPRITES.rock[1+(R()<.5?0:1)],x:p.x,y:p.y,k:.55+R()*.3,flip:side<0};const bounds={x:p.x-it.s.ax*it.k,y:p.y-it.s.ay*it.k,w:it.s.w*it.k,h:it.s.h*it.k};if(!clearAreas.some(r=>overlaps(bounds,r)))props.push(it);}}
+    R=rng(19);for(let gy=gyTop+2.8;gy<gyEnd;gy+=.8+R()*.35){if(Math.abs(gy-roadGy)<1.35)continue;for(const side of [-1,1]){if(R()<.12)continue;const p=iso(riverC(gy)+side*(BANK_W-.12),gy);const it={kind:'bankRock',s:DECOR?DECOR.rock[(R()*DECOR.rock.length)|0]:SPRITES.rock[1+(R()<.5?0:1)],x:p.x,y:p.y,k:DECOR?.45+R()*.25:.55+R()*.3,flip:side<0};const bounds={x:p.x-it.s.ax*it.k,y:p.y-it.s.ay*it.k,w:it.s.w*it.k,h:it.s.h*it.k};if(!clearAreas.some(r=>overlaps(bounds,r)))props.push(it);}}
     props.sort((a, b) => a.y - b.y);
     low.sort((a, b) => a.y - b.y);
 
-    return { tunnelGx, gyEnd, riverC, RIVER_W, BANK_W, gyTop, bank, water, deep, ripples, road, roadEdge, pebbles, roadGy, bridgeC, mountains, cliffs, foothill, fallTop, props, low, mountBase, mtnX0, mtnX1 };
+    return { tunnelGx, gyEnd, riverC, RIVER_W, BANK_W, gyTop, bank, water, deep, ripples, road, roadEdge, pebbles, roadGy, bridgeC, mountains, cliffs, foothill, fallTop, props, low, mountBase, mtnX0, mtnX1, E, toW, sceneRect, roadW, gxE };
   }
 
   // ---------- desenho ----------
@@ -338,6 +381,55 @@
     // Uma faixa baixa e irregular substitui a fileira de círculos verdes.
     b.fillStyle='#3c7040';b.beginPath();for(let i=0;i<f.length;i++){const q=f[i];if(i===0)b.moveTo(q.x,mb(q.x)+12);b.lineTo(q.x,mb(q.x)-5-(i%3)*5);}for(let i=f.length-1;i>=0;i--)b.lineTo(f[i].x,mb(f[i].x)+12);b.closePath();b.fill();
   }
+
+  // Serra pintada: faixa repetida (espelhando a cada cópia para não ter emenda)
+  function drawMountainArt(b, L, view) {
+    const img = art.mount; if (!ready(img)) return false;
+    const SM = 1.55, w = img.naturalWidth * SM, h = img.naturalHeight * SM, base = -262;
+    const i0 = Math.floor((view.l + 6000) / w) - 1, i1 = Math.ceil((view.r + 6000) / w) + 1;
+    for (let i = i0; i <= i1; i++) {
+      const x = -6000 + i * w;
+      if (i % 2) { b.save(); b.translate(x + w, 0); b.scale(-1, 1); b.drawImage(img, 0, base - h, w, h); b.restore(); }
+      else b.drawImage(img, x, base - h, w, h);
+    }
+    return true;
+  }
+  function drawScene(b, L) {
+    const img = art.scene; if (!ready(img)) return;
+    const S = SCENE.S, K = SCENE.k;
+    b.save(); b.transform(S, K * S, 0, S, L.E.x, L.E.y); b.drawImage(img, -SCENE.exit[0], -SCENE.exit[1]); b.restore();
+  }
+  // Chão da fazenda com o ladrilho pintado (pré-desenhado uma vez por tamanho de fazenda)
+  function groundCanvas() {
+    const img = art.ground; if (!ready(img)) return null;
+    const key = COLS + 'x' + ROWS; if (GROUND && GROUND.key === key) return GROUND;
+    const Q = 1.25, TW = HW * 2, TH = HH * 2;
+    // canto esquerdo (1,137) e direito (482,135) da face de cima no PNG; topo em y=1
+    const sx = TW / 481, sy = TH / 270, iw = img.naturalWidth * sx, ih = img.naturalHeight * sy;
+    const minX = -ROWS * HW - HW, maxX = COLS * HW + HW, minY = -HH, maxY = (COLS + ROWS) * HH + ih;
+    const c = document.createElement('canvas'); c.width = Math.ceil((maxX - minX) * Q); c.height = Math.ceil((maxY - minY) * Q);
+    const g = c.getContext('2d'); g.scale(Q, Q); g.translate(-minX, -minY);
+    const R = rng(29);
+    const tiles = []; for (let d = 0; d < COLS + ROWS - 1; d++) for (let x = Math.max(0, d - ROWS + 1); x <= Math.min(COLS - 1, d); x++) tiles.push([x, d - x]);
+    // 1) bordas da frente: ladrilho inteiro, para aparecer a lateral de terra
+    for (const [x, y] of tiles) {
+      if (x !== COLS - 1 && y !== ROWS - 1) continue;
+      const cx = (x - y) * HW, top = (x + y) * HH - HH;
+      g.drawImage(img, cx - iw / 2, top - 1 * sy, iw, ih);
+    }
+    // 2) só o miolo da grama em cada quadrado (sem as bordinhas), virado ao acaso para não repetir
+    const Z = 1.32; // amplia para a borda recortada ficar fora do quadrado
+    for (const [x, y] of tiles) {
+      const cx = (x - y) * HW, cy = (x + y) * HH;
+      g.save(); g.beginPath(); g.moveTo(cx, cy - HH - 0.6); g.lineTo(cx + HW + 0.6, cy); g.lineTo(cx, cy + HH + 0.6); g.lineTo(cx - HW - 0.6, cy); g.closePath(); g.clip();
+      g.translate(cx, cy); g.scale(R() < 0.5 ? -Z : Z, R() < 0.5 ? -Z : Z);
+      // centro da face de cima no PNG: (242, 136)
+      g.drawImage(img, -242 * sx, -136 * sy, iw, ih);
+      g.restore();
+    }
+    return (GROUND = { key, c, x: minX, y: minY, w: maxX - minX, h: maxY - minY });
+  }
+  function drawGround(b) { const G = groundCanvas(); if (!G) return false; b.drawImage(G.c, G.x, G.y, G.w, G.h); return true; }
 
   function fallGeom(L) {
     const t = L.fallTop, fp = L.mountains[1].pts, fi = Math.max(0, Math.min(fp.length - 1, Math.round((t.x - fp[0].x) / 22)));
@@ -507,12 +599,8 @@
     }
     g.restore();
     // cachoeira: faixas descendo + espuma no pé
-    const f = fallGeom(L);
-    if (ready(scenery.fall)) {
-      const r = fallAssetRect(L);
-      f.x = r.x + r.w * 0.60; f.top = r.y + r.h * 0.18;
-      f.bot = r.y + r.h * 0.71; f.wTop = r.w * 0.12; f.wBot = r.w * 0.17;
-    }
+    const F = SCENE.fall, ft = L.toW(F.x, F.top), fb = L.toW(F.x, F.bot);
+    const f = { x: (ft.x + fb.x) / 2, top: ft.y, bot: fb.y, wTop: F.wTop * SCENE.S, wBot: F.wBot * SCENE.S };
     if (f.bot - f.top > 20 && f.x > view.l - 100 && f.x < view.r + 100) {
       const lerp = (a, b2, k) => a + (b2 - a) * k;
       g.save(); g.lineCap = 'round';
@@ -538,27 +626,36 @@
   function draw(b) {
     if (!enabled()) return;
     if (!SPRITES) buildSprites();
-    const info = farmInfo(), sig = JSON.stringify(info);
+    const info = farmInfo(), sig = JSON.stringify(info) + (decorSprites() ? ':d' : '');
     if (sig !== LAYOUT_SIG) { LAYOUT = build(info); LAYOUT_SIG = sig; fxParts = null; }
     if (!fxCanvas) ensureFx();
     const L = LAYOUT, view = viewRect();
-    drawMountains(b, L, view);
+    // puxa o verde do fundo para o mesmo tom da grama pintada
+    if (ready(art.scene)) { b.fillStyle = 'rgba(132,192,30,0.5)'; b.fillRect(view.l - 200, view.t - 200, view.r - view.l + 400, view.b - view.t + 400); }
+    if (!drawMountainArt(b, L, view)) drawMountains(b, L, view);
     for (const it of L.low) drawSprite(b, it, view);
     drawRoad(b, L);
-    drawTunnel(b, L);
     drawRiver(b, L, view);
-    drawWaterfall(b, L);
-    drawBridge(b, L);
+    drawScene(b, L);
+    drawGround(b);
     // sombras de tudo antes dos objetos
     b.fillStyle = 'rgba(20,50,10,0.22)';
     for (const it of L.props) if (it.shadow && it.x > view.l && it.x < view.r && it.y > view.t && it.y < view.b) { b.beginPath(); b.ellipse(it.x + 6 * it.k, it.y, 30 * it.k, 11 * it.k, 0, 0, 7); b.fill(); }
     for (const it of L.props) drawSprite(b, it, view);
   }
 
-  function layout() { if (!enabled()) return null; if (!SPRITES) buildSprites(); const info = farmInfo(), sig = JSON.stringify(info); if (sig !== LAYOUT_SIG) { LAYOUT = build(info); LAYOUT_SIG = sig; fxParts = null; } return LAYOUT; }
+  function layout() { if (!enabled()) return null; if (!SPRITES) buildSprites(); const info = farmInfo(), sig = JSON.stringify(info) + (decorSprites() ? ':d' : ''); if (sig !== LAYOUT_SIG) { LAYOUT = build(info); LAYOUT_SIG = sig; fxParts = null; } return LAYOUT; }
   // ponto do túnel (em tiles) para o caminhão entrar e sair
   function tunnel() { const L = layout(); return L ? { gx: L.tunnelGx, gy: L.roadGy } : null; }
   // altura da ponte num ponto da estrada (o caminhão sobe e desce junto)
-  function bridgeLift(gx, gy) { const L = layout(); if (!L || Math.abs(gy - L.roadGy) > 1.2) return 0; return bridgeLiftAt(L, gx); }
-  window.MFAmbient = { draw, enabled, tunnel, bridgeLift, inspect(){const L=layout(),r=fallAssetRect(L);return {trees:L.props.filter(p=>['palm','pine','leafy'].includes(p.kind)).length,palms:L.props.filter(p=>p.kind==='palm').length,bankRocks:L.props.filter(p=>p.kind==='bankRock').length,riverStart:L.fallTop,waterOutlet:{x:r.x+r.w*.23,y:r.y+r.h*.92}};}, version: 4, signature: () => (enabled() ? 'amb4:' + COLS + 'x' + ROWS + ':' + sceneryRevision : 'off') };
+  function bridgeLift(gx, gy) {
+    const L = layout(); if (!L || Math.abs(gy - L.roadGy) > 1.2) return 0;
+    const p = iso(gx, L.roadGy), pts = L.roadW;
+    if (p.x >= pts[pts.length - 1].x) return 0;
+    let y = pts[0].y;
+    for (let i = 1; i < pts.length; i++) if (p.x <= pts[i].x) { const a = pts[i - 1], c = pts[i], t = (p.x - a.x) / ((c.x - a.x) || 1); y = a.y + (c.y - a.y) * Math.max(0, Math.min(1, t)); break; }
+    return p.y - y;
+  }
+  function groundReady() { return enabled() && !!groundCanvas(); }
+  window.MFAmbient = { draw, enabled, tunnel, bridgeLift, groundReady, inspect(){const L=layout(),r=fallAssetRect(L);return {trees:L.props.filter(p=>['palm','pine','leafy'].includes(p.kind)).length,palms:L.props.filter(p=>p.kind==='palm').length,bankRocks:L.props.filter(p=>p.kind==='bankRock').length,riverStart:L.fallTop,waterOutlet:{x:r.x+r.w*.23,y:r.y+r.h*.92}};}, version: 5, signature: () => (enabled() ? 'amb5:' + COLS + 'x' + ROWS + ':' + sceneryRevision : 'off') };
 })();
