@@ -76,7 +76,7 @@ const {chromium,webkit,devices}=require('playwright');
   MFTutorial.restore({step:5,done:true},false);offsetX=0;offsetY=-180;zoom=.5;requestRedraw();
  });
  await f.waitForFunction(()=>{const im=preload(terrenos[0].imgSrc);return im.complete&&im.naturalWidth>0;});
- const tap=await f.evaluate(()=>{const t=terrenos[0],p=gridToScreen(t.gx+(t.w-1)/2,t.gy+(t.h-1)/2);return {x:canvas.width/2+offsetX+p.x*zoom,y:canvas.height/3+offsetY+(p.y-80)*zoom};});
+ const tap=await f.evaluate(()=>{const t=terrenos[0],p=gridToScreen(t.gx+(t.w-1)/2,t.gy+(t.h-1)/2);return {x:MFViewport.width/2+offsetX+p.x*zoom,y:MFViewport.height/3+offsetY+(p.y-80)*zoom};});
  await f.locator('#game').tap({position:tap});
  await f.waitForFunction(()=>document.getElementById('overlay-bau').style.display==='flex');
  await reload();f=frame();await f.evaluate(()=>{const xp=playerXP;parent.testPlaying=true;MFBarn.tick();parent.testPlaying=false;if(playerXP!==xp)throw Error('Estrelas da obra repetiram após reload');});
@@ -107,7 +107,7 @@ const {chromium,webkit,devices}=require('playwright');
   const t=terrenos[0];t.fruitTree.startTime-=MFFruitTrees.config(t).cycle;MFFruitTrees.sync(t);offsetX=0;offsetY=-75;zoom=.6;requestRedraw();
  });
  await f.waitForFunction(()=>{const im=preload(terrenos[0].imgSrc);return im.complete&&im.naturalWidth>0;});
- const treeTap=await f.evaluate(()=>{const t=terrenos[0],p=gridToScreen(t.gx+.5,t.gy+.5);return {x:canvas.width/2+offsetX+p.x*zoom,y:canvas.height/3+offsetY+(p.y-70)*zoom};});
+ const treeTap=await f.evaluate(()=>{const t=terrenos[0],p=gridToScreen(t.gx+.5,t.gy+.5);return {x:MFViewport.width/2+offsetX+p.x*zoom,y:MFViewport.height/3+offsetY+(p.y-70)*zoom};});
  await f.locator('#game').tap({position:treeTap});
  await f.waitForFunction(()=>player.acaoAtual?.job==='tree'||filaAcoes.some(t=>t._job?.kind==='tree'));
  await f.evaluate(()=>{
@@ -128,7 +128,7 @@ const {chromium,webkit,devices}=require('playwright');
   },kind);
   await f.waitForFunction(()=>terrenos.every(t=>preload(t.imgSrc)?.naturalWidth>0));
   for(let i=0;i<4;i++){
-   const pos=await f.evaluate(i=>{const t=terrenos[i],p=gridToScreen(t.gx+.5,t.gy+.5);return {x:canvas.width/2+offsetX+p.x*zoom,y:canvas.height/3+offsetY+(p.y-10)*zoom};},i);
+   const pos=await f.evaluate(i=>{const t=terrenos[i],p=gridToScreen(t.gx+.5,t.gy+.5);return {x:MFViewport.width/2+offsetX+p.x*zoom,y:MFViewport.height/3+offsetY+(p.y-10)*zoom};},i);
    await f.locator('#game').tap({position:pos});await page.waitForTimeout(80);
   }
   await f.evaluate(kind=>{const jobs=[player.acaoAtual?.alvo,...filaAcoes].filter(Boolean);if(jobs.length!==4||new Set(jobs).size!==4)throw Error('Toques perderam fila de '+kind+': '+jobs.length);},kind);
@@ -153,7 +153,7 @@ const {chromium,webkit,devices}=require('playwright');
    else{const cfg=MFAnimalProduction.types[type];t.animal={tipo:type,startTime:Date.now()-300000-cfg.cycle/2,totalTime:300000,etapa:2};t.imgSrc=ANIMAL_ADULT[type].adultImg;MFAnimalProduction.sync(t.animal);}
   },type);
   await f.waitForFunction(()=>preload(terrenos[0].imgSrc)?.naturalWidth>0);
-  const point=await f.evaluate(()=>{const t=terrenos[0],p=gridToScreen(t.gx+.5,t.gy+.5);return {x:canvas.width/2+offsetX+p.x*zoom,y:canvas.height/3+offsetY+(p.y-25)*zoom};});
+  const point=await f.evaluate(()=>{const t=terrenos[0],p=gridToScreen(t.gx+.5,t.gy+.5);return {x:MFViewport.width/2+offsetX+p.x*zoom,y:MFViewport.height/3+offsetY+(p.y-25)*zoom};});
   await f.locator('#game').tap({position:point});
   await f.waitForFunction(()=>!document.getElementById('mf-growth-info').hidden);
   await f.evaluate(()=>{const el=document.getElementById('mf-growth-info'),percent=Number(el.querySelector('[role=progressbar]').getAttribute('aria-valuenow'));if(percent<49||percent>51||!el.textContent.includes('Pronto em'))throw Error('Porcentagem/tempo ausente: '+el.textContent);if(el.getBoundingClientRect().top<0)throw Error('Informação fora da tela');});
