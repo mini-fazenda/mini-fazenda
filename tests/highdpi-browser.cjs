@@ -19,6 +19,14 @@ const {chromium,webkit}=require('playwright');
    terrenos.push({gx:5,gy:5,w:2,h:2,imgSrc:TERRA_ARADA_SRC,cultura:{tipo:'cenoura',startTime:Date.now()-300000,totalTime:600000,etapa:0}});
    reapplyGrowthFromTime(terrenos[0]);draw();
   });
+  await f.evaluate(()=>preload(MFAdapter.project.items['item-espinafre'].stage0));
+  await f.waitForFunction(()=>{const i=preload(MFAdapter.project.items['item-espinafre'].stage0);return i.complete&&i.naturalWidth>0;});
+  await f.evaluate(()=>{
+   const img=preload(MFAdapter.project.items['item-espinafre'].stage0),surface=document.createElement('canvas');surface.width=800;surface.height=500;const g=surface.getContext('2d');g.fillStyle='#00ff00';g.fillRect(0,0,800,500);g.translate(400,100);
+   for(const gx of [0,3]){const t={gx,gy:0,w:2,h:2};if(!MFCropSprites.drawSprite(g,t,gridToScreen(gx+.5,.5),img))throw Error('Arte nova sem encaixe');}
+   for(const gy of [0,.5,1]){const p=gridToScreen(2,gy),pixel=g.getImageData(Math.round(400+p.x),Math.round(100+p.y),1,1).data;if(pixel[0]>pixel[1]*1.18&&pixel[1]>pixel[2]*1.25)throw Error('Terra invadiu corredor');}
+  });
+  console.log('PASS: duas plantações renderizadas preservam o corredor de um quadrado');
   const size=await f.evaluate(()=>({dpr:devicePixelRatio,width:MFViewport.width,height:MFViewport.height,ratio:MFViewport.ratio,buffer:[canvas.width,canvas.height],cache:[MFAdapter.cache.canvas.width,MFAdapter.cache.canvas.height],css:[canvas.getBoundingClientRect().width,canvas.getBoundingClientRect().height],transform:ctx.getTransform().a}));
   assert.equal(size.dpr,3);assert.equal(size.ratio,2);assert.deepEqual(size.buffer,[1688,780]);assert.deepEqual(size.cache,size.buffer);assert.deepEqual(size.css,[844,390]);assert.equal(size.transform,2);
   // A posição do mouse está em pixels CSS, inclusive nas camadas desenhadas por último.
