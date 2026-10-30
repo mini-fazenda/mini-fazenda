@@ -41,7 +41,12 @@ function retryPending(error){
   retryDelay=Math.min(retryDelay*2,30000);
 }
 let clockOffset=0; // diferença entre o relógio do aparelho e o do servidor (anti-troca de data)
-function status(text){const el=$('sync');el.textContent=text;el.hidden=false;el.dataset.state=saveBlocked?'error':pending?'pending':'saved';}
+function status(text){
+ const el=$('sync'),state=saveBlocked?'error':pending?'pending':/conect|restabelecendo|salvando/i.test(text)?'pending':'saved';
+ el.textContent=state==='error'?'!':state==='saved'?'✓':'';
+ el.hidden=false;el.dataset.state=state;el.title=text;
+ el.setAttribute('aria-label',text);el.setAttribute('aria-busy',String(state==='pending'));
+}
 function gate(text){$('farms').close();$('gate').hidden=false;$('message').textContent=text}
 function freeze(){ready=false;sessionActive=false;stopped=true;pending=null;clearTimeout(retryTimer);clearTimeout(reconnectTimer);clearTimeout(projectionTimer);$('game-container').replaceChildren();bridge=null;$('toolbar').hidden=true}
 function fail(error){
