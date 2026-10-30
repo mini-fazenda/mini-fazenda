@@ -34,6 +34,8 @@ export const query=r=>r,orderByKey=()=>{},limitToFirst=()=>{},startAfter=()=>{};
  if(await page.locator('iframe').count())throw Error('Jogo abriu antes do login');
  await page.locator('#login').click();await page.waitForFunction(()=>document.querySelector('#gate').hidden);
  let f=page.frames().find(f=>f.url().includes('game.html'));
+ // Conta nova: escolhe o personagem antes de jogar.
+ await f.waitForFunction(()=>window.MFCharacter);await f.evaluate(()=>window.MFCharacter.choose('menino'));
  // O clique de tela cheia dentro do iframe deve acionar o documento pai.
  await page.evaluate(()=>{
    window.__testFullscreenRequests=0;
@@ -85,8 +87,14 @@ export const query=r=>r,orderByKey=()=>{},limitToFirst=()=>{},startAfter=()=>{};
  await page.evaluate(()=>{
    testCloud['directory']={neighbor:{name:'Vizinha',level:5}};
    testCloud['publicFarms/neighbor']={state:{...testCloud['publicFarms/rodrigo'].state,farmName:'Vizinha',moedas:0}};
+   // A visita agora acontece pela barra de amigos.
+   testCloud['profiles/neighbor']={name:'Vizinha',level:5,xp:0,code:'222222'};
+   testCloud['friends/rodrigo']={neighbor:1};
+   testSubs.filter(s=>s.p==='friends/rodrigo').forEach(s=>s.cb({val:()=>({neighbor:1})}));
  });
- await page.locator('#neighbors').click();await page.locator('#farm-list button').click();
+ f=page.frames().find(f=>f.url().includes('game.html'));
+ await f.evaluate(()=>{const d=document.getElementById('mf-daily');if(d){d.classList.remove('on');d.hidden=true;d.style.display='none'}});
+ await f.locator('#mf-amigos .mfa-visit').first().click();
  await page.waitForFunction(()=>document.querySelector('#gate').hidden&&document.querySelector('#farm-title').textContent.includes('Vizinha'));
  const ownCoins=await page.evaluate(()=>testCloud['farms/rodrigo'].state.moedas);
  await page.locator('#home').click();await page.waitForFunction(()=>document.querySelector('#gate').hidden);

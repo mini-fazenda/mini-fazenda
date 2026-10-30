@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mini Fazenda — teste local</title>
+<style>
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#1d3a20;font:14px system-ui,sans-serif}
+  #game{position:fixed;inset:0;border:0;width:100%;height:100%}
+  #bar{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);z-index:10;display:flex;gap:8px;align-items:center;
+       background:rgba(20,40,20,.85);color:#fff;padding:6px 10px;border-radius:12px}
+  #bar button{border:0;border-radius:8px;padding:6px 10px;background:#4d8f3a;color:#fff;font-weight:700;cursor:pointer}
+  #bar button.sec{background:#6b5a3a}
+</style>
+</head>
+<body>
+<!--
+  Página só para testar no seu computador. Não vai para o site:
+  o GitHub Pages publica apenas a pasta "public".
+  Não usa login nem o banco de dados: o progresso fica só nesta aba.
+-->
+<iframe id="game" title="Mini Fazenda (teste local)" allow="fullscreen"></iframe>
+<div id="bar">
+  <span>🧪 Teste local (não salva na conta)</span>
+  <button id="novo" type="button">Começar do zero</button>
+  <button id="ocultar" class="sec" type="button">Ocultar</button>
+</div>
+<script>
+  const frame = document.getElementById('game');
+  let saved = null, api = null;
+  // Amigos de exemplo (só no teste local, nada vai para o servidor)
+  const demo = {
+    code: '123456',
+    friends: [],
+    requests: [],
+    sent: [], ready: true,
+  };
+  const subs = new Set();
+  const sorted = () => ({ ...demo, friends: demo.friends.slice().sort((x, y) => (y.level * 1e7 + y.xp) - (x.level * 1e7 + x.xp)) });
+  const emit = () => subs.forEach(cb => cb(sorted()));
+  const friends = {
+    myCode: () => demo.code,
+    subscribe(cb) { subs.add(cb); cb(sorted()); return () => subs.delete(cb); },
+    async sendInvite(raw) {
+      const code = String(raw || '').replace(/\D/g, '');
+      if (code.length !== 6) throw new Error('O ID tem 6 números.');
+      if (code === demo.code) throw new Error('Esse é o seu próprio ID 🙂');
+      return 'Convite enviado! (teste local)';
+    },
+    async accept(uid) { const r = demo.requests.find(x => x.uid === uid); demo.requests = demo.requests.filter(x => x.uid !== uid); if (r) demo.friends.push({ ...r, xp: 0 }); emit(); },
+    async decline(uid) { demo.requests = demo.requests.filter(x => x.uid !== uid); emit(); },
+    async remove(uid) { demo.friends = demo.friends.filter(x => x.uid !== uid); emit(); },
+    async visit() { alert('Na versão online, aqui abre a fazenda do amigo (só para olhar).'); },
+  };
+  window.MFOnline = {
+    friends, myCode: () => demo.code,
+    isVisiting: () => false,
+    playing: () => true,
+    bootState: () => saved,
+    changed: () => { try { if (api) saved = api.capture(); } catch (e) { console.warn(e); } },
+    attach: a => { api = a; },
+    fail: e => { console.error('[teste local]', e); alert('Erro no jogo: ' + (e && e.message || e)); },
+    isFullscreen: () => !!document.fullscreenElement,
+    requestFullscreen: () => document.documentElement.requestFullscreen?.().then(() => true).catch(() => false),
+    exitFullscreen: () => document.fullscreenElement ? document.exitFullscreen().then(() => true).catch(() => false) : Promise.resolve(false)
+  };
+  function load() { api = null; frame.src = 'public/game.html?teste=' + Date.now(); }
+  document.getElementById('novo').onclick = () => { saved = null; load(); };
+  document.getElementById('ocultar').onclick = () => { document.getElementById('bar').hidden = true; };
+  load();
+</script>
+</body>
+</html>
