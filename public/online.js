@@ -31,8 +31,7 @@ function checkpoint(){
     const state=bridge.capture(),text=JSON.stringify(state);
     if(text===lastText)return;
     lastText=text;ownState=state;pending={id:crypto.randomUUID(),state};
-    // Cópia de emergência somente desta aba para recargas durante falhas de rede.
-    try{sessionStorage.setItem('mf-recovery-v2:'+user.uid,JSON.stringify({state,revision,at:Date.now()}))}catch(e){console.warn('[recovery storage]',e)}
+    status('Salvando no Firebase…');
     // Alterações são enviadas imediatamente. Não há gravação do progresso no navegador.
     void flush().catch(e=>{console.warn('[save]',e);retryPending()});
   }catch(e){fail(e)}
@@ -49,17 +48,19 @@ function scheduleProjection(state,version,run){
     try{
       // As projeções também usam revisão: uma publicação atrasada não substitui uma nova.
       const uid=user.uid;
-      await sdk.runTransaction(sdk.ref(db,`publicFarms/${uid}`),current=>{
-        if(current?.revision>version)return;
-        return {state:publicState(state),revision:version,updatedAt:sdk.serverTimestamp()};
-      },{applyLocally:false});
+      // Projeção pública não é saldo nem save: não precisa de transação concorrente.
+      // Evita esgotar as tentativas do Realtime Database em fazendas grandes.
+      const published=await sdk.get(sdk.ref(db,`publicFarms/${uid}/revision`));
+      if(Number(published.val()||0)<=version)await sdk.set(sdk.ref(db,`publicFarms/${uid}`),{
+        state:publicState(state),revision:version,updatedAt:sdk.serverTimestamp()
+      });
       if(run!==epoch||!sessionActive||stopped)return;
       await sdk.update(sdk.ref(db),{
         [`directory/${uid}`]:{name:(state.farmName||'Minha fazenda').slice(0,12),level:state.playerLevel||1,updatedAt:sdk.serverTimestamp()}
       });
       void publishProfile(state);
     }catch(e){console.warn('Atualização de visita',e)}
-  },500);
+  },2000);
 }
 async function flush(){
   if(saving)return saving;
@@ -68,10 +69,12 @@ async function flush(){
   let failed=false;
   const operation=(async()=>{
     while(pending&&connected&&sessionActive&&!stopped&&run===epoch){
-      const record=pending,base=revision;
+      const record=pending;
       const result=await sdk.runTransaction(sdk.ref(db,`farms/${uid}`),current=>{
         if(run!==epoch||!sessionActive||stopped)return;
-        return nextDocument(current,{sessionId:token,revision:base,id:record.id,state:record.state,timestamp:sdk.serverTimestamp()});
+        // O Firebase pode executar o callback muitas vezes durante a disputa de revisão.
+        // Usar SEMPRE a revisão lida nessa execução evita abortar com base antiga.
+        return nextDocument(current,{sessionId:token,revision:current?.revision||0,id:record.id,state:record.state,timestamp:sdk.serverTimestamp()});
       },{applyLocally:false});
       if(run!==epoch||stopped||!sessionActive)return;
       if(!result.committed&&result.snapshot.val()?.saveId!==record.id){
@@ -85,9 +88,8 @@ async function flush(){
       revision=result.snapshot.val().revision;
       if(pending?.id===record.id)pending=null;
       ownState=record.state;
-      try{const k='mf-recovery-v2:'+uid,s=JSON.parse(sessionStorage.getItem(k)||'null');if(s&&JSON.stringify(s.state)===JSON.stringify(record.state))sessionStorage.removeItem(k)}catch{}
       $('farm-title').textContent=record.state.farmName||'Minha fazenda';
-      retryDelay=1000;clearTimeout(retryTimer);status('Online');scheduleProjection(record.state,revision,run);
+      retryDelay=1000;clearTimeout(retryTimer);status(pending?'Salvando no Firebase…':'Salvo no Firebase');scheduleProjection(record.state,revision,run);
     }
   })();
   saving=operation;
@@ -95,6 +97,10 @@ async function flush(){
   catch(e){
     failed=true;
     if(run!==epoch||stopped)return;
+    if(/maxretry/i.test(String(e?.code||'')+' '+String(e?.message||''))){
+      console.warn('[Firebase] transaction maxretry; retry backoff',uid,revision);
+      status('Servidor ocupado. Repetindo salvamento…');
+    }
     if(e.code==='PERMISSION_DENIED'||e.code==='permission-denied'){
       const currentToken=await sdk.get(sdk.ref(db,`sessions/${uid}`)).then(s=>s.val()).catch(()=>null);
       if(currentToken&&currentToken!==token){await disconnectPrevious();return}
@@ -210,15 +216,6 @@ async function boot(account){
   const remote=(await sdk.get(sdk.ref(db,`farms/${user.uid}`))).val();
   if(run!==epoch||stopped)return;
   revision=remote?.revision||0;ownState=remote?.state||null;
-  // Recuperação conservadora: nunca substitui um save remoto mais novo.
-  try{
-    const recovery=JSON.parse(sessionStorage.getItem('mf-recovery-v2:'+user.uid)||'null');
-    if(recovery?.state&&Number(recovery.revision)===revision&&Date.now()-recovery.at<86400000){
-      ownState=recovery.state;
-      lastText='';
-      console.warn('[recovery] progresso pendente desta aba restaurado');
-    }else if(recovery)sessionStorage.removeItem('mf-recovery-v2:'+user.uid);
-  }catch(e){console.warn('[recovery]',e)}
   claimed=true;sessionActive=true;
   stopSession=sdk.onValue(sdk.ref(db,`sessions/${user.uid}`),snap=>{
     if(run===epoch&&!stopped&&snap.val()!==null&&snap.val()!==sessionId)void disconnectPrevious();
@@ -232,7 +229,7 @@ async function drain(){
     if(!connected||!sessionActive)throw new Error('Aguarde a conexão voltar.');
     await flush();
     if(stopped)return false;
-    if(pending)throw new Error('Ainda há progresso sem confirmação do servidor. Aguarde a sincronização antes de visitar amigos.');
+    if(pending)throw new Error('O Firebase ainda não confirmou o save. Aguarde a sincronização antes de sair da fazenda.');
     return true;
   }catch(e){suspending=false;if(connected)$('gate').hidden=true;throw e}
 }
@@ -314,7 +311,7 @@ $('login').onclick=async()=>{
     gate(messages[e?.code]||`Não foi possível entrar com Google (${e?.code||'erro desconhecido'}).`);
   }finally{$('login').disabled=false}
 };
-setInterval(checkpoint,1000);
+setInterval(checkpoint,4000);
 // Sem beforeunload/preventDefault: fechar ou recarregar nunca abre confirmação.
 window.addEventListener('pagehide',()=>{checkpoint();void flush().catch(()=>{})});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){checkpoint();void flush().catch(()=>{})}});
