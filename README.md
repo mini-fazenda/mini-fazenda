@@ -132,3 +132,24 @@ firebase deploy --only database --project mini-fazenda-9b007
 O teste do emulador verifica cinco fertilizações por amigo, envio atômico com o contador,
 bloqueio da sexta e de evento sem contador, leitura pelo dono e confirmação do recebimento.
 A mensagem do jogo distingue verificação da amizade, consulta do limite e envio.
+
+## Compatibilidade de contas antigas
+
+O host normaliza números legados e listas esparsas devolvidas pelo Realtime Database
+antes de montar a fazenda, tanto no login quanto nas visitas. O primeiro save da
+versão compatível conserva o estado anterior em `farms/$uid/legacyStateBackup`,
+privado ao proprietário, e preserva os demais campos do documento. Esse backup não
+é cache do navegador, não é publicado nas visitas e não é substituído a cada save.
+Dados ambíguos/inválidos interrompem o carregamento com o campo identificado, sem
+criar uma fazenda nova por cima deles. Não é necessário excluir a conta.
+
+**Publique também o `database.rules.json` atualizado no Firebase.** A regra permite
+que um documento legado sem `revision` receba a revisão 1 uma única vez, somente
+pelo dono e com a sessão atual. As revisões seguintes continuam sequenciais. Sem
+essa publicação, essas contas podem continuar recebendo `PERMISSION_DENIED` ao
+salvar; o GitHub Pages não altera as regras do banco.
+
+A comparação do progresso desconsidera apenas `savedAt` e `activeSeconds`, que
+mudam sem ações do jogador, para evitar transações contínuas com a fazenda parada.
+Alterações reais continuam sendo capturadas. Um documento existente sem `state`
+ou com revisão inválida é bloqueado para análise, em vez de ser zerado.

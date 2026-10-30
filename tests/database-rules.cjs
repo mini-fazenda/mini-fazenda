@@ -36,6 +36,21 @@ const fs=require('fs');
  const result=await assertSucceeds(runTransaction(ref(own,'farms/owner'),current=>nextDocument(current,{sessionId:'session-2',revision:2,id:'id-3',state,timestamp:3}),{applyLocally:false}));
  if(!result.committed)throw new Error('transaction not committed');
  await assertSucceeds(runTransaction(ref(own,'farms/owner'),current=>nextDocument(current,{sessionId:'session-2',revision:2,id:'id-3',state,timestamp:3}),{applyLocally:false}));
+ // Documento legado real, criado antes das regras de revisão: só o dono migra.
+ await env.withSecurityRulesDisabled(async context=>{
+   await set(ref(context.database(),'farms/legacy'),{state:{...state,moedas:4321},oldMetadata:'preservar'});
+ });
+ const legacyDb=env.authenticatedContext('legacy').database();
+ await assertSucceeds(set(ref(legacyDb,'sessions/legacy'),'legacy-session'));
+ const legacyCurrent=(await get(ref(legacyDb,'farms/legacy'))).val();
+ const migrated=nextDocument(legacyCurrent,{sessionId:'legacy-session',revision:0,id:'migration',state,timestamp:4});
+ await assertFails(set(ref(other,'farms/legacy'),migrated));
+ await assertFails(set(ref(legacyDb,'farms/legacy'),{...migrated,sessionId:'stale-session'}));
+ await assertSucceeds(set(ref(legacyDb,'farms/legacy'),migrated));
+ await assertFails(set(ref(legacyDb,'farms/legacy'),migrated));
+ const verified=(await get(ref(legacyDb,'farms/legacy'))).val();
+ if(verified.legacyStateBackup.moedas!==4321||verified.oldMetadata!=='preservar')throw Error('Migration lost original save');
+ console.log('PASS: migração de revisão ausente preserva backup, exige dono/sessão e não permite reiniciar revisão.');
  await env.withSecurityRulesDisabled(async context=>{await set(ref(context.database(),'friends'),{owner:{other:1},other:{owner:1}});});
  await assertSucceeds(get(ref(other,'friends/other/owner')));
  await assertSucceeds(get(ref(other,'fertUsage/other/owner')));

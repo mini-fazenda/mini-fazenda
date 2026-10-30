@@ -1,0 +1,38 @@
+const {chromium}=require('playwright');
+const mock=require('./firebase-mock.cjs');
+(async()=>{
+ const browser=await chromium.launch({headless:true,...(process.env.MF_CHROMIUM_PATH?{executablePath:process.env.MF_CHROMIUM_PATH}:{}),args:['--no-sandbox']});
+ const page=await browser.newPage();const errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/firebase-config.js',r=>r.fulfill({contentType:'application/javascript',body:"window.MINI_FAZENDA_FIREBASE={apiKey:'demo',authDomain:'demo',databaseURL:'demo',projectId:'demo',appId:'demo'};"}));
+ await page.route('https://www.gstatic.com/firebasejs/12.5.0/*',r=>r.fulfill({contentType:'application/javascript',body:mock}));
+ await page.route('https://i.postimg.cc/**',r=>r.abort());
+ await page.goto('http://localhost:8080');
+ await page.evaluate(()=>{
+  localStorage.setItem('test-user','yes');
+  const old={moedas:'12345',playerXP:'345',playerLevel:'4',COLS:'25',ROWS:'23',farmName:'Legada',character:'menino',terrenos:{2:{gx:3,gy:4,w:1,h:1,imgSrc:''}},inventory:{milho:{count:'25'}},player:{gx:'6',gy:'7',path:[]},customLegacy:{preserve:true}};
+  localStorage.setItem('test-cloud',JSON.stringify({'farms/rodrigo':{state:old,oldMetadata:'preservar'},'userCodes/rodrigo':'123456','codes/123456':'rodrigo'}));
+ });
+ await page.reload();
+ await page.waitForFunction(()=>MFOnline?.playing()&&testCloud['farms/rodrigo']?.revision>=1);
+ let f=page.frames().find(f=>f.url().includes('game.html'));
+ const got=await f.evaluate(()=>({coins:moedas,xp:playerXP,level:playerLevel,tiles:terrenos.length,inventory:MFAdapter.captureState().inventory}));
+ if(got.coins!==12345||got.xp!==345||got.level!==4||got.tiles!==1||got.inventory.milho.count!==25)throw Error('Migração alterou progresso: '+JSON.stringify(got));
+ const backup=await page.evaluate(()=>testCloud['farms/rodrigo'].legacyStateBackup);
+ if(backup.moedas!=='12345'||!backup.terrenos['2'])throw Error('Backup original ausente');
+ await f.evaluate(()=>{moedas=12346;saveGameState('legacy-change')});
+ await page.waitForFunction(()=>testCloud['farms/rodrigo'].state.moedas===12346);
+ await page.reload();await page.waitForFunction(()=>MFOnline?.playing());
+ f=page.frames().find(f=>f.url().includes('game.html'));
+ if(await f.evaluate(()=>moedas)!==12346)throw Error('Não persistiu após recarregar');
+ await page.waitForFunction(()=>testCloud['publicFarms/rodrigo']?.state);
+ await page.evaluate(()=>{testCloud['publicFarms/neighbor']={state:{...testCloud['publicFarms/rodrigo'].state,farmName:'Vizinha'}};});
+ await page.evaluate(()=>MFOnline.friends.visit('neighbor'));
+ await page.waitForFunction(()=>MFOnline.isVisiting()&&document.querySelector('#gate').hidden);
+ await page.locator('#home').click();await page.waitForFunction(()=>MFOnline.playing());
+ f=page.frames().find(f=>f.url().includes('game.html'));
+ if(await f.evaluate(()=>moedas)!==12346)throw Error('Visita perdeu saldo');
+ if(errors.length)throw Error(errors.join('\n'));
+ console.log('PASS: conta sem revisão com números e listas antigos salva, recarrega, visita e retorna sem apagar progresso.');
+ await browser.close();
+})().catch(e=>{console.error(e);process.exit(1)});
