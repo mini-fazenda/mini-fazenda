@@ -10,6 +10,10 @@
   if(data.truckOrder)data.truckOrder.aberto=false;
   for(const [type,entry]of Object.entries(data.inventory||{}))if(items['item-'+type]?.lootIcon)entry.imgSrc=items['item-'+type].lootIcon;
   for(const t of [...(data.terrenos||[]),...(data.storedObjects||[])]){
+   if(t.cultura?.seedId&&items[t.cultura.seedId]?.growTime){
+    t.cultura.tipo=t.cultura.seedId.replace(/^item-/,'');
+   }
+   if(t.cultura&&t.cultura.tipo!=='morta')t.itemId='item-'+t.cultura.tipo;
    const type=t.animal?.tipo||t.cultura?.tipo;
    const id=type?'item-'+type:(t.itemId||t.catalogId||(t.tipo?'item-'+t.tipo:''));
    const cfg=items[id];if(!cfg)continue;

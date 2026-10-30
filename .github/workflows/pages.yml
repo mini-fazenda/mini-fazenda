@@ -18,17 +18,8 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Identificar versão publicada
-        run: |
-          python3 - <<'PYVERSION'
-          import os, re
-          from pathlib import Path
-          p = Path('public/index.html')
-          s, count = re.subn(r'online\.js\?v=[^"\s]+', 'online.js?v=' + os.environ['GITHUB_SHA'], p.read_text())
-          if count != 1:
-              raise SystemExit('Não foi possível identificar a versão do host')
-          p.write_text(s)
-          PYVERSION
+      - name: Versionar scripts e estilos da publicação
+        run: python3 scripts/stamp-release.py public "$GITHUB_SHA"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

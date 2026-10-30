@@ -61,8 +61,8 @@ const mock=require('./firebase-mock.cjs');
  await f.evaluate(()=>{moedas=9878;saveGameState('maxretry')});
  await page.waitForFunction(()=>testCloud['farms/rodrigo']?.state.moedas===9878,{timeout:15000});
  if(await page.evaluate(()=>[...Object.keys(sessionStorage),...Object.keys(localStorage)].some(k=>k.startsWith('mf-recovery-v2:')||k.startsWith('mf-pending-v3:'))))throw Error('Save gravado em sessionStorage');
- if(!await page.evaluate(()=>testRestWrites>0&&testFailMaxretry>0))throw Error('Não usou recuperação condicional com maxretry persistente');
- console.log('PASS: maxretry persistente usa gravação condicional e limpa pendência após confirmação');
+ if(!await page.evaluate(()=>testAtomicSaves>0&&testFailMaxretry>0))throw Error('Não usou gravação atômica evitando maxretry persistente');
+ console.log('PASS: gravação atômica evita maxretry persistente e limpa pendência após confirmação');
  // Save legado sem farmName: a cópia pública precisa ter nome para visitas.
  await f.evaluate(()=>{window.__farmName='';saveGameState('legacy-no-name')});
  await page.waitForFunction(()=>testCloud['publicFarms/rodrigo']?.state?.farmName==='Fazenda');

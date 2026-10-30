@@ -2,8 +2,9 @@
 // O servidor continua verificando autenticação, sessão e revisão nas regras existentes.
 function error(code){return Object.assign(new Error(code),{code});}
 export function isMaxRetry(e){return /(?:^|\/)maxretry$/i.test(String(e?.code||e?.message||''));}
-export async function conditionalSave({databaseURL,uid,getToken,update,active,fetchImpl=globalThis.fetch,timeoutMs=10000}){
- const base=new URL(databaseURL);base.pathname=base.pathname.replace(/\/$/,'')+'/farms/'+encodeURIComponent(uid)+'.json';
+export async function conditionalSave({databaseURL,uid,collection='farms',getToken,update,active,fetchImpl=globalThis.fetch,timeoutMs=10000}){
+ if(!['farms','publicFarms'].includes(collection))throw error('save/invalid-collection');
+ const base=new URL(databaseURL);base.pathname=base.pathname.replace(/\/$/,'')+'/'+collection+'/'+encodeURIComponent(uid)+'.json';
  let token=await getToken(false),renewed=false;
  async function request(options){
   for(;;){

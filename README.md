@@ -154,23 +154,25 @@ mudam sem ações do jogador, para evitar transações contínuas com a fazenda 
 Alterações reais continuam sendo capturadas. Um documento existente sem `state`
 ou com revisão inválida é bloqueado para análise, em vez de ser zerado.
 
-## Recuperação de `maxretry` ao entrar/salvar
+## Saves e visitas em tempo real
 
-O aviso de falha no save após autenticar não é uma recusa do login Google. Quando
-uma transação de `farms/$uid` esgota os retries do SDK, a sessão passa a usar a
-API REST do próprio Realtime Database, autenticada com o token Firebase atual.
-Ela lê a versão com `X-Firebase-ETag: true` e grava com `If-Match`: qualquer mudança
-concorrente rejeita a escrita com HTTP 412, sem substituir o documento novo.
-As regras de dono, sessão e revisão continuam sendo aplicadas pelo Firebase.
+Cada gravação confirma `farms/$uid` e `publicFarms/$uid` no mesmo update atômico.
+As regras existentes exigem sessão atual e revisão sequencial no save privado;
+um conflito rejeita a operação inteira, incluindo a projeção. Isso também evita
+usar transações do SDK no caminho principal que antes podia esgotar `maxretry`.
+`saveId` continua reconhecendo confirmações repetidas e respostas perdidas.
 
-Não há `set` incondicional para contornar o erro, nem exclusão/recriação de conta.
-Resposta perdida é confirmada pelo `saveId`, evitando reaplicar o progresso. Token
-expirado é renovado uma vez; falhas continuam visíveis e pausam a simulação. Conflitos
-de revisão só podem ser repetidos na mesma sessão e em número limitado por tentativa.
-A troca de transporte não exige regras novas; as regras de compatibilidade de contas
-sem revisão, descritas acima, continuam necessárias para esses documentos específicos.
+O visitante assina `publicFarms/$uid` com `onValue`: mudanças de culturas, objetos
+e personagem chegam sem sair e entrar de novo. A cena é aplicada sem reiniciar o
+iframe ou a câmera. Os relógios de crescimento usam a hora do servidor; tarefas,
+inventário, compras e colheitas do dono não são executados pelo visitante.
+A visita acompanha o último estado confirmado; latência e interrupções de rede
+continuam possíveis, não se trata de um servidor autoritativo de física/movimento.
 
-Referência: https://firebase.google.com/docs/database/rest/save-data#section-conditional-requests
+Ao entrar, o dono também republica saves anteriores para reparar projeções antigas,
+com retry e proteção de revisão. Para fazendas cujo último save ocorreu antes desta
+correção, o dono precisa entrar uma vez para reparar uma cópia pública desatualizada.
+Não é necessário apagar contas nem modificar as regras para este fluxo.
 
 ### Adubação compartilhada e zoom em visitas
 

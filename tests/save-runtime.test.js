@@ -16,5 +16,5 @@ test('save antigo atualiza configuração sem apagar progresso ou alterar o orig
 });
 test('não troca terra em cultivo, relógios, arte dinâmica do celeiro nem objetos desconhecidos',()=>{
  const old={terrenos:[{cultura:{tipo:'milho',startTime:123,totalTime:456},imgSrc:'estagio.png'},{itemId:'item-celeiro',barnStartedAt:100,imgSrc:'obra.svg'},{itemId:'desconhecido',imgSrc:'preservar.png'}]};
- assert.deepEqual(MFSaveRuntime.refresh(old,project).terrenos,old.terrenos);
+ const next=MFSaveRuntime.refresh(old,project);assert.deepEqual(next.terrenos[0].cultura,old.terrenos[0].cultura);assert.equal(next.terrenos[0].imgSrc,'estagio.png');assert.equal(next.terrenos[0].itemId,'item-milho');assert.deepEqual(next.terrenos.slice(1),old.terrenos.slice(1));
 });
