@@ -917,6 +917,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const 
 @media(max-width:600px){#loja-content .mf-shop-arrow{width:31px;height:42px;font-size:25px}#loja-content #mf-shop-prev{left:-3%}#loja-content #mf-shop-next{right:-3%}#loja-content #mf-shop-page{bottom:5%;font-size:12px}}
 </style>
 <script src="render-resolution.js?v=1"></script>
+<script src="plot-ground.js?v=1"></script>
 <script src="farm-economy.js?v=girassol-4"></script>
 <script src="growth-time.js?v=1"></script>
 <script src="animal-production.js?v=1"></script>
@@ -4858,6 +4859,8 @@ function isMFAnimal(t) {
   return meta==='animais'||meta==='animal'||
     /(?:porco|porquinho|vaca|cavalo|ovelha|bode|boi|galinha|pato|cabrito|coelho|burro|cabra|galo)/.test(src);
 }
+// Preencha os canteiros antes dos sprites: margens das artes não viram faixas de grama.
+window.MFPlotGround?.draw(ctx,terrenos,gridToScreen,modoMover?estruturaMovendo:null);
 // montar lista de drawables para depth sort
 const drawables = [];
 
@@ -6598,9 +6601,13 @@ function drawFarmMark(t, hover, current) {
   const w=TILE_W*(t.w||1)*(window.MFAdapter?.scaleForStructure?.(t,Number(t.visualScale)||1) ?? (Number(t.visualScale)||1));
   const h=w*800/1200, a=gridToScreen(t.gx+((t.w||1)-1)/2,t.gy+((t.h||1)-1)/2);
   const x=a.x-w/2,y=a.y-h+TILE_H*0.9,path=new Path2D();
-  // Mesmos limites e mesma âncora do PNG de terra; não usa o tile lógico.
-  path.moveTo(x+w*.5,y+h*.19);path.lineTo(x+w*.985,y+h*.56);
-  path.lineTo(x+w*.5,y+h*.97);path.lineTo(x+w*.015,y+h*.56);path.closePath();
+  if(window.MFPlotGround?.isPlot(t)){
+    const points=MFPlotGround.corners(t,gridToScreen);
+    points.forEach((p,i)=>i?path.lineTo(p.x,p.y):path.moveTo(p.x,p.y));path.closePath();
+  }else{
+    path.moveTo(x+w*.5,y+h*.19);path.lineTo(x+w*.985,y+h*.56);
+    path.lineTo(x+w*.5,y+h*.97);path.lineTo(x+w*.015,y+h*.56);path.closePath();
+  }
   ctx.save();ctx.lineJoin='round';ctx.clip(path);
   // Faixas sobrepostas esfumam da borda para dentro, sem o efeito neon.
   for(let width=26;width>=2;width-=2){

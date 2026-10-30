@@ -44,3 +44,12 @@ body:has(#farms[style*="display: flex"]) :is(#mf-bounds,#mf-truck-markers),body:
 #toolbar #sync{position:fixed;right:max(8px,env(safe-area-inset-right));top:max(68px,calc(env(safe-area-inset-top) + 58px));max-width:min(380px,70vw);white-space:normal;padding:5px 9px;font:600 11px system-ui;color:#e9f8e2;background:#24482bdd;border-radius:8px;pointer-events:auto;box-shadow:0 2px 5px #0003}
 #toolbar #sync[data-state="pending"]{background:#73541fee;color:#fff0b9}
 #toolbar #sync[data-state="error"]{background:#922f28;color:#fff}
+
+/* Indicador fixo: texto de estado permanece disponível ao leitor de tela e no toque. */
+#toolbar #sync{width:30px;height:30px;min-width:30px;max-width:30px;padding:0;box-sizing:border-box;border:0;border-radius:50%;display:grid;place-items:center;white-space:nowrap;background:#24482bdd;color:#86ed70;font:700 19px system-ui;overflow:hidden}
+#toolbar #sync[hidden]{display:none}
+#toolbar #sync[data-state="pending"]{background:#24482bdd;color:#86ed70}
+#toolbar #sync[data-state="pending"]::before{content:"";width:16px;height:16px;box-sizing:border-box;border:3px solid #86ed7040;border-top-color:#86ed70;border-right-color:#86ed70;border-radius:50%;animation:mf-sync-spin .8s linear infinite}
+#toolbar #sync[data-state="error"]{background:#922f28;color:#fff}
+@keyframes mf-sync-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#toolbar #sync[data-state="pending"]::before{animation:none}}

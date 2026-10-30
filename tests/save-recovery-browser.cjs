@@ -8,20 +8,24 @@ const {chromium}=require('playwright');const mock=require('./firebase-mock.cjs')
  await f.evaluate(()=>{MFCharacter.choose('menino');window.__farmName='Save';moedas=1000;saveGameState('initial');});
  await page.waitForFunction(()=>testCloud['farms/rodrigo']?.state.moedas===1000);await page.waitForTimeout(300);
  await page.evaluate(()=>{const state=structuredClone(testCloud['farms/rodrigo'].state),game=document.querySelector('iframe').contentWindow;MFOnline.attach({capture:()=>({...state,moedas:game.moedas})});});
+ const savedBox=await page.locator('#sync').boundingBox();
  await page.evaluate(()=>{window.testHoldSaves=true;});
  await f.evaluate(()=>{moedas=2000;saveGameState('first');});await page.waitForFunction(()=>testSaveWaiters.length===1);
+ const busy=await page.locator('#sync').evaluate(el=>({state:el.dataset.state,busy:el.getAttribute('aria-busy'),text:el.textContent,animation:getComputedStyle(el,'::before').animationName,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height}));
+ if(busy.state!=='pending'||busy.busy!=='true'||busy.text!==''||busy.animation!=='mf-sync-spin'||busy.width!==savedBox.width||busy.height!==savedBox.height)throw Error('Indicador não ficou verde girando com tamanho fixo');
+ console.log('PASS: salvamento usa spinner sem texto, tamanho fixo e descrição acessível');
  await f.evaluate(()=>{moedas=3000;saveGameState('latest');});await page.waitForTimeout(50);
  await page.evaluate(()=>testReleaseSave());await page.waitForFunction(()=>testCloud['farms/rodrigo'].state.moedas===2000&&testSaveWaiters.length===1);
  await page.reload();f=await loaded();if(await f.evaluate(()=>moedas)!==3000)throw Error('Perdeu alteração mais recente: confirmação anterior avançou revisão');
  await page.waitForFunction(()=>testCloud['farms/rodrigo'].state.moedas===3000);console.log('PASS: recarregar durante confirmação de save anterior preserva o mais recente');
 
  await page.evaluate(()=>{window.testHoldSaves=true;});await f.evaluate(()=>{moedas=3500;saveGameState('stalled');});await page.waitForFunction(()=>testSaveWaiters.length===1);
- await page.waitForFunction(()=>document.getElementById('sync').textContent.includes('save/timeout'),null,{timeout:18000});
+ await page.waitForFunction(()=>document.getElementById('sync').getAttribute('aria-label').includes('save/timeout'),null,{timeout:18000});
  if(await page.evaluate(()=>MFOnline.playing()))throw Error('Jogo continuou durante save sem resposta');
  await page.evaluate(()=>{window.testHoldSaves=false;testReleaseSave();});await page.waitForFunction(()=>testCloud['farms/rodrigo'].state.moedas===3500&&MFOnline.playing());
  console.log('PASS: save sem resposta pausa, confirmação atrasada libera o jogo sem duplicação');
  await page.evaluate(()=>{window.testDenySave=true;});await f.evaluate(()=>{moedas=4000;saveGameState('denied');});
- await page.waitForFunction(()=>document.getElementById('sync').textContent.includes('PERMISSION_DENIED'));
+ await page.waitForFunction(()=>document.getElementById('sync').getAttribute('aria-label').includes('PERMISSION_DENIED'));
  if(!await page.locator('#sync').isVisible())throw Error('Falha de salvamento está escondida');
  if(await page.evaluate(()=>MFOnline.playing()))throw Error('Jogo continuou alterando fazenda com escrita negada');
  // Fechar a aba encerra sessionStorage; a recuperação pendente precisa sobreviver.
