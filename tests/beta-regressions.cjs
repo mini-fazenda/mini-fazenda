@@ -144,6 +144,23 @@ const {chromium,webkit,devices}=require('playwright');
 
  }
  console.log('PASS: quatro toques consecutivos preservam filas de arar, colher e plantar sem esperar o personagem');
+ for(const type of ['cenoura','arvore','vaca','ovelha']){
+  await f.evaluate(type=>{
+   window.MFCancelPlacing();setFarmMoveMode(false);filaAcoes=[];player.acaoAtual=null;player.path=[];terrenos=[];offsetX=0;offsetY=-35;zoom=.6;
+   const t={gx:5,gy:5,w:2,h:2,imgSrc:TERRA_ARADA_SRC};terrenos.push(t);
+   if(type==='cenoura'){t.cultura={tipo:'cenoura',startTime:Date.now()-300000,totalTime:600000,etapa:0};reapplyGrowthFromTime(t);}
+   else if(type==='arvore'){t.itemId='item-arvore-limao';MFFruitTrees.start(t,Date.now()-900000);MFFruitTrees.sync(t);}
+   else{const cfg=MFAnimalProduction.types[type];t.animal={tipo:type,startTime:Date.now()-300000-cfg.cycle/2,totalTime:300000,etapa:2};t.imgSrc=ANIMAL_ADULT[type].adultImg;MFAnimalProduction.sync(t.animal);}
+  },type);
+  await f.waitForFunction(()=>preload(terrenos[0].imgSrc)?.naturalWidth>0);
+  const point=await f.evaluate(()=>{const t=terrenos[0],p=gridToScreen(t.gx+.5,t.gy+.5);return {x:canvas.width/2+offsetX+p.x*zoom,y:canvas.height/3+offsetY+(p.y-25)*zoom};});
+  await f.locator('#game').tap({position:point});
+  await f.waitForFunction(()=>!document.getElementById('mf-growth-info').hidden);
+  await f.evaluate(()=>{const el=document.getElementById('mf-growth-info'),percent=Number(el.querySelector('[role=progressbar]').getAttribute('aria-valuenow'));if(percent<49||percent>51||!el.textContent.includes('Pronto em'))throw Error('Porcentagem/tempo ausente: '+el.textContent);if(el.getBoundingClientRect().top<0)throw Error('Informação fora da tela');});
+  await f.locator('#game').dispatchEvent('mouseleave');
+  await f.evaluate(()=>{MFGrowthInfo.update();if(document.getElementById('mf-growth-info').hidden)throw Error('Informação sumiu após soltar o toque');});
+ }
+ console.log('PASS: toque mostra porcentagem e tempo persistentes para plantação, árvore, leite e lã');
  if(errors.length)throw Error(errors.join('\n'));console.log('PASS: celeiro 200 moedas, obra autônoma 5min, giro, save, 5 estrelas únicas e toque abre vendas ('+(ios?'WebKit/iOS':'Chromium/toque')+')');
  await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
