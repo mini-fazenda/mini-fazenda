@@ -10,7 +10,9 @@ const config=window.MINI_FAZENDA_FIREBASE;
 let sdk,auth,db,user,sessionId,revision=0,epoch=0;
 let ready=false,connected=false,sessionActive=false,stopped=false,visiting=false,suspending=false,visitingUid=null;
 let bridge=null,initialState=null,ownState=null,pending=null,saving=null,lastText='',lastKey=null;
-let stopConnection,stopSession,resolveConnection,connectionReady,projectionTimer,retryTimer,reconnectTimer;
+let stopConnection,stopSession,stopVisit,resolveConnection,connectionReady,projectionTimer,retryTimer,reconnectTimer;
+let visitSerial=0,visitedRevision=-1,visitedPublishedAt=0;
+let projectionTarget=null,projectionWork=null,projectionDelay=1000,confirmedState=null;
 let retryDelay=1000,loginAttempt=false;
 let useRestSaves=false;
 let confirmedSaveId=null,inFlightRecord=null,saveBlocked=false,lastSaveError='';
@@ -48,7 +50,15 @@ function status(text){
  el.setAttribute('aria-label',text);el.setAttribute('aria-busy',String(state==='pending'));
 }
 function gate(text){$('farms').close();$('gate').hidden=false;$('message').textContent=text}
-function freeze(){ready=false;sessionActive=false;stopped=true;pending=null;clearTimeout(retryTimer);clearTimeout(reconnectTimer);clearTimeout(projectionTimer);$('game-container').replaceChildren();bridge=null;$('toolbar').hidden=true}
+function endVisit(){
+  visitSerial++;stopVisit?.();stopVisit=null;
+  visitingUid=null;visitedRevision=-1;visitedPublishedAt=0;
+}
+function freeze(){
+  endVisit();ready=false;sessionActive=false;stopped=true;pending=null;projectionTarget=null;
+  clearTimeout(retryTimer);clearTimeout(reconnectTimer);clearTimeout(projectionTimer);
+  $('game-container').replaceChildren();bridge=null;$('toolbar').hidden=true;
+}
 function fail(error){
   if(stopped)return;
   console.error(error);freeze();gate(String(error?.message||'').startsWith('save/incompatible')?error.message:'Não foi possível conectar à fazenda. Recarregue a página para tentar novamente.');
@@ -75,22 +85,50 @@ function publicState(state){
   const farmName=typeof state.farmName==='string'&&state.farmName.trim()?state.farmName.slice(0,12):'Fazenda';
   return {...state,farmName,inventory:{},moedas:0,truckOrder:null,loot:[],player:{...state.player,path:[]},aradora:{...state.aradora,path:[],fila:[]}};
 }
-function scheduleProjection(state,version,run){
+// Publica somente documentos já confirmados em farms/{uid}; falhas são repetidas.
+function scheduleProjection(state,version,run,saveId=confirmedSaveId){
+  if(!state||!Number.isSafeInteger(version)||version<1||run!==epoch||stopped)return;
+  if(projectionTarget?.run===run&&projectionTarget.version>version)return;
+  projectionTarget={state,version,run,saveId};
   clearTimeout(projectionTimer);
-  projectionTimer=setTimeout(async()=>{
-    if(run!==epoch||!sessionActive||!connected||stopped)return;
-    try{
-      // As projeções também usam revisão: uma publicação atrasada não substitui uma nova.
-      const uid=user.uid;
-      await sdk.runTransaction(sdk.ref(db,`publicFarms/${uid}`),current=>{
-        if(current?.revision>version)return;
-        return {state:publicState(state),revision:version,updatedAt:sdk.serverTimestamp()};
-      },{applyLocally:false});
-      if(run!==epoch||!sessionActive||stopped)return;
-      await sdk.set(sdk.ref(db,`directory/${uid}`),{name:(state.farmName||'Minha fazenda').slice(0,12),level:state.playerLevel||1,updatedAt:sdk.serverTimestamp()});
-      void publishProfile(state);
-    }catch(e){console.warn('Atualização de visita',e)}
-  },500);
+  projectionTimer=setTimeout(()=>void publishProjection(),150);
+}
+async function publishProjection(){
+  if(projectionWork)return projectionWork;
+  const target=projectionTarget;
+  if(!target||target.run!==epoch||!sessionActive||!connected||stopped)return false;
+  const uid=user.uid;
+  const operation=(async()=>{
+    const result=await sdk.runTransaction(sdk.ref(db,`publicFarms/${uid}`),current=>{
+      if(target.run!==epoch||!sessionActive||stopped||Number(current?.revision)>target.version)return;
+      return {state:publicState(target.state),revision:target.version,
+        saveId:target.saveId||'',updatedAt:sdk.serverTimestamp()};
+    },{applyLocally:false});
+    if(target.run!==epoch||stopped)return;
+    if((Number(result.snapshot.val()?.revision)||0)<target.version)throw new Error('projection/not-confirmed');
+    await sdk.set(sdk.ref(db,`directory/${uid}`),{
+      name:(target.state.farmName||'Minha fazenda').slice(0,12),
+      level:target.state.playerLevel||1,updatedAt:sdk.serverTimestamp()
+    });
+    void publishProfile(target.state);
+  })();
+  projectionWork=operation;
+  let failed=false;
+  try{
+    await operation;
+    if(projectionTarget===target)projectionTarget=null;
+    projectionDelay=1000;
+  }catch(e){
+    failed=true;console.warn('[projeção pública]',e);
+  }finally{
+    if(projectionWork===operation)projectionWork=null;
+    if(projectionTarget?.run===epoch&&!stopped&&connected&&sessionActive){
+      clearTimeout(projectionTimer);
+      projectionTimer=setTimeout(()=>void publishProjection(),failed?projectionDelay:0);
+      if(failed)projectionDelay=Math.min(projectionDelay*2,30000);
+    }
+  }
+  return !failed;
 }
 async function flush(){
   if(saving)return saving;
@@ -127,7 +165,7 @@ async function flush(){
       }
       revision=result.snapshot.val().revision;confirmedSaveId=result.snapshot.val().saveId;inFlightRecord=null;
       if(pending?.id===record.id)pending=null;
-      ownState=record.state;
+      ownState=record.state;confirmedState=record.state;
       // Atualiza a base da pendência MAIS RECENTE após confirmar a anterior.
       if(pending)rememberPending();else forgetPending();
       $('farm-title').textContent=record.state.farmName||'Minha fazenda';
@@ -223,11 +261,12 @@ async function reconnect(run){
     if(token!==sessionId){await disconnectPrevious();return}
     sessionActive=true;
     if(ready){await flush();if(!saveBlocked)$('gate').hidden=true;if(!visiting)checkpoint()}
+    if(confirmedState)scheduleProjection(confirmedState,revision,run);
   }catch(e){if(run===epoch&&connected&&!stopped){console.warn('[reconnect]',e);status('Reconectando…');clearTimeout(reconnectTimer);reconnectTimer=setTimeout(()=>{if(run===epoch&&connected&&!stopped)void reconnect(run)},3000)}}
 }
 async function boot(account){
   const run=++epoch;
-  stopConnection?.();stopSession?.();clearTimeout(projectionTimer);clearTimeout(retryTimer);clearTimeout(reconnectTimer);retryDelay=1000;useRestSaves=false;
+  stopConnection?.();stopSession?.();endVisit();clearTimeout(projectionTimer);clearTimeout(retryTimer);clearTimeout(reconnectTimer);projectionTarget=null;projectionWork=null;projectionDelay=1000;confirmedState=null;retryDelay=1000;useRestSaves=false;
   ready=false;sessionActive=false;connected=false;stopped=false;bridge=null;pending=null;saving=null;
   user=account;ownState=null;lastText='';saveBlocked=false;lastSaveError='';confirmedSaveId=null;inFlightRecord=null;$('game-container').replaceChildren();$('toolbar').hidden=true;
   if(!user){stopFriends();$('login').hidden=false;gate('Entre com sua conta Google para continuar.');return}
@@ -258,7 +297,7 @@ async function boot(account){
   const remote=(await sdk.get(sdk.ref(db,`farms/${user.uid}`))).val();
   if(run!==epoch||stopped)return;
   if(remote&&!remote.state)throw new Error('save/incompatible: documento sem state — progresso preservado no Firebase');
-  revision=documentRevision(remote);confirmedSaveId=remote?.saveId||null;ownState=normalizeSave(remote?.state);
+  revision=documentRevision(remote);confirmedSaveId=remote?.saveId||null;ownState=normalizeSave(remote?.state);confirmedState=ownState;
   let stateSavedAt=remote?.updatedAt;
   // A nuvem é a autoridade; só recupere uma pendência baseada nela.
   let restoredPending=false;
@@ -277,7 +316,7 @@ async function boot(account){
     try{
       const credit=await redeemTestCredit({sdk,db,uid:user.uid,sessionId,revision,active:()=>run===epoch&&!stopped});
       if(run!==epoch||stopped)return;
-      if(credit){revision=credit.revision;confirmedSaveId=credit.saveId;ownState={...ownState,moedas:ownState.moedas+credit.amount};lastText='';}
+      if(credit){revision=credit.revision;confirmedSaveId=credit.saveId;ownState={...ownState,moedas:ownState.moedas+credit.amount};confirmedState=ownState;lastText='';}
     }catch(e){console.warn('[crédito de teste]',e)}
   }
   if(run!==epoch||stopped)return;
@@ -286,6 +325,7 @@ async function boot(account){
     if(run===epoch&&!stopped&&snap.val()!==null&&snap.val()!==sessionId)void disconnectPrevious();
   },e=>{console.warn('[session listener]',e);status('Verificando sessão…')});
   mount(ownState,false,stateSavedAt);
+  if(confirmedState)scheduleProjection(confirmedState,revision,run);
   void startFriends({sdk,db,uid:user.uid,visit:visitFarm,applyFertilize}).then(()=>{if(run===epoch&&ownState)void publishProfile(ownState)}).catch(e=>console.warn('[amigos]',e));
 }
 async function drain(){
@@ -312,7 +352,7 @@ $('home').onclick=async()=>{
     const remote=(await sdk.get(sdk.ref(db,`farms/${user.uid}`))).val();
     if(stopped)return;
     if(remote&&!remote.state)throw new Error('save/incompatible: documento sem state — progresso preservado no Firebase');
-  revision=documentRevision(remote);confirmedSaveId=remote?.saveId||null;ownState=normalizeSave(remote?.state);lastText='';mount(ownState,false,remote?.updatedAt);
+  revision=documentRevision(remote);confirmedSaveId=remote?.saveId||null;ownState=normalizeSave(remote?.state);confirmedState=ownState;lastText='';endVisit();mount(ownState,false,remote?.updatedAt);
   }catch(e){fail(e)}
 };
 // Fertilizações dos amigos: só aplica com a própria fazenda aberta e o jogo pronto.
@@ -322,16 +362,44 @@ function applyFertilize(list){
   if(!game?.MFFertilize)return false;
   try{game.MFFertilize.apply(list);queueMicrotask(checkpoint);return true}catch(e){console.warn('[fertilizar]',e);return true}
 }
-// Abre a fazenda de outra pessoa em modo visita (somente olhar).
+// A revisão recebida pelo listener, e não o cache da primeira visita, é a fonte da renderização.
+function applyVisitSnapshot(data,uid,serial){
+  if(serial!==visitSerial||stopped||!visiting||visitingUid!==uid||!data?.state)return;
+  const nextRevision=Number(data.revision)||0,nextUpdatedAt=Number(data.updatedAt)||0;
+  if(nextRevision<visitedRevision||
+    (nextRevision===visitedRevision&&nextUpdatedAt<=visitedPublishedAt))return;
+  const state=normalizeSave(data.state);
+  const loaded={...state,savedAt:state.savedAt||nextUpdatedAt};
+  visitedRevision=nextRevision;visitedPublishedAt=nextUpdatedAt;
+  initialState=loaded;
+  $('farm-title').textContent=`Visitando: ${state.farmName||'Fazenda'}`;
+  if(ready&&bridge?.applyVisitState){
+    try{bridge.applyVisitState(loaded);status('Visita atualizada ao vivo')}
+    catch(e){console.warn('[visita ao vivo]',e);status('Falha ao atualizar a visita')}
+  }
+}
+// Toda nova visita consulta o Firebase; enquanto aberta recebe atualizações ao vivo.
 async function visitFarm(uid){
   if(!user||uid===user.uid||!connected||!sessionActive||stopped)return false;
   try{
     if(!await drain())return false;
-    const data=(await sdk.get(sdk.ref(db,`publicFarms/${uid}`))).val();
+    const path=sdk.ref(db,`publicFarms/${uid}`);
+    const data=(await sdk.get(path)).val();
     if(stopped)return false;
-    if(!data?.state){suspending=false;$('gate').hidden=true;throw new Error('Esta fazenda ainda não está disponível.')}
-    visitingUid=uid;mount(data.state,true,data.updatedAt);return true;
-  }catch(e){suspending=false;if(connected&&!stopped)$('gate').hidden=true;status(e.message);throw e}
+    if(!data?.state)throw new Error('Esta fazenda ainda não está disponível.');
+    const state=normalizeSave(data.state);
+    endVisit();
+    visitingUid=uid;visitedRevision=Number(data.revision)||0;visitedPublishedAt=Number(data.updatedAt)||0;
+    const serial=visitSerial;
+    mount(state,true,data.updatedAt);
+    stopVisit=sdk.onValue(path,snap=>{
+      try{applyVisitSnapshot(snap.val(),uid,serial)}
+      catch(e){console.warn('[visita ao vivo]',e);status('Falha ao atualizar a visita')}
+    },e=>{if(serial===visitSerial){console.warn('[visita ao vivo]',e);status('Visita sem sincronização: '+String(e.code||e.message||e))}});
+    return true;
+  }catch(e){
+    suspending=false;if(connected&&!stopped)$('gate').hidden=true;status(e.message);throw e;
+  }
 }
 function row(uid,farm){
   if(uid===user.uid)return;
@@ -340,13 +408,9 @@ function row(uid,farm){
   title.textContent=farm.name||'Fazenda';sub.textContent=`Nível ${farm.level||1}`;text.append(title,sub);
   const button=document.createElement('button');button.textContent='Visitar';button.onclick=async()=>{
     button.disabled=true;
-    try{
-      if(!await drain())return;
-      const data=(await sdk.get(sdk.ref(db,`publicFarms/${uid}`))).val();
-      if(stopped)return;
-      if(!data?.state){suspending=false;$('gate').hidden=true;throw new Error('Esta fazenda ainda não está disponível.')}
-      mount(data.state,true,data.updatedAt);
-    }catch(e){suspending=false;if(connected&&!stopped)$('gate').hidden=true;status(e.message)}finally{button.disabled=false}
+    try{await visitFarm(uid)}
+    catch(e){if(!stopped)status(e.message)}
+    finally{button.disabled=false}
   };el.append(text,button);$('farm-list').append(el);
 }
 async function listFarms(reset=false){
