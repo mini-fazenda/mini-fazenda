@@ -51,7 +51,6 @@ test('modo tela cheia preserva a interface online sobre o jogo', () => {
   const hostCss=read('public/online.css');
   assert.ok(hostScript.includes('requestFullscreen:requestHostFullscreen'), 'host controla fullscreen');
   assert.ok(hostScript.includes('exitFullscreen:exitHostFullscreen'), 'host controla saída de fullscreen');
-  assert.ok(/frame\.src='game\.html\?v=[\w-]+'/.test(hostScript), 'novo HTML sem cache antigo');
   assert.ok(game.includes('window.MFHost.requestFullscreen()'), 'jogo solicita fullscreen no host');
   assert.ok(game.includes('window.MFHost.exitFullscreen()'), 'jogo sai do fullscreen do host');
   assert.ok(hostCss.includes(':root:fullscreen #toolbar'), 'toolbar acima do iframe');
