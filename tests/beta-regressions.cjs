@@ -219,7 +219,7 @@ const {chromium,webkit,devices}=require('playwright');
  });
  await reload();f=frame();await f.evaluate(()=>{
   for(const type of ['trigo','cenoura','girassol','espinafre','limao','maca','laranja','acerola']){
-   const item=__gameInventory.map[type],slot=__gameInventory.slots[item.slotIndex];if(item.count!==7||!slot.querySelector('img').src.endsWith('produtos/'+type+'.png'))throw Error('Migração de ícone perdeu estoque: '+type);
+   const item=__gameInventory.map[type],slot=__gameInventory.slots[item.slotIndex];if(item.count!==7||!slot.querySelector('img').src.endsWith(MFAdapter.project.items['item-'+type].lootIcon))throw Error('Migração de ícone perdeu estoque: '+type);
   }
   document.getElementById('overlay-bau').style.display='flex';
  });

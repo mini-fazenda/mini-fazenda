@@ -25,7 +25,7 @@ test('coleta animal espera a chegada e os 1300 ms da ação antes de entregar ao
  env.player.gx=4;env.player.gy=4;env.player.path=[];env.processArar(0);clock+=1299;env.processArar(0);assert.equal(credited,0);clock++;env.processArar(0);assert.equal(credited,1);assert.equal(env.queueJob(animal,'animal'),false);
 });
 test('colheita inteira usa a quantidade centralizada sem multiplicar os drops',()=>{
- const env={window:{MFFarmEconomy,MFAdapter:{project:{items:{}}}},gridToScreen:()=>({x:0,y:0}),canvas:{width:800,height:600},offsetX:0,offsetY:0,zoom:1,TERRA_SECA_SRC:'terra-seca.png',requestRedraw(){},addXP(){},spawnLoot:()=>{env.drops++;return true;}};
+ const env={window:{MFFarmEconomy,MFAdapter:{project:{items:{}}}},gridToScreen:()=>({x:0,y:0}),MFViewport:{width:800,height:600},canvas:{width:800,height:600},offsetX:0,offsetY:0,zoom:1,TERRA_SECA_SRC:'terra-seca.png',requestRedraw(){},addXP(){},spawnLoot:()=>{env.drops++;return true;}};
  vm.createContext(env);vm.runInContext(html.slice(html.indexOf('function tryHarvestAtTile('),html.indexOf('// ---------------------------\n// Ações: Arar')),env);
  for(const [tipo,cfg] of Object.entries(MFFarmEconomy.crops)){
   env.drops=0;const tile={gx:1,gy:1,cultura:{tipo,etapa:2}};assert.equal(env.tryHarvestAtTile(tile),true);assert.equal(env.drops,1);assert.equal(env.tryHarvestAtTile(tile),false);
@@ -42,7 +42,7 @@ test('balde e tesoura só aparecem para produção pronta e preços dos produtos
 
 test('não apaga a plantação nem concede estrelas se o inventário recusar a colheita',()=>{
  let stars=0;
- const env={window:{MFFarmEconomy,MFAdapter:{project:{items:{}}}},gridToScreen:()=>({x:0,y:0}),canvas:{width:800,height:600},offsetX:0,offsetY:0,zoom:1,TERRA_SECA_SRC:'terra-seca.png',requestRedraw(){},addXP(){stars++},spawnLoot:()=>false};
+ const env={window:{MFFarmEconomy,MFAdapter:{project:{items:{}}}},gridToScreen:()=>({x:0,y:0}),MFViewport:{width:800,height:600},canvas:{width:800,height:600},offsetX:0,offsetY:0,zoom:1,TERRA_SECA_SRC:'terra-seca.png',requestRedraw(){},addXP(){stars++},spawnLoot:()=>false};
  vm.createContext(env);vm.runInContext(html.slice(html.indexOf('function tryHarvestAtTile('),html.indexOf('// ---------------------------\n// Ações: Arar')),env);
  const tile={gx:1,gy:1,imgSrc:'espinafre-final.png',cultura:{tipo:'espinafre',etapa:2}};
  assert.equal(env.tryHarvestAtTile(tile),false);assert.equal(tile.cultura.tipo,'espinafre');assert.equal(tile.imgSrc,'espinafre-final.png');assert.equal(stars,0);

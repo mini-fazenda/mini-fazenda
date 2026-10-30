@@ -18,7 +18,7 @@
  function update(){
   const a=player.acaoAtual,t=a?.alvo;if(!t||!terrenos.includes(t)||window.MFHost?.isVisiting?.()){box.hidden=true;return;}
   const r=canvas.getBoundingClientRect(),p=gridToScreen(t.gx+((t.w||1)-1)/2,t.gy+((t.h||1)-1)/2);
-  const x=r.left+(canvas.width/2+offsetX+p.x*zoom)*r.width/canvas.width,y=r.top+(canvas.height/3+offsetY+p.y*zoom)*r.height/canvas.height-16;
+  const x=r.left+(MFViewport.width/2+offsetX+p.x*zoom)*r.width/MFViewport.width,y=r.top+(MFViewport.height/3+offsetY+p.y*zoom)*r.height/MFViewport.height-16;
   if(x<r.left||x>r.right||y<r.top+25||y>r.bottom){box.hidden=true;return;}
   box.hidden=false;box.style.left=x+'px';box.style.top=y+'px';const working=a.state==='ararando';box.classList.toggle('working',working);
   const src=tool(a);if(image.getAttribute('src')!==src)image.setAttribute('src',src);

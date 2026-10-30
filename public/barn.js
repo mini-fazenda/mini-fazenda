@@ -12,7 +12,7 @@
  turn.onclick=rotate;
  function select(){if(visiting()||moedas<200)return;window.MFFences?.stop();window.MFHoe?.stop();setFarmMoveMode(false);orientation=0;placingItem={id:core.ID,tipo:'proprio',price:200,xp:5,...core.layout(0),imgSrc:'assets/construcoes/celeiro-0.png'};selectedItem={...placingItem};continuousSelection=false;modoColocar='placing';preview.active=true;updatePreview();turn.hidden=false;}
  function place(gx,gy){if(visiting()||moedas<200)return false;const t=core.start(gx,gy,orientation);if(!core.fits(t,COLS,ROWS,terrenos))return false;terrenos.push(t);moedas-=200;if(moedasSpan)moedasSpan.textContent=moedas;window.MFGameAudio?.event('place',core.ID);window.MFCancelPlacing?.();turn.hidden=true;changed();return true;}
- function point(e){const r=canvas.getBoundingClientRect();return {x:((e.clientX-r.left)*canvas.width/r.width-canvas.width/2-offsetX)/zoom,y:((e.clientY-r.top)*canvas.height/r.height-canvas.height/3-offsetY)/zoom};}
+ function point(e){const r=canvas.getBoundingClientRect();return {x:((e.clientX-r.left)*MFViewport.width/r.width-MFViewport.width/2-offsetX)/zoom,y:((e.clientY-r.top)*MFViewport.height/r.height-MFViewport.height/3-offsetY)/zoom};}
  document.addEventListener('click',e=>{if(e.target.closest?.('#item-celeiro')){e.preventDefault();e.stopImmediatePropagation();select();}},true);
  for(const type of ['mousedown','mouseup','click'])window.addEventListener(type,e=>{
   if(e.target!==canvas||visiting())return;
