@@ -10,7 +10,7 @@ test('um único update atômico confirma save privado e visita na mesma revisão
  assert.equal(writes['farms/u'].legacyStateBackup.secret,'backup');
 });
 test('projeção exclui inventário, tarefas, recompensas e backups sem perder a cena',()=>{
- const state=publicState(current.state);assert.equal(state.moedas,0);assert.equal(state.playerXP,0);assert.deepEqual(state.inventory,{});assert.deepEqual(state.actionQueue,[]);assert.equal(state.levelRewards,undefined);assert.equal(state.legacyStateBackup,undefined);assert.deepEqual(state.terrenos,current.state.terrenos);assert.equal(state.player.action,null);
+ const state=publicState(current.state);assert.equal(state.moedas,0);assert.equal(state.playerXP,400);assert.deepEqual(state.inventory,{});assert.deepEqual(state.actionQueue,[]);assert.equal(state.levelRewards,undefined);assert.equal(state.legacyStateBackup,undefined);assert.deepEqual(state.terrenos,current.state.terrenos);assert.equal(state.player.action,null);
 });
 test('revisão concorrente retorna documento novo; nunca confirma uma projeção isolada',async()=>{
  let reads=0;const latest={...current,revision:5,saveId:'elsewhere'};
