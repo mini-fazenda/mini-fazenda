@@ -745,14 +745,17 @@
   };
   window.addEventListener('pagehide',()=>stopFertilized?.(),{once:true});
   const stars=new Map();
+  function syncStars(){for(const [t,el]of stars){const q=tileScreen(t);el.style.width=(72*zoom)+'px';el.style.left=q.x+'px';el.style.top=q.y+'px';}}
+  window.MFFertilize.syncStars=syncStars;
   setInterval(()=>{
     const active=new Set();
     for(const t of terrenos){if(window.MFFertilizerCore.bind(t))startGrowthTimer(t);if(!window.MFFertilizerCore.active(t))continue;active.add(t);
       let el=stars.get(t);if(!el){el=document.createElement('div');el.className='mf-fertilized-stars';const art=document.createElement('img');art.src='assets/fertilizante/estrelas-v2.webp';art.alt='';art.draggable=false;el.appendChild(art);el.title='Plantação adubada';el.style.cssText='position:fixed;pointer-events:none;z-index:6;transform:translate(-50%,-85%)';stars.set(t,el);}
       const host=document.getElementById('mf-visit-cover')||document.body;if(el.parentNode!==host)host.appendChild(el);
-      const q=tileScreen(t);el.style.width=(152*zoom)+'px';el.style.left=q.x+'px';el.style.top=q.y+'px';
+
     }
     for(const [t,el]of stars)if(!active.has(t)){el.remove();stars.delete(t);}
+    syncStars();
   },150);
   // Visitante: barra com 5 fertilizantes POR AMIGO (voltam 24h depois do primeiro uso nessa fazenda).
   const FERT_IMG = 'assets/fertilizante/saco.png', FERT_POUR = 'assets/fertilizante/despejar.webp', FERT_FRAMES = 29, FERT_MAX = 5;
