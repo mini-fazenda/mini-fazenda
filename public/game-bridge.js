@@ -49,6 +49,7 @@
   function restore(data) {
     if (!data) return;
     data={...data,terrenos:data.terrenos || [],inventory:data.inventory || {}};
+    window.MFNatureAssets?.normalizeState(data);
     activeSeconds=data.activeSeconds || 0;
     window.MFMissions.restore(data.missions || {});
     window.MFDaily?.restore(data.dailyRewards || {});

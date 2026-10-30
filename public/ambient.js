@@ -148,6 +148,17 @@
       tuft: Array.from({ length: 4 }, (_, i) => tuft(801 + i)),
       flower: Array.from({ length: 6 }, (_, i) => flowers(901 + i * 3)),
     };
+    // Atlas local recortado da folha enviada; o procedural continua como fallback.
+    const art=window.MFNatureAssets;
+    const use=(kind,names,height)=>{const list=names.map(name=>art?.sprite(name,height));if(list.every(Boolean))SPRITES[kind]=list;};
+    use('leafy',['oak','dark','apple','orange','gold','oak'],170);
+    use('blossom',['apple','orange'],170);
+    use('pine',['pine','pine','pine'],180);
+    use('palm',['palm','palms','palm'],220);
+    use('bush',['bush','bushLight','bushFlowers','bushFlowers','bush'],43);
+    use('rock',['rockFlowers','rock','rock'],42);
+    use('tuft',['tuft','tuft','tuft','tuft'],19);
+    use('flower',['flower','flowerPink','flower','flowerPink','flower','flowerPink'],19);
   }
 
   // ---------- layout do cenário ----------
@@ -542,6 +553,7 @@
     if (sig !== LAYOUT_SIG) { LAYOUT = build(info); LAYOUT_SIG = sig; fxParts = null; }
     if (!fxCanvas) ensureFx();
     const L = LAYOUT, view = viewRect();
+    window.MFNatureAssets?.ground(b,view);
     drawMountains(b, L, view);
     for (const it of L.low) drawSprite(b, it, view);
     drawRoad(b, L);
@@ -560,5 +572,5 @@
   function tunnel() { const L = layout(); return L ? { gx: L.tunnelGx, gy: L.roadGy } : null; }
   // altura da ponte num ponto da estrada (o caminhão sobe e desce junto)
   function bridgeLift(gx, gy) { const L = layout(); if (!L || Math.abs(gy - L.roadGy) > 1.2) return 0; return bridgeLiftAt(L, gx); }
-  window.MFAmbient = { draw, enabled, tunnel, bridgeLift, inspect(){const L=layout(),r=fallAssetRect(L);return {trees:L.props.filter(p=>['palm','pine','leafy'].includes(p.kind)).length,palms:L.props.filter(p=>p.kind==='palm').length,bankRocks:L.props.filter(p=>p.kind==='bankRock').length,riverStart:L.fallTop,waterOutlet:{x:r.x+r.w*.23,y:r.y+r.h*.92}};}, version: 4, signature: () => (enabled() ? 'amb4:' + COLS + 'x' + ROWS + ':' + sceneryRevision : 'off') };
+  window.MFAmbient = { draw, enabled, tunnel, bridgeLift, groundReady:()=>enabled()&&!!window.MFNatureAssets?.groundReady(),refreshSprites(){SPRITES=null;LAYOUT_SIG='';},inspect(){const L=layout(),r=fallAssetRect(L);return {trees:L.props.filter(p=>['palm','pine','leafy'].includes(p.kind)).length,palms:L.props.filter(p=>p.kind==='palm').length,bankRocks:L.props.filter(p=>p.kind==='bankRock').length,riverStart:L.fallTop,waterOutlet:{x:r.x+r.w*.23,y:r.y+r.h*.92}};}, version: 5, signature: () => (enabled() ? 'amb5:' + COLS + 'x' + ROWS + ':' + sceneryRevision+':'+window.MFNatureAssets?.signature() : 'off') };
 })();
