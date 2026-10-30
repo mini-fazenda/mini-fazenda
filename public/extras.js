@@ -292,8 +292,10 @@
         const id = card.id, tipo = id.replace(/^item-/, ''), conf = cfg[id] || {};
         const tab = CAT[card.dataset.category] || 'upgrades';
         const price = Number(card.dataset.preco) || 0, xp = Number(card.dataset.xp) || 0;
-        const grow = Number(conf.growTime || card.dataset.growTime) || (typeof CROP_TIME_TABLE !== 'undefined' ? CROP_TIME_TABLE[tipo] : 0) || 0;
-        let sell = null;
+        let grow = Number(conf.growTime || card.dataset.growTime) || (typeof CROP_TIME_TABLE !== 'undefined' ? CROP_TIME_TABLE[tipo] : 0) || 0;
+        const production=tab==='animais'?window.MFAnimalProduction?.types?.[tipo]:null;
+        if(tab==='animais')grow=production?.cycle||0;
+        let sell = production?production.saleCoins*production.amount:null;
         if (tab === 'sementes') {
           const one = window.MFAdapter?.salePreview?.(price, xp, tipo)?.coins;
           if (Number.isFinite(one)) sell = one * (Number(conf.yieldCount) || Number(conf.yield) || YIELD[tipo] || 1);
@@ -303,8 +305,8 @@
           name: card.querySelector('span')?.textContent?.trim() || tipo,
           icon: card.querySelector('img')?.src || card.dataset.img || '',
           pic: tab === 'sementes' ? (conf.shopImg || card.dataset.img || card.querySelector('img')?.src) : (card.querySelector('img')?.src || card.dataset.img),
-          price, xp, level: Math.max(1, Number(card.dataset.nivel || conf.level) || 1), grow, sell,
-          desc: conf.description || DESC[tipo] || (tab === 'animais' ? 'Um novo amigo para a sua fazenda.' : 'Item especial para a sua fazenda.'),
+          production, price, xp, level: Math.max(1, Number(card.dataset.nivel || conf.level) || 1), grow, sell,
+          desc: tab==='animais'?(production?`Colocação imediata. Primeira coleta de ${production.name.toLowerCase()} pronta ao comprar. Próximas coletas a cada ${fmtTime(production.cycle)}. Venda: ${production.saleCoins} moedas por unidade.`:'Colocação imediata. Este animal ainda não possui produção de itens.') : conf.description || DESC[tipo] || (tab === 'animais' ? 'Um novo amigo para a sua fazenda.' : 'Item especial para a sua fazenda.'),
         };
       });
   }
@@ -347,9 +349,9 @@
       ${lock ? `<div class="mfs-lock">🔒 Nível ${it.level}</div>` : ''}
       <h4>${esc(it.name)}</h4>
       <div class="mfs-img"><img alt="" src="${esc(it.icon)}"></div>
-      <div class="mfs-info"><span><img alt="" src="${esc(starSrc())}"> ★ ${it.xp}</span>${it.grow ? `<span>⏱ ${fmtTime(it.grow)}</span>` : ''}</div>
-      ${it.sell != null ? `<div class="mfs-sell">Colher por: <img alt="" style="width:14px;height:14px;vertical-align:-3px" src="${esc(coinSrc())}"> ${it.sell}</div>` : ''}
-      <div class="mfs-price"><img alt="" src="${esc(coinSrc())}">${it.price}</div>
+      <div class="mfs-info"><span><img alt="" src="${esc(starSrc())}"> ★ ${it.xp}</span>${it.grow ? `<span>⏱ ${it.production?'Coleta: ':''}${fmtTime(it.grow)}</span>` : ''}</div>
+      ${it.sell != null ? `<div class="mfs-sell">${it.production?`Vender ${esc(it.production.name)}:`:'Colher por:'} <img alt="" style="width:14px;height:14px;vertical-align:-3px" src="${esc(coinSrc())}"> ${it.sell}</div>` : ''}
+      <div class="mfs-price"><img alt="" src="${esc(coinSrc())}">${it.price}${it.tab==='animais'?' <small>Comprar</small>':''}</div>
       <button class="mfs-buy" type="button">Comprar</button></div>`;
   }
   function previewHTML(it) {
@@ -357,7 +359,7 @@
     return `<div class="mfs-preview"><div class="t">Prévia</div><h3>${esc(it.name)}</h3>
       <div class="pic"><img alt="" src="${esc(it.pic)}"></div>
       <div class="mfs-info"><span><img alt="" src="${esc(starSrc())}"> Estrelas: ${it.xp}</span>${it.grow ? `<span>⏱ ${fmtTime(it.grow)}</span>` : ''}</div>
-      ${it.sell != null ? `<div class="mfs-sell">Colher e vender: <img alt="" style="width:15px;height:15px;vertical-align:-3px" src="${esc(coinSrc())}"> ${it.sell}</div>` : ''}
+      ${it.sell != null ? `<div class="mfs-sell">${it.production?`Vender ${esc(it.production.name)}:`:'Colher e vender:'} <img alt="" style="width:15px;height:15px;vertical-align:-3px" src="${esc(coinSrc())}"> ${it.sell}</div>` : ''}
       <div class="mfs-price"><img alt="" src="${esc(coinSrc())}">${it.price}</div>
       ${it.level > 1 ? `<div class="mfs-sell">Disponível no nível ${it.level}</div>` : ''}
       <p>${esc(it.desc)}</p></div>`;
