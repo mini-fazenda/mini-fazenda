@@ -6,7 +6,7 @@
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid && newData.exists()",
-        ".validate": "newData.hasChildren(['sessionId','revision','state','saveId','updatedAt']) && newData.child('sessionId').val() === root.child('sessions').child($uid).val() && newData.child('revision').isNumber() && ((!data.exists() && newData.child('revision').val() === 1) || (data.exists() && newData.child('revision').val() === data.child('revision').val() + 1))",
+        ".validate": "newData.hasChildren(['sessionId','revision','state','saveId','updatedAt']) && newData.child('sessionId').val() === root.child('sessions').child($uid).val() && newData.child('revision').isNumber() && ((!data.child('revision').exists() && newData.child('revision').val() === 1) || (data.exists() && newData.child('revision').val() === data.child('revision').val() + 1))",
         "sessionId": {
           ".validate": "newData.isString() && newData.val().length <= 64"
         },

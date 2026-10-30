@@ -1,4 +1,5 @@
-import {nextDocument,clearLegacySaves,recoverPendingState} from './persistence.js?v=pending-v4';
+import {normalizeSave,documentRevision,progressText} from './save-compat.js?v=legacy-1';
+import {nextDocument,clearLegacySaves,recoverPendingState} from './persistence.js?v=legacy-1';
 import {redeemTestCredit} from './test-credit.js?v=2';
 import {startFriends,stopFriends,publishProfile,api as friendsApi} from './friends.js?v=permissao-fert-1';
 const $=id=>document.getElementById(id);
@@ -41,7 +42,7 @@ function gate(text){$('farms').close();$('gate').hidden=false;$('message').textC
 function freeze(){ready=false;sessionActive=false;stopped=true;pending=null;clearTimeout(retryTimer);clearTimeout(reconnectTimer);clearTimeout(projectionTimer);$('game-container').replaceChildren();bridge=null;$('toolbar').hidden=true}
 function fail(error){
   if(stopped)return;
-  console.error(error);freeze();gate('Não foi possível conectar à fazenda. Recarregue a página para tentar novamente.');
+  console.error(error);freeze();gate(String(error?.message||'').startsWith('save/incompatible')?error.message:'Não foi possível conectar à fazenda. Recarregue a página para tentar novamente.');
 }
 async function disconnectPrevious(){
   if(stopped)return;
@@ -53,7 +54,7 @@ function playing(){return ready&&connected&&sessionActive&&!stopped&&!visiting&&
 function checkpoint(){
   if(!playing()||!bridge)return;
   try{
-    const state=bridge.capture(),text=JSON.stringify(state);
+    const state=normalizeSave(bridge.capture()),text=progressText(state);
     if(text===lastText)return;
     lastText=text;ownState=state;pending={id:crypto.randomUUID(),state};
     rememberPending();status('Salvando…');
@@ -77,9 +78,7 @@ function scheduleProjection(state,version,run){
         return {state:publicState(state),revision:version,updatedAt:sdk.serverTimestamp()};
       },{applyLocally:false});
       if(run!==epoch||!sessionActive||stopped)return;
-      await sdk.update(sdk.ref(db),{
-        [`directory/${uid}`]:{name:(state.farmName||'Minha fazenda').slice(0,12),level:state.playerLevel||1,updatedAt:sdk.serverTimestamp()}
-      });
+      await sdk.set(sdk.ref(db,`directory/${uid}`),{name:(state.farmName||'Minha fazenda').slice(0,12),level:state.playerLevel||1,updatedAt:sdk.serverTimestamp()});
       void publishProfile(state);
     }catch(e){console.warn('Atualização de visita',e)}
   },500);
@@ -190,12 +189,12 @@ window.MFOnline={
   },fail
 };
 function mount(state,visit,savedAt){
-  ready=false;bridge=null;initialState=state?{...state,savedAt:state.savedAt||savedAt}:state;visiting=visit;suspending=false;
+  ready=false;bridge=null;initialState=state?{...normalizeSave(state),savedAt:state.savedAt||savedAt}:state;visiting=visit;suspending=false;
   $('toolbar').hidden=false;$('home').hidden=!visit;$('neighbors').hidden=true; // Amigos agora fica só na barra de baixo do jogo
   $('farm-title').textContent=visit?`Visitando: ${state.farmName||'Fazenda'}`:state?.farmName||'Minha fazenda';
   gate(visit?'Abrindo visita…':'Carregando sua fazenda…');
   const frame=document.createElement('iframe');frame.title=visit?'Visita à fazenda (somente visualização)':'Minha fazenda';
-  frame.src='game.html?v=offline-growth-2';frame.allow='fullscreen';$('game-container').replaceChildren(frame);
+  frame.src='game.html?v=legacy-1';frame.allow='fullscreen';$('game-container').replaceChildren(frame);
   status(visit?'Somente visualização':'Online');
 }
 async function reconnect(run){
@@ -239,18 +238,19 @@ async function boot(account){
   if(token!==sessionId){await disconnectPrevious();return}
   const remote=(await sdk.get(sdk.ref(db,`farms/${user.uid}`))).val();
   if(run!==epoch||stopped)return;
-  revision=remote?.revision||0;confirmedSaveId=remote?.saveId||null;ownState=remote?.state||null;
+  if(remote&&!remote.state)throw new Error('save/incompatible: documento sem state — progresso preservado no Firebase');
+  revision=documentRevision(remote);confirmedSaveId=remote?.saveId||null;ownState=normalizeSave(remote?.state);
   let stateSavedAt=remote?.updatedAt;
   // A nuvem é a autoridade; só recupere uma pendência baseada nela.
   let restoredPending=false;
   for(const storage of [localStorage,sessionStorage])try{
     const recovery=JSON.parse(storage.getItem(recoveryKey())||'null');
     const recovered=recoverPendingState(remote,recovery);
-    if(recovered){ownState=recovered;stateSavedAt=recovered.savedAt||recovery.at+clockOffset;restoredPending=true;break;}
+    if(recovered){ownState=normalizeSave(recovered);stateSavedAt=recovered.savedAt||recovery.at+clockOffset;restoredPending=true;break;}
   }catch(e){console.warn('[pending recovery]',e)}
   if(!restoredPending)try{
     const legacy=JSON.parse(sessionStorage.getItem('mf-recovery-v2:'+user.uid)||'null');
-    if(legacy?.state&&Number(legacy.revision)===revision&&Date.now()-legacy.at<86400000){ownState=legacy.state;stateSavedAt=legacy.at+clockOffset;}
+    if(legacy?.state&&Number(legacy.revision)===revision&&Date.now()-legacy.at<86400000){ownState=normalizeSave(legacy.state);stateSavedAt=legacy.at+clockOffset;}
     else if(legacy)sessionStorage.removeItem('mf-recovery-v2:'+user.uid);
   }catch(e){console.warn('[legacy recovery]',e)}
   // Resgate autenticado, atômico e único, antes de abrir o jogo ou permitir saves.
@@ -292,7 +292,8 @@ $('home').onclick=async()=>{
     gate('Abrindo sua fazenda…');
     const remote=(await sdk.get(sdk.ref(db,`farms/${user.uid}`))).val();
     if(stopped)return;
-    revision=remote?.revision||0;confirmedSaveId=remote?.saveId||null;ownState=remote?.state||null;lastText='';mount(ownState,false,remote?.updatedAt);
+    if(remote&&!remote.state)throw new Error('save/incompatible: documento sem state — progresso preservado no Firebase');
+  revision=documentRevision(remote);confirmedSaveId=remote?.saveId||null;ownState=normalizeSave(remote?.state);lastText='';mount(ownState,false,remote?.updatedAt);
   }catch(e){fail(e)}
 };
 // Fertilizações dos amigos: só aplica com a própria fazenda aberta e o jogo pronto.
