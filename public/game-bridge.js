@@ -41,7 +41,7 @@
       fences:window.MFFences?.capture() || {},
       dailyRewards:clone(window.MFDaily?.capture() || {}),
       tutorial:window.MFTutorial?.capture() || null,
-      actionQueue:filaAcoes.map(t=>({gx:t.gx,gy:t.gy})),
+      actionQueue:filaAcoes.map(t=>({gx:t.gx,gy:t.gy,...(t._job?{job:clone(t._job)}:{})})),
       loot: lootParticles.map(p=>simple(p))
     });
     return clone(data);
@@ -61,6 +61,11 @@
     window.MFAdapter.applyState(data);
     terrenos.forEach((t,i)=>{
       const saved=data.terrenos?.[i];
+      if(saved?.cultura){
+        Object.assign(t.cultura,clone(saved.cultura));
+        // O relógio é a fonte do estágio; não volte ao estágio salvo antes de sair.
+        reapplyGrowthFromTime(t);
+      }
       if(saved?.animal){
         Object.assign(t.animal,clone(saved.animal));
         window.MFSheepAnimation?.normalize(t);
@@ -84,7 +89,8 @@
       actor.path=clone(saved.path || []);
       if(saved.action){
         const target=terrenos.find(t=>t.gx===saved.action.alvo.gx&&t.gy===saved.action.alvo.gy);
-        if(target)actor.acaoAtual={...saved.action,alvo:target,startTime:performance.now()-(saved.action.elapsed || 0)};
+        if(target){actor.acaoAtual={...saved.action,alvo:target,startTime:performance.now()-(saved.action.elapsed || 0)};
+          if(actor===player&&saved.action.job)target._job={kind:saved.action.job,itemId:saved.action.itemId,price:saved.action.price||0};}
       }
     }
     aradora.fila=(data.aradora?.fila || []).map(p=>terrenos.find(t=>t.gx===p.gx&&t.gy===p.gy)).filter(Boolean);
@@ -106,7 +112,11 @@
     lootParticles.length=0;
     // Partículas de recompensa pendentes são restauradas com a mesma origem.
     (data.loot || []).forEach(p=>lootParticles.push({...p,img:preload(LOOT_SPRITES[p.tipo] || window.MFAdapter?.project?.items?.['item-'+p.tipo]?.lootIcon || '')}));
-    filaAcoes=(data.actionQueue || []).map(p=>terrenos.find(t=>t.gx===p.gx&&t.gy===p.gy)).filter(Boolean);
+    filaAcoes=(data.actionQueue || []).map(p=>{
+      const t=terrenos.find(t=>t.gx===p.gx&&t.gy===p.gy);
+      if(t&&p.job&&['plantar','colher','animal','arar'].includes(p.job.kind))t._job=clone(p.job);
+      return t;
+    }).filter(Boolean);
     arando=player.acaoAtual?.state==='ararando';
     if(arando)player.currentSprite=spriteArando;
     atualizarBloqueioTerrasPorNivel();
