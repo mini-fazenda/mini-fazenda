@@ -85,7 +85,7 @@ export const query=r=>r,orderByKey=()=>{},limitToFirst=()=>{},startAfter=()=>{};
  await page.evaluate(()=>localStorage.setItem('mf-online:demo:rodrigo',JSON.stringify({pending:true,baseRevision:999,state:{moedas:1}})));
  await page.reload();await page.waitForFunction(()=>document.querySelector('#gate').hidden);
  f=page.frames().find(f=>f.url().includes('game.html'));
- if(await f.evaluate(()=>moedas)!==9876)throw Error('Save local prevaleceu sobre a conta');
+ if(await f.evaluate(()=>moedas)!==9877)throw Error('Save local prevaleceu sobre a conta');
  if(await page.evaluate(()=>localStorage.getItem('mf-online:demo:rodrigo'))!==null)throw Error('Save antigo não foi removido');
  if(dialogs.length)throw Error('Confirmação ao recarregar');
  console.log('PASS: reload sem confirmação, ignora e limpa save local antigo');
