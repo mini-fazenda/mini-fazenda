@@ -6,7 +6,7 @@ test('quatro árvores: retorno em dez colheitas e tempos/estrelas crescentes',()
  assert.deepEqual(values.map(c=>c.minutes),[30,40,50,60]);assert.equal(values[0].stars,150);assert.equal(values[3].stars,250);
 });
 for(const [type,c]of Object.entries(core.types))test(type+': três estágios, offline e coleta sem destruir ou duplicar',()=>{
- const t={itemId:'item-arvore-'+type,gx:3,gy:4,w:2,h:2};assert.equal(core.start(t,1000),true);
+ const t={itemId:'item-arvore-'+type,gx:3,gy:4,w:2,h:2};assert.equal(core.start(t,1000),true);assert.equal(core.state(t,1000).ready,true);assert.equal(core.collect(t,1000).amount,1);assert.equal(core.collect(t,1000),null);
  assert.equal(core.sync(t,1000+c.cycle*.49).stage,0);assert.equal(core.sync(t,1000+c.cycle*.5).stage,1);
  assert.equal(core.collect(t,1000+c.cycle-1),null);
  const saved=JSON.parse(JSON.stringify(t)),now=1000+c.cycle*40;assert.equal(core.sync(saved,now).stage,2);

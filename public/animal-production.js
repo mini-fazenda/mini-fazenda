@@ -1,6 +1,10 @@
 /* Relógio persistente: um lote por ciclo, sem acumular produção ilimitada offline. */
 (function(root){
  const types={vaca:{product:'leite',name:'Leite',cycle:15*60000,amount:1,saleCoins:60,stars:1,tool:'bucket',icon:'assets/7fc2de79ae289a20560f-icone-leite.png'},ovelha:{product:'la',name:'Lã',cycle:30*60000,amount:1,saleCoins:100,stars:2,tool:'shears',icon:'assets/animais/la.svg'}};
+ function start(animal,now=Date.now()){
+  if(!types[animal?.tipo])return false;
+  animal.etapa=2;animal.startTime=now-Math.max(0,Number(animal.totalTime)||0);animal.production={readyAt:now};return true;
+ }
  function sync(animal,now=Date.now()){
   const cfg=types[animal?.tipo];if(!cfg)return null;
   const matureAt=Number(animal.startTime)+Number(animal.totalTime);
@@ -16,5 +20,5 @@
   animal.production.readyAt=now+result.cycle;
   delete animal.milk;return result;
  }
- root.MFAnimalProduction={types,sync,collect};
+ root.MFAnimalProduction={types,start,sync,collect};
 })(globalThis);
