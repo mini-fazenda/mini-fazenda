@@ -258,3 +258,12 @@ REVISAO 18 - ORDEM DA LOJA, ARROZ E OVELHA PASTANDO
 - Animacao de pastar com 18 quadros enviados: descanso, cabeca baixa, mastigacao e retorno. Ciclo aproximado de 20 segundos, desencontrado entre animais.
 - 37 testes automatizados passaram, incluindo ordem por tempo, economia e estagios do arroz, preservacao da ovelha e animacao.
 - Quadros e transparencias conferidos. Teste completo no navegador nao executado: download do Chromium falhou neste ambiente.
+
+REVISAO 19 - PASSAROS E CENARIO COM AS ARTES ENVIADAS
+- Quatro passaros decorativos (azuis e marrons) decolam, batem asas, planam, pousam e bicam o chao.
+- Rotas desencontradas em ciclos de 48 segundos; pousos procuram espaco livre e pairam se um objeto novo ocupar o destino.
+- Passaros acompanham camera e zoom pelo compositor existente e nao recebem cliques, ocupam terreno ou alteram o save.
+- Grama continua derivada do interior do tile enviado, sem bordas de blocos. Arvores, coqueiros, pinheiros, arbustos, flores e pedras usam o atlas local enviado.
+- Preservadas estrada, ponte, tunel, cascata, tamanho da fazenda e regras de expansao.
+- Tres fases e icone do arroz substituidos pelas artes novas, sem mudar tempo, preco, venda ou estrelas. Saves antigos recebem somente a nova arte.
+- 41 testes passaram; scripts inline compilados; composicao do cenario e recortes conferidos em renderizacao Canvas. Teste de navegacao/login no browser nao executado nesta revisao.
