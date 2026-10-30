@@ -51,7 +51,7 @@
       if(terrenos[i]?.cultura)t.cultura=clone(terrenos[i].cultura);
     });
     Object.assign(data, { version: 2, savedAt:background?.at||Date.now(), offsetX, offsetY, zoom,activeSeconds,character:window.__mfCharacter||null,
-      player: {...window.MFSaveRuntime.actorProgress(data.player), x:player.x,y:player.y,facing:player.facing,path:clone(player.path),action:actionState(player)},
+      player: {...window.MFSaveRuntime.actorProgress(data.player), gx:player.gx,gy:player.gy,x:player.x,y:player.y,facing:player.facing,path:clone(player.path),action:actionState(player)},
       aradora: {...window.MFSaveRuntime.actorProgress(data.aradora),x:aradora.x,y:aradora.y,facing:aradora.facing,
         path:clone(aradora.path || []),action:actionState(aradora),fila:clone((aradora.fila || []).map(t=>({gx:t.gx,gy:t.gy})))},
       runtimeVersion:1,
@@ -126,7 +126,7 @@
     for(const [actor,saved] of [[player,data.player],[aradora,data.aradora]]){
       actor.acaoAtual=null; actor.path=[];
       if(!saved)continue;
-      for(const k of ['x','y','facing'])if(Number.isFinite(saved[k]))actor[k]=saved[k];
+      for(const k of ['gx','gy','x','y','facing'])if(Number.isFinite(saved[k]))actor[k]=saved[k];
       actor.path=clone(saved.path || []);
       if(saved.action){
         const target=terrenos.find(t=>t.gx===saved.action.alvo.gx&&t.gy===saved.action.alvo.gy);
@@ -186,13 +186,13 @@
       if(completeAt>now){
         // Preserve também uma ação parcialmente realizada no intervalo offline.
         if(now-cursor>=travel){
-          player.path=[];player.gx=t.gx;player.gy=t.gy;Object.assign(player,gridToScreen(t.gx,t.gy));
+          player.path=[];if(!a.remoto){player.gx=t.gx;player.gy=t.gy;Object.assign(player,gridToScreen(t.gx,t.gy));}
           a.state='ararando';a.startTime=performance.now()-(elapsed+now-cursor-travel);arando=true;
         }
         break;
       }
       if(jobValid(t,{kind:a.job||'arar'}))finishJob(t,a,completeAt);
-      delete t._job;player.path=[];player.gx=t.gx;player.gy=t.gy;Object.assign(player,gridToScreen(t.gx,t.gy));
+      delete t._job;player.path=[];if(!a.remoto){player.gx=t.gx;player.gy=t.gy;Object.assign(player,gridToScreen(t.gx,t.gy));}
       player.acaoAtual=null;arando=false;player.currentSprite=player.previousSprite||spriteFront;
       cursor=completeAt;
       if(filaAcoes.length)iniciarArar(filaAcoes.shift());
