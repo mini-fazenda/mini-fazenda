@@ -918,6 +918,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const 
 </style>
 <script src="render-resolution.js?v=1"></script>
 <script src="plot-ground.js?v=1"></script>
+<script src="crop-sprites.js?v=1"></script>
 <script src="farm-economy.js?v=girassol-4"></script>
 <script src="growth-time.js?v=1"></script>
 <script src="animal-production.js?v=1"></script>
@@ -4859,8 +4860,6 @@ function isMFAnimal(t) {
   return meta==='animais'||meta==='animal'||
     /(?:porco|porquinho|vaca|cavalo|ovelha|bode|boi|galinha|pato|cabrito|coelho|burro|cabra|galo)/.test(src);
 }
-// Preencha os canteiros antes dos sprites: margens das artes não viram faixas de grama.
-window.MFPlotGround?.draw(ctx,terrenos,gridToScreen,modoMover?estruturaMovendo:null);
 // montar lista de drawables para depth sort
 const drawables = [];
 
@@ -4972,7 +4971,7 @@ if(t.fruitTree)window.MFFruitTrees?.sync(t);
 const animalFrame=window.MFBarn?.src(t)||window.MFNatureAssets?.srcFor(t)||window.MFSheepAnimation?.src(t)||t.imgSrc;
 const img = preload(animalFrame);
 
-if(img?.complete&&img.naturalWidth&&window.MFBarn?.drawSprite(ctx,t,anchor,img))continue;
+if(img?.complete&&img.naturalWidth&&(window.MFBarn?.drawSprite(ctx,t,anchor,img)||window.MFCropSprites?.drawSprite(ctx,t,anchor,img)))continue;
 const targetW = TILE_W * (t.w || 1);
 if (img && img.complete && img.naturalWidth > 0) {
   const scale = targetW / img.naturalWidth;
@@ -5117,7 +5116,7 @@ const anchor = gridToScreen(
 );
 const drawX = anchor.x - drawW / 2;
 const drawY = anchor.y - drawH + TILE_H * 0.9;
-if(!window.MFBarn?.drawSprite(ctx,estruturaMovendo,anchor,img))ctx.drawImage(img, drawX, drawY, drawW, drawH);
+if(!window.MFBarn?.drawSprite(ctx,estruturaMovendo,anchor,img)&&!window.MFCropSprites?.drawSprite(ctx,estruturaMovendo,anchor,img))ctx.drawImage(img, drawX, drawY, drawW, drawH);
   }
 
   ctx.restore();
@@ -5152,7 +5151,7 @@ const drawH = img.naturalHeight * scale * vs;
 const anchor = gridToScreen(clampX + (placingItem.w - 1) / 2, clampY + (placingItem.h - 1) / 2);
 const drawX = anchor.x - drawW / 2;
 const drawY = anchor.y - drawH + TILE_H * 0.9;
-if(!window.MFBarn?.drawSprite(ctx,placingItem,anchor,img))ctx.drawImage(img, drawX, drawY, drawW, drawH);
+if(!window.MFBarn?.drawSprite(ctx,placingItem,anchor,img)&&!window.MFCropSprites?.drawSprite(ctx,placingItem,anchor,img))ctx.drawImage(img, drawX, drawY, drawW, drawH);
       }
     }
     ctx.restore();
@@ -6582,6 +6581,9 @@ function terrainAtPointer(x, y) {
     const t = terrenos[i], img = imgCache[t.imgSrc];
     if (!img?.complete || !img.naturalWidth) continue;
     if(window.MFBarn?.is(t)){if(window.MFBarn.hit(t,img,x,y))return t;continue;}
+    const cropAnchor=gridToScreen(t.gx+((t.w||1)-1)/2,t.gy+((t.h||1)-1)/2);
+    const cropHit=window.MFCropSprites?.hit(t,img,x,y,cropAnchor);
+    if(cropHit!==null&&cropHit!==undefined){if(cropHit)return t;continue;}
     const scale = TILE_W * (t.w || 1) / img.naturalWidth;
     const vs = window.MFAdapter?.scaleForStructure?.(t, Number(t.visualScale) || 1) ?? (Number(t.visualScale) || 1);
     const w = img.naturalWidth * scale * vs, h = img.naturalHeight * scale * vs;
