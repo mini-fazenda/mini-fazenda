@@ -232,7 +232,16 @@
       if(!host.bootState() && !host.isVisiting()) { seedStarterFarm(); window.MFTutorial?.start(); }
       setTimeout(()=>window.MFCharacter?.init?.(),0);
       document.documentElement.style.visibility='visible';
-      host.attach({capture, pan:(dx,dy)=>{offsetX+=dx;offsetY+=dy;updateTruckDomPosition();requestRedraw()}});
+      host.attach({capture,
+        pan:(dx,dy)=>{offsetX+=dx;offsetY+=dy;updateTruckDomPosition();requestRedraw()},
+        // O host recebe revisões do Firebase sem reconstruir o iframe nem perder a câmera.
+        applyVisitState(state){
+          if(!host.isVisiting()||!state)return false;
+          const camera={offsetX,offsetY,zoom};
+          restore({...state,...camera});
+          return true;
+        }
+      });
       window.MFFertilize?.watch?.();
       if(host.isVisiting()){
         const cover=document.createElement('div');
