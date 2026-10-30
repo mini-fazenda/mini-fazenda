@@ -32,7 +32,7 @@
  function reset(){selecting=false;selected={};sell.textContent='Vender';cancel.hidden=true;msg.textContent='';for(const slot of inv()?.slots||[]){slot.classList.remove('mf-sale-selected');slot.querySelector('.mf-sale-qty')?.remove();}}
  function visitor(){return !!window.MFHost?.isVisiting?.();}
  function finish(selection){
-  if(visitor())return;
+  if(visitor()||!window.MFHost?.playing?.())return;
   try{
    const result=MFSalesCore.sell(inv().map,selection,quote);
    window.MFValueSource?.element(box,'venda');moedas+=result.total;if(result.stars)addXP(result.stars);

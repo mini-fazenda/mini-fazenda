@@ -33,7 +33,7 @@
   const candidates=[];if(axis!=='y')candidates.push({gx:Math.floor(u),gy:Math.round(v),axis:'x',type});if(axis!=='x')candidates.push({gx:Math.round(u),gy:Math.floor(v),axis:'y',type});
   return candidates.filter(e=>core.fits(e,COLS,ROWS)).sort((a,b)=>distance(p,...core.ends(a).map(point))-distance(p,...core.ends(b).map(point)))[0]||null;
  }
- function hit(p){return board.list().map(e=>{const [a,b]=core.ends(e).map(point);return {e,d:Math.min(...[0,17,35].map(h=>distance(p,{x:a.x,y:a.y-h},{x:b.x,y:b.y-h})))};}).filter(o=>o.d<11/zoom).sort((a,b)=>a.d-b.d)[0]?.e||null;}
+ function hit(p,tolerance=11){return board.list().map(e=>{const [a,b]=core.ends(e).map(point);return {e,d:Math.min(...[0,17,35].map(h=>distance(p,{x:a.x,y:a.y-h},{x:b.x,y:b.y-h})))};}).filter(o=>o.d<tolerance/zoom).sort((a,b)=>a.d-b.d)[0]?.e||null;}
  function mouse(e){const r=canvas.getBoundingClientRect();return {x:((e.clientX-r.left)*canvas.width/r.width-canvas.width/2-offsetX)/zoom,y:((e.clientY-r.top)*canvas.height/r.height-canvas.height/3-offsetY)/zoom};}
  const toolbar=document.createElement('div');toolbar.id='mf-fence-toolbar';toolbar.hidden=true;toolbar.innerHTML='<span></span><button type="button" data-rotate>Direção: automática ↔</button><button type="button" data-store hidden>Guardar no MiniBaú</button><button type="button" data-cancel>Concluir</button>';document.body.append(toolbar);
  const info=toolbar.querySelector('span'),rotate=toolbar.querySelector('[data-rotate]'),store=toolbar.querySelector('[data-store]');
@@ -46,6 +46,41 @@
   const result=board.place(e,COLS,ROWS,moedas,mode.fromStock);if(!result.ok){info.textContent=result.reason;return false;}if(result.cost)window.MFValueSource?.tile({gx:e.gx+(e.axis==='x'?.5:0)-.5,gy:e.gy+(e.axis==='y'?.5:0)-.5,w:1,h:1},'compra');moedas-=result.cost;document.getElementById('valor-moedas').textContent=moedas;changed();return true;
  }
  function paint(e){if(!e)return;const previous=lastPaint;if(previous&&previous.axis===e.axis&&(e.axis==='x'?previous.gy===e.gy:previous.gx===e.gx)){const field=e.axis==='x'?'gx':'gy';for(let n=Math.min(previous[field],e[field]);n<=Math.max(previous[field],e[field]);n++){const step={...e,[field]:n};if(board.canPlace(step,COLS,ROWS)&&!commit(step))break;}}else commit(e);lastPaint=e;}
+ // No modo Mover o clique da cerca deve ser capturado antes do clique genérico do terreno.
+ // Também expomos as mesmas operações para os toques, sem sintetizar eventos de mouse.
+ function selectMoveAt(x,y,touch=false){
+  if(visiting()||!modoMover||estruturaMovendo||mode)return false;
+  const target=hit(mouse({clientX:x,clientY:y}),touch?22:13);
+  if(!target)return false;
+  mode={type:target.type};original=target;hover=target;axis=target.axis;
+  rotate.textContent=axis==='x'?'Direção: ↘ (R)':'Direção: ↙ (R)';
+  toolbar.hidden=false;store.hidden=false;
+  info.textContent='Cerca selecionada — arraste ou toque no destino para mover.';
+  canvas.style.cursor='grabbing';requestRedraw();
+  return true;
+ }
+ function hoverMoveAt(x,y){
+  if(!original||!modoMover)return false;
+  // O clique costuma acontecer sobre o trilho (17 px acima do chão).
+  // Convertemos para a aresta no solo antes de encaixar na grade isométrica.
+  const p=mouse({clientX:x,clientY:y});p.y+=17;
+  hover=closest(p,original.type);
+  requestRedraw();
+  return !!hover;
+ }
+ function commitMoveAt(x,y){
+  if(!original||!modoMover)return false;
+  hoverMoveAt(x,y);
+  if(!hover){info.textContent='Fora do mapa. Escolha outra posição.';return false}
+  return commit(hover);
+ }
+ document.addEventListener('click',e=>{
+  if(e.target!==canvas||visiting()||!modoMover)return;
+  const consumed=original?commitMoveAt(e.clientX,e.clientY):selectMoveAt(e.clientX,e.clientY);
+  if(consumed||original){
+   e.preventDefault();e.stopImmediatePropagation();
+  }
+ },true);
  document.addEventListener('click',e=>{
   const card=e.target.closest?.('#item-cerca-flores,#item-cerca-arame,#item-cerca-branca');if(card){e.preventDefault();e.stopImmediatePropagation();const type=Object.keys(core.catalog).find(t=>core.catalog[t].id===card.id);start(type);return;}
   if(mode&&e.target.closest?.('#btn-mover,#btn-enxada,#btn-trator,#btn-loja,#btn-bau,#mf-btn-celeiro,#mf-btn-presente'))stop();
@@ -64,5 +99,5 @@
  canvas.addEventListener('mouseleave',()=>{hover=null;down=false;requestRedraw();});window.addEventListener('mouseup',()=>down=false);window.addEventListener('blur',()=>down=false);
  document.addEventListener('keydown',e=>{if(!mode||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key==='Escape'){stop();e.preventDefault();}else if(e.key.toLowerCase()==='r'){turn();e.preventDefault();}});
  function previewDraw(ctx){if(!mode||!hover)return;const available=original?true:mode.fromStock?board.stock()[mode.type]>0:moedas>=core.catalog[mode.type].price;const fits=available&&board.canPlace(hover,COLS,ROWS,original?core.key(original):null);ctx.save();ctx.globalAlpha=.65;rail(ctx,hover);for(const p of core.ends(hover))post(ctx,{...p,type:hover.type});const [a,b]=core.ends(hover).map(point);line(ctx,a,b,fits?'#b5ed55':'#ef6551',5);ctx.restore();}
- window.MFFences={start,stop,capture:()=>board.capture(),restore:s=>{stop();board.restore(s);requestRedraw();},stock:()=>board.stock(),renderStored(grid){for(const [type,count]of Object.entries(board.stock())){if(!count)continue;const card=document.createElement('article'),pic=document.createElement('img'),label=document.createElement('strong'),button=document.createElement('button');pic.src=core.catalog[type].icon;pic.alt=core.catalog[type].name;label.textContent=core.catalog[type].name+' ×'+count;button.textContent='Colocar';button.onclick=()=>{document.getElementById('mf-objects').hidden=true;start(type,true);};card.append(pic,label,button);grid.append(card);}},appendDrawables(list){if(mode&&((!original&&modoColocar!=='fence')||(original&&!modoMover)))stop();for(const e of board.list()){if(original&&core.key(e)===core.key(original))continue;const [a,b]=core.ends(e).map(point);list.push({kind:'fenceRail',fence:e,depth:(a.y+b.y),footY:(a.y+b.y)/2});}for(const p of board.posts()){const a=point(p);list.push({kind:'fencePost',fence:p,depth:a.y*2+.1,footY:a.y});}},drawItem,drawPreview:previewDraw};
+ window.MFFences={start,stop,isMoveSelected:()=>!!(original&&modoMover),selectMoveAt,hoverMoveAt,commitMoveAt,capture:()=>board.capture(),restore:s=>{stop();board.restore(s);requestRedraw();},stock:()=>board.stock(),renderStored(grid){for(const [type,count]of Object.entries(board.stock())){if(!count)continue;const card=document.createElement('article'),pic=document.createElement('img'),label=document.createElement('strong'),button=document.createElement('button');pic.src=core.catalog[type].icon;pic.alt=core.catalog[type].name;label.textContent=core.catalog[type].name+' ×'+count;button.textContent='Colocar';button.onclick=()=>{document.getElementById('mf-objects').hidden=true;start(type,true);};card.append(pic,label,button);grid.append(card);}},appendDrawables(list){if(mode&&((!original&&modoColocar!=='fence')||(original&&!modoMover)))stop();for(const e of board.list()){if(original&&core.key(e)===core.key(original))continue;const [a,b]=core.ends(e).map(point);list.push({kind:'fenceRail',fence:e,depth:(a.y+b.y)/2,footY:(a.y+b.y)/2});}for(const p of board.posts()){const a=point(p);list.push({kind:'fencePost',fence:p,depth:a.y+.1,footY:a.y});}},drawItem,drawPreview:previewDraw};
 })();
