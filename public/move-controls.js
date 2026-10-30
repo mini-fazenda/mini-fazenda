@@ -28,5 +28,5 @@
   if(gap>=300){dock.style.left=(left+right)/2+'px';dock.style.width='max-content';dock.style.maxWidth=gap+'px';dock.style.bottom='max(12px,env(safe-area-inset-bottom))';}
   else{dock.style.left='50%';dock.style.width='max-content';dock.style.maxWidth='calc(100vw - 20px)';dock.style.bottom=(Math.max(friends?innerHeight-friends.top:0,menu?innerHeight-menu.top:0)+10)+'px';}
  }
- window.MFMoveControls={update};window.addEventListener('resize',update);setInterval(update,100);
+ window.MFMoveDock={update};window.addEventListener('resize',update);setInterval(update,100);
 })();

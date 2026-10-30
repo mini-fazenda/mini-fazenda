@@ -5429,7 +5429,7 @@ function setFarmMoveMode(active) {
   if(btnMover)btnMover.title=active?'Mover: selecione, arraste ou toque no destino':'Seta: clique para ativar mover';
   if(!active)window.MFFences?.stop?.();
   moveHint();
-  window.MFMoveControls?.update?.();
+  window.MFMoveDock?.update?.();
   requestRedraw();
 }
 if(btnMover)btnMover.addEventListener('click',e=>{
@@ -7797,7 +7797,7 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 <script src="sheep-animation.js?v=suave-2"></script>
 <script src="animal-indicators.js?v=hidpi-1"></script>
 <script src="fence-art.js?v=1"></script>
-<script src="fences.js?v=compact-menu-4"></script>
+<script src="fences.js?v=touch-fix-5"></script>
 <script src="barn.js?v=hidpi-1"></script>
 <script>
 // Sair do modo colocar: Esc ou botão direito (sementes e itens continuam em seleção contínua até cancelar).
@@ -7815,7 +7815,7 @@ canvas.addEventListener('contextmenu', e => { if (window.MFCancelPlacing()) e.pr
 <script src="ajustes-celular.js?v=3"></script>
 <script src="tutorial.js?v=hidpi-1"></script>
 <script src="save-runtime.js?v=1"></script>
-<script src="move-controls.js?v=2"></script>
+<script src="move-controls.js?v=touch-fix-3"></script>
 <script src="level-rewards-core.js?v=1"></script>
 <script src="level-rewards.js?v=1"></script>
 <script src="game-bridge.js?v=level-rewards-4"></script>
