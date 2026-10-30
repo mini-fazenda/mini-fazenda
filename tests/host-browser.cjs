@@ -77,7 +77,7 @@ export const query=r=>r,orderByKey=()=>{},limitToFirst=()=>{},startAfter=()=>{};
  console.log('PASS: conflito de revisão da mesma conta foi recuperado');
  // Save legado sem farmName: a cópia pública precisa ter nome para visitas.
  await f.evaluate(()=>{window.__farmName='';saveGameState('legacy-no-name')});
- await page.waitForFunction(()=>testCloud['publicFarms/rodrigo']?.state?.farmName==='Minha fazenda');
+ await page.waitForFunction(()=>testCloud['publicFarms/rodrigo']?.state?.farmName==='Fazenda');
  await f.evaluate(()=>{window.__farmName='Conta';saveGameState('restore-name')});
  console.log('PASS: projeção pública de save antigo sem nome');
 
