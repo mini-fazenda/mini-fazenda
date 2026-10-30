@@ -5673,18 +5673,8 @@ function addXP(amount) {
   while (playerXP >= xpForNext(playerLevel)) {
     playerXP -= xpForNext(playerLevel);
     playerLevel += 1;
-    const pr=window.MFAdapter?.project?.progression||{};
-    const bloco25 = Math.floor((playerLevel - 1) / Math.max(1,Number(pr.rewardBlockSize)||25));
-    const baseReward = Math.max(0,Number(pr.rewardBase??30)) * Math.pow(Math.max(1,Number(pr.rewardMultiplier)||2), bloco25);
-    const nivelCiclo = (playerLevel - 1) % Math.max(1,Number(pr.rewardCycleSize)||5);
-    let reward = Math.round(baseReward * Math.pow(Math.max(1,Number(pr.rewardCycleMultiplier)||2), nivelCiclo));
-    // Tabela fixa por faixa de nível (ex.: níveis 1-10 = 50, 11-20 = 100). Depois da última faixa usa a última.
-    if (Array.isArray(pr.rewardBands) && pr.rewardBands.length) { const band = pr.rewardBands.find(b => playerLevel <= Number(b.upTo)) || pr.rewardBands[pr.rewardBands.length - 1]; reward = Math.max(0, Number(band.coins) || 0); }
-    window.MFValueSource?.actor("player", "nivel");
-    moedas += reward;
-    console.log(`Nível ${playerLevel} → +${reward} moedas (base ${baseReward})`);
-    if (moedasSpan) moedasSpan.textContent = moedas;
-    console.log('LEVEL UP ->', playerLevel, 'reward:', reward);
+    if(window.MFLevelRewards)window.MFLevelRewards.earned(playerLevel);
+
   }
   updateXPUI();
 }
@@ -7797,7 +7787,7 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 <script src="daily-state.js?v=2"></script>
 <script src="daily-rewards.js?v=3"></script>
 <script src="truck-ui.js?v=entrega-explicita-1"></script>
-<script src="object-storage.js?v=hidpi-1"></script>
+<script src="object-storage.js?v=level-gifts-2"></script>
 <script src="pointer-menu.js?v=1"></script>
 <script src="barn-ui.js?v=1"></script>
 <script src="animal-tools.js?v=1"></script>
@@ -7806,7 +7796,7 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 <script src="sheep-animation.js?v=suave-2"></script>
 <script src="animal-indicators.js?v=hidpi-1"></script>
 <script src="fence-art.js?v=1"></script>
-<script src="fences.js?v=hidpi-1"></script>
+<script src="fences.js?v=level-gifts-2"></script>
 <script src="barn.js?v=hidpi-1"></script>
 <script>
 // Sair do modo colocar: Esc ou botão direito (sementes e itens continuam em seleção contínua até cancelar).
@@ -7824,4 +7814,6 @@ canvas.addEventListener('contextmenu', e => { if (window.MFCancelPlacing()) e.pr
 <script src="ajustes-celular.js?v=3"></script>
 <script src="tutorial.js?v=hidpi-1"></script>
 <script src="save-runtime.js?v=1"></script>
-<script src="game-bridge.js?v=background-queue-3"></script>
+<script src="level-rewards-core.js?v=1"></script>
+<script src="level-rewards.js?v=1"></script>
+<script src="game-bridge.js?v=level-rewards-4"></script>
