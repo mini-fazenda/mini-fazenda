@@ -115,6 +115,25 @@ const {chromium,webkit,devices}=require('playwright');
   const stored=MFObjects.capture().at(-1);if(stored.fruitTree.startTime!==saved.startTime||stored.fruitTree.tipo!==saved.tipo)throw Error('MiniBaú perdeu ciclo da árvore');
  });
  console.log('PASS: toque real na árvore madura inicia a coleta com foice');
+ for(const kind of ['arar','colher','plantar']){
+  await f.evaluate(kind=>{
+   window.MFCancelPlacing();setFarmMoveMode(false);terrenos=[];filaAcoes=[];player.acaoAtual=null;player.path=[];moedas=1000;aradora.spawned=false;
+   document.querySelectorAll('#overlay-bau,#overlay-loja').forEach(el=>el.style.display='none');document.getElementById('mf-sale-summary').hidden=true;
+   offsetX=0;offsetY=-50;zoom=.5;
+   for(let i=0;i<4;i++){
+    const t={gx:3+i*2,gy:5,w:2,h:2,imgSrc:kind==='arar'?TERRA_SECA_SRC:TERRA_ARADA_SRC};terrenos.push(t);
+    if(kind==='colher'){t.cultura={tipo:'cenoura',startTime:Date.now()-600001,totalTime:600000,etapa:2};reapplyGrowthFromTime(t);}
+   }
+   if(kind==='plantar')document.getElementById('item-cenoura').click();
+  },kind);
+  await f.waitForFunction(()=>terrenos.every(t=>preload(t.imgSrc)?.naturalWidth>0));
+  for(let i=0;i<4;i++){
+   const pos=await f.evaluate(i=>{const t=terrenos[i],p=gridToScreen(t.gx+.5,t.gy+.5);return {x:canvas.width/2+offsetX+p.x*zoom,y:canvas.height/3+offsetY+(p.y-10)*zoom};},i);
+   await f.locator('#game').tap({position:pos});await page.waitForTimeout(80);
+  }
+  await f.evaluate(kind=>{const jobs=[player.acaoAtual?.alvo,...filaAcoes].filter(Boolean);if(jobs.length!==4||new Set(jobs).size!==4)throw Error('Toques perderam fila de '+kind+': '+jobs.length);},kind);
+ }
+ console.log('PASS: quatro toques consecutivos preservam filas de arar, colher e plantar sem esperar o personagem');
  if(errors.length)throw Error(errors.join('\n'));console.log('PASS: celeiro 200 moedas, obra autônoma 5min, giro, save, 5 estrelas únicas e toque abre vendas ('+(ios?'WebKit/iOS':'Chromium/toque')+')');
  await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
