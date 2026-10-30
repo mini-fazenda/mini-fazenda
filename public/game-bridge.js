@@ -30,7 +30,7 @@
       if(terrenos[i]?.animal)t.animal=clone(terrenos[i].animal);
       if(terrenos[i]?.cultura)t.cultura=clone(terrenos[i].cultura);
     });
-    Object.assign(data, { version: 2, offsetX, offsetY, zoom,activeSeconds,character:window.__mfCharacter||null,
+    Object.assign(data, { version: 2, savedAt:Date.now(), offsetX, offsetY, zoom,activeSeconds,character:window.__mfCharacter||null,
       player: {...data.player, x:player.x,y:player.y,facing:player.facing,path:clone(player.path),action:actionState(player)},
       aradora: {...data.aradora,x:aradora.x,y:aradora.y,facing:aradora.facing,
         path:clone(aradora.path || []),action:actionState(aradora),fila:clone((aradora.fila || []).map(t=>({gx:t.gx,gy:t.gy})))},
@@ -48,7 +48,11 @@
   }
   function restore(data) {
     if (!data) return;
-    data={...data,terrenos:data.terrenos || [],inventory:data.inventory || {}};
+    data={...data,terrenos:clone(data.terrenos || []),inventory:data.inventory || {}};
+    // Normalize antes de montar os timers: não reinicie relógios legados no login.
+    for(const t of data.terrenos){const c=t?.cultura;if(!c||c.tipo==='morta')continue;
+      window.MFGrowthTime.normalize(c,{savedAt:data.savedAt,totalTime:window.MFAdapter.project.items?.['item-'+c.tipo]?.growTime||c.totalTime,firstRatio:CROP_FIRST_RATIO[c.tipo]||.35});
+    }
     window.MFNatureAssets?.normalizeState(data);
     activeSeconds=data.activeSeconds || 0;
     window.MFMissions.restore(data.missions || {});
@@ -119,8 +123,43 @@
     }).filter(Boolean);
     arando=player.acaoAtual?.state==='ararando';
     if(arando)player.currentSprite=spriteArando;
+    resumeOfflinePlanting(data);
     atualizarBloqueioTerrasPorNivel();
     requestRedraw();
+  }
+  // Somente plantios/arações já pedidos pelo jogador, nunca tarefas novas.
+  function resumeOfflinePlanting(data){
+    if(host.isVisiting())return;
+    const now=Date.now(),savedAt=Number(data.savedAt);
+    if(!Number.isFinite(savedAt)||savedAt<1e11||savedAt>=now)return;
+    let cursor=savedAt;
+    const limit=filaAcoes.length+1;
+    for(let i=0;i<limit&&player.acaoAtual;i++){
+      const a=player.acaoAtual,t=a.alvo;
+      if(!['plantar','arar'].includes(a.job||'arar'))break;
+      const work=Math.max(1,Number(a.duration)||JOB_TIME[a.job]||3000);
+      let travel=0;
+      if(a.state==='indo'&&!a.remoto){
+        let from={x:player.x,y:player.y};
+        for(const step of player.path||[]){const to=gridToScreen(step.x,step.y);travel+=Math.hypot(to.x-from.x,to.y-from.y);from=to;}
+        travel=1000*travel/(Math.max(.1,Number(player.speed)||2.3)*60);
+      }
+      const elapsed=a.state==='ararando'?Math.max(0,Number(a.elapsed)||0):0;
+      const completeAt=cursor+travel+Math.max(0,work-elapsed);
+      if(completeAt>now){
+        // Preserve também uma ação parcialmente realizada no intervalo offline.
+        if(now-cursor>=travel){
+          player.path=[];player.gx=t.gx;player.gy=t.gy;Object.assign(player,gridToScreen(t.gx,t.gy));
+          a.state='ararando';a.startTime=performance.now()-(elapsed+now-cursor-travel);arando=true;
+        }
+        break;
+      }
+      if(jobValid(t,{kind:a.job||'arar'}))finishJob(t,a,completeAt);
+      delete t._job;player.path=[];player.gx=t.gx;player.gy=t.gy;Object.assign(player,gridToScreen(t.gx,t.gy));
+      player.acaoAtual=null;arando=false;player.currentSprite=player.previousSprite||spriteFront;
+      cursor=completeAt;
+      if(filaAcoes.length)iniciarArar(filaAcoes.shift());
+    }
   }
   // Início de jogo (só para conta nova, sem save): 3 plantações prontas,
   // 1 plantação morta e 2 crescendo, perto do personagem.

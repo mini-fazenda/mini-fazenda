@@ -189,13 +189,13 @@ window.MFOnline={
     if(connected&&sessionActive){$('gate').hidden=true;if(!visiting)checkpoint()}
   },fail
 };
-function mount(state,visit){
-  ready=false;bridge=null;initialState=state;visiting=visit;suspending=false;
+function mount(state,visit,savedAt){
+  ready=false;bridge=null;initialState=state?{...state,savedAt:state.savedAt||savedAt}:state;visiting=visit;suspending=false;
   $('toolbar').hidden=false;$('home').hidden=!visit;$('neighbors').hidden=true; // Amigos agora fica só na barra de baixo do jogo
   $('farm-title').textContent=visit?`Visitando: ${state.farmName||'Fazenda'}`:state?.farmName||'Minha fazenda';
   gate(visit?'Abrindo visita…':'Carregando sua fazenda…');
   const frame=document.createElement('iframe');frame.title=visit?'Visita à fazenda (somente visualização)':'Minha fazenda';
-  frame.src='game.html?v=produtos-colheita-1';frame.allow='fullscreen';$('game-container').replaceChildren(frame);
+  frame.src='game.html?v=offline-growth-2';frame.allow='fullscreen';$('game-container').replaceChildren(frame);
   status(visit?'Somente visualização':'Online');
 }
 async function reconnect(run){
@@ -240,16 +240,17 @@ async function boot(account){
   const remote=(await sdk.get(sdk.ref(db,`farms/${user.uid}`))).val();
   if(run!==epoch||stopped)return;
   revision=remote?.revision||0;confirmedSaveId=remote?.saveId||null;ownState=remote?.state||null;
+  let stateSavedAt=remote?.updatedAt;
   // A nuvem é a autoridade; só recupere uma pendência baseada nela.
   let restoredPending=false;
   for(const storage of [localStorage,sessionStorage])try{
     const recovery=JSON.parse(storage.getItem(recoveryKey())||'null');
     const recovered=recoverPendingState(remote,recovery);
-    if(recovered){ownState=recovered;restoredPending=true;break;}
+    if(recovered){ownState=recovered;stateSavedAt=recovered.savedAt||recovery.at+clockOffset;restoredPending=true;break;}
   }catch(e){console.warn('[pending recovery]',e)}
   if(!restoredPending)try{
     const legacy=JSON.parse(sessionStorage.getItem('mf-recovery-v2:'+user.uid)||'null');
-    if(legacy?.state&&Number(legacy.revision)===revision&&Date.now()-legacy.at<86400000)ownState=legacy.state;
+    if(legacy?.state&&Number(legacy.revision)===revision&&Date.now()-legacy.at<86400000){ownState=legacy.state;stateSavedAt=legacy.at+clockOffset;}
     else if(legacy)sessionStorage.removeItem('mf-recovery-v2:'+user.uid);
   }catch(e){console.warn('[legacy recovery]',e)}
   // Resgate autenticado, atômico e único, antes de abrir o jogo ou permitir saves.
@@ -265,7 +266,7 @@ async function boot(account){
   stopSession=sdk.onValue(sdk.ref(db,`sessions/${user.uid}`),snap=>{
     if(run===epoch&&!stopped&&snap.val()!==null&&snap.val()!==sessionId)void disconnectPrevious();
   },e=>{console.warn('[session listener]',e);status('Verificando sessão…')});
-  mount(ownState,false);
+  mount(ownState,false,stateSavedAt);
   void startFriends({sdk,db,uid:user.uid,visit:visitFarm,applyFertilize}).then(()=>{if(run===epoch&&ownState)void publishProfile(ownState)}).catch(e=>console.warn('[amigos]',e));
 }
 async function drain(){
@@ -291,7 +292,7 @@ $('home').onclick=async()=>{
     gate('Abrindo sua fazenda…');
     const remote=(await sdk.get(sdk.ref(db,`farms/${user.uid}`))).val();
     if(stopped)return;
-    revision=remote?.revision||0;confirmedSaveId=remote?.saveId||null;ownState=remote?.state||null;lastText='';mount(ownState,false);
+    revision=remote?.revision||0;confirmedSaveId=remote?.saveId||null;ownState=remote?.state||null;lastText='';mount(ownState,false,remote?.updatedAt);
   }catch(e){fail(e)}
 };
 // Fertilizações dos amigos: só aplica com a própria fazenda aberta e o jogo pronto.
@@ -309,7 +310,7 @@ async function visitFarm(uid){
     const data=(await sdk.get(sdk.ref(db,`publicFarms/${uid}`))).val();
     if(stopped)return false;
     if(!data?.state){suspending=false;$('gate').hidden=true;throw new Error('Esta fazenda ainda não está disponível.')}
-    visitingUid=uid;mount(data.state,true);return true;
+    visitingUid=uid;mount(data.state,true,data.updatedAt);return true;
   }catch(e){suspending=false;if(connected&&!stopped)$('gate').hidden=true;status(e.message);throw e}
 }
 function row(uid,farm){
@@ -324,7 +325,7 @@ function row(uid,farm){
       const data=(await sdk.get(sdk.ref(db,`publicFarms/${uid}`))).val();
       if(stopped)return;
       if(!data?.state){suspending=false;$('gate').hidden=true;throw new Error('Esta fazenda ainda não está disponível.')}
-      mount(data.state,true);
+      mount(data.state,true,data.updatedAt);
     }catch(e){suspending=false;if(connected&&!stopped)$('gate').hidden=true;status(e.message)}finally{button.disabled=false}
   };el.append(text,button);$('farm-list').append(el);
 }

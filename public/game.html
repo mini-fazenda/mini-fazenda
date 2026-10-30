@@ -917,6 +917,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const 
 @media(max-width:600px){#loja-content .mf-shop-arrow{width:31px;height:42px;font-size:25px}#loja-content #mf-shop-prev{left:-3%}#loja-content #mf-shop-next{right:-3%}#loja-content #mf-shop-page{bottom:5%;font-size:12px}}
 </style>
 <script src="farm-economy.js?v=girassol-4"></script>
+<script src="growth-time.js?v=1"></script>
 <script src="animal-production.js?v=1"></script>
 <script src="fences-core.js?v=atlas-1"></script>
 </head>
@@ -3752,7 +3753,8 @@ function reapplyGrowthFromTime(t){
  const settings=window.MFAdapter?.project?.items?.['item-'+type]||{};
  const total=Math.max(100,Number(settings.growTime)||Number(crop.totalTime)||CROP_TIME_TABLE[type]||20000);
  crop.totalTime=total;
- if(!crop.startTime||crop.startTime<1e11)crop.startTime=Date.now();
+ if(window.MFGrowthTime)window.MFGrowthTime.normalize(crop,{totalTime:total,firstRatio:CROP_FIRST_RATIO[type]||.35});
+ else if(!crop.startTime||crop.startTime<1e11)crop.startTime=Date.now();
  const first=Math.round(total*(CROP_FIRST_RATIO[type]||.35));
  function sync(){
   if(t.cultura!==crop)return;
@@ -3866,7 +3868,7 @@ function unqueueJob(t) {
   if (!filaAcoes.includes(t)) return false;
   filaAcoes = filaAcoes.filter(x => x !== t); delete t._job; requestRedraw(); return true;
 }
-function finishJob(t, a) {
+function finishJob(t, a, completedAt=Date.now()) {
   const job = { kind: a.job || 'arar', itemId: a.itemId, price: a.price };
   if (!jobValid(t, job)) return;
   if (job.kind === 'colher') { tryHarvestAtTile(t); return; }
@@ -3876,7 +3878,7 @@ function finishJob(t, a) {
     const card = document.getElementById(job.itemId); if (!card) return;
     const keep = placingItem;
     placingItem = { id: card.id, w: parseInt(card.dataset.w || 1), h: parseInt(card.dataset.h || 1), imgSrc: card.dataset.img || '', price: parseInt(card.dataset.preco || 0), tipo: card.dataset.tipo || 'dependente', xp: parseInt(card.dataset.xp || 0), visualScale: parseFloat(card.dataset.visualscale || '1') };
-    try { plantCropAtTile(t); } finally { placingItem = keep; }
+    try { plantCropAtTile(t,completedAt); } finally { placingItem = keep; }
     return;
   }
   t.imgSrc = TERRA_ARADA_SRC;
@@ -4421,7 +4423,7 @@ window.addEventListener("mouseup", () => {
   spawnedTiles.clear();
 });
 // === Função auxiliar para plantar ===
-function plantCropAtTile(terreno) {
+function plantCropAtTile(terreno,plantedAt=Date.now()) {
   if (!placingItem || !terreno || terreno.cultura || !String(terreno.imgSrc||'').includes('terra-arada')) return false;
 
   let tipo = placingItem.id.replace("item-", "");
@@ -4447,7 +4449,7 @@ function plantCropAtTile(terreno) {
     if (moedasSpan) moedasSpan.textContent = moedas;
     addXP(Number(window.MFAdapter?.project?.items?.[placingItem.id]?.plantXP ?? xp));
 
-    terreno.cultura = { tipo, etapa: 0, startTime: Date.now(), totalTime };
+    terreno.cultura = { tipo, etapa: 0, startTime: plantedAt, totalTime };
     terreno.imgSrc = etapas[0];
     startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
     window.MFHost?.changed?.('crop-planted');
@@ -4557,7 +4559,7 @@ if (
           if (moedas >= placingItem.price) {
             moedas -= placingItem.price; if (moedasSpan) moedasSpan.textContent = moedas;
             if (placingItem.xp) addXP(placingItem.xp);
-            terreno.cultura = { tipo: 'melancia', etapa: 0, startTime: performance.now(), totalTime: 55000 };
+            terreno.cultura = { tipo: 'melancia', etapa: 0, startTime: Date.now(), totalTime: 55000 };
             terreno.imgSrc = MELANCIA_ETAPAS[0];
             if (!imgCache[MELANCIA_ETAPAS[0]]) { const img = new Image(); img.src = MELANCIA_ETAPAS[0]; imgCache[MELANCIA_ETAPAS[0]] = img; }
             startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
@@ -6454,6 +6456,7 @@ function syncAllGrowth(now){
     const crop=t.cultura,tipo=String(crop.tipo||'').toLowerCase(),stages=CROP_STAGE_TABLE[tipo];
     if(!stages)return;
     const total=Number(window.MFAdapter?.project?.items?.['item-'+tipo]?.growTime)||crop.totalTime||CROP_TIME_TABLE[tipo];
+    window.MFGrowthTime?.normalize(crop,{totalTime:total,firstRatio:CROP_FIRST_RATIO[tipo]||.35});
     const elapsed=Date.now()-crop.startTime,first=total*(CROP_FIRST_RATIO[tipo]||.35),stage=elapsed>=total?2:elapsed>=first?1:0;
     if(crop.etapa!==stage||t.imgSrc!==stages[stage])reapplyGrowthFromTime(t);
   });
@@ -7873,4 +7876,4 @@ canvas.addEventListener('contextmenu', e => { if (window.MFCancelPlacing()) e.pr
 <script src="animal-sell.js?v=1"></script>
 <script src="ajustes-celular.js?v=3"></script>
 <script src="tutorial.js?v=1"></script>
-<script src="game-bridge.js?v=beta-saves-1"></script>
+<script src="game-bridge.js?v=offline-growth-2"></script>

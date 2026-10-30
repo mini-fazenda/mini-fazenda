@@ -73,6 +73,10 @@ A autenticação usa persistência por aba, para que desconectar a aba antiga n�
 
 A recuperação pendente depende do armazenamento do navegador: limpeza dos dados, armazenamento indisponível ou troca de aparelho antes da sincronização podem perder alterações não confirmadas. Nenhuma interface oferece garantia absoluta de perda zero em interrupções desse tipo. O salvamento é automático e o jogo exige conexão para continuar jogando.
 
+## Crescimento com o jogo fechado
+
+O save registra o horário absoluto de captura e de plantio. Plantios e arações que o jogador já enfileirou podem terminar durante a ausência, respeitando sequência, deslocamento, duração e custo; cada planta usa o horário previsto de conclusão. Não cria novos pedidos nem automatiza colheitas. Saves anteriores usam o updatedAt confirmado como referência; horários legados relativos são migrados conservadoramente usando essa referência e o estágio conhecido, sem inventar o instante original de plantio.
+
 ## Visitas e acesso
 
 A lista de fazendas é paginada. Cada fazenda recebe uma projeção pública para usuários autenticados, atualizada após o save da conta. A visita é uma fotografia da última publicação; não é multiplayer simultâneo. Arraste para explorar e use “Voltar à minha fazenda” para retornar.
