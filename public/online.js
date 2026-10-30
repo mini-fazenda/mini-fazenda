@@ -92,8 +92,10 @@ async function flushProjection(){
       try{result=await sdk.runTransaction(sdk.ref(db,`publicFarms/${record.uid}`),update,{applyLocally:false});}
       catch(e){if(!isMaxRetry(e))throw e;result=await conditionalSave({databaseURL:config.databaseURL,uid:record.uid,collection:'publicFarms',getToken:force=>sdk.getIdToken(record.account,force),update,active});}
       if(!active())return;
-      if(!result.committed&&(Number(result.snapshot.val()?.revision)||0)<record.version)throw new Error('visit/revision-conflict');
+      const publishedRevision=Number(result.snapshot.val()?.revision)||0;
+      if(!result.committed&&publishedRevision<record.version)throw new Error('visit/revision-conflict');
       if(projectionPending===record)projectionPending=null;
+      if(publishedRevision>record.version)return; // Evita regredir diretório e perfil da revisão mais recente.
       // Falhas no diretório/perfil não devem descartar uma atualização visual ainda pendente.
       try{await sdk.set(sdk.ref(db,`directory/${record.uid}`),{name:record.state.farmName||'Fazenda',level:record.state.playerLevel||1,updatedAt:sdk.serverTimestamp()});void publishProfile(record.state);}catch(e){console.warn('[diretório]',e);}
     }catch(e){
@@ -107,14 +109,15 @@ async function flushProjection(){
     if(projectionPending&&projectionPending!==record&&record.run===epoch)queueMicrotask(flushProjection);
   }
 }
-function watchVisit(uid){
-  stopVisit?.();const sequence=++visitSequence;visitRevision=-1;visitData=null;
+function watchVisit(uid,initial){
+  stopVisit?.();const sequence=++visitSequence;visitRevision=Number(initial?.revision)||0;visitData=initial||null;
   stopVisit=sdk.onValue(sdk.ref(db,`publicFarms/${uid}`),snap=>{
     if(sequence!==visitSequence||!visiting||visitingUid!==uid||stopped)return;
     const data=snap.val();
     if(!data?.state){gate('Esta fazenda não está disponível no momento.');return;}
     const version=Number(data.revision)||0;
-    if(version<visitRevision&&!(data.saveId&&Number(data.updatedAt)>Number(visitData?.updatedAt||0)))return;
+    if(version<visitRevision)return;
+    if(version===visitRevision&&Number(data.updatedAt||0)<=Number(visitData?.updatedAt||0))return;
     visitRevision=version;visitData=data;
     if(ready&&bridge?.applyVisit){
       try{bridge.applyVisit(data.state,data.updatedAt);$('farm-title').textContent='Visitando: '+(data.state.farmName||'Fazenda');if(connected)$('gate').hidden=true;status('Visita em tempo real');}catch(e){gate('Não foi possível atualizar a visita. Volte à sua fazenda e tente novamente.');console.warn('[visita]',e);}
@@ -284,6 +287,7 @@ async function boot(account){
   if(run!==epoch||stopped)return;
   if(remote&&!remote.state)throw new Error('save/incompatible: documento sem state — progresso preservado no Firebase');
   revision=documentRevision(remote);confirmedSaveId=remote?.saveId||null;ownState=normalizeSave(remote?.state);
+  let confirmedForProjection=ownState;
   let stateSavedAt=remote?.updatedAt;
   // A nuvem é a autoridade; só recupere uma pendência baseada nela.
   let restoredPending=false;
@@ -302,7 +306,7 @@ async function boot(account){
     try{
       const credit=await redeemTestCredit({sdk,db,uid:user.uid,sessionId,revision,active:()=>run===epoch&&!stopped});
       if(run!==epoch||stopped)return;
-      if(credit){revision=credit.revision;confirmedSaveId=credit.saveId;ownState={...ownState,moedas:ownState.moedas+credit.amount};lastText='';}
+      if(credit){revision=credit.revision;confirmedSaveId=credit.saveId;ownState={...ownState,moedas:ownState.moedas+credit.amount};confirmedForProjection=ownState;lastText='';}
     }catch(e){console.warn('[crédito de teste]',e)}
   }
   if(run!==epoch||stopped)return;
@@ -311,7 +315,8 @@ async function boot(account){
     if(run===epoch&&!stopped&&snap.val()!==null&&snap.val()!==sessionId)void disconnectPrevious();
   },e=>{console.warn('[session listener]',e);status('Verificando sessão…')});
   mount(ownState,false,stateSavedAt);
-  if(ownState)scheduleProjection({...ownState,savedAt:ownState.savedAt||stateSavedAt},revision,run);
+  // A projeção pública deve refletir apenas o save confirmado, não recuperação pendente local.
+  if(confirmedForProjection)scheduleProjection({...confirmedForProjection,savedAt:confirmedForProjection.savedAt||remote?.updatedAt},revision,run);
   void startFriends({sdk,db,uid:user.uid,visit:visitFarm,applyFertilize}).then(()=>{if(run===epoch&&ownState)void publishProfile(ownState)}).catch(e=>console.warn('[amigos]',e));
 }
 async function drain(){
@@ -356,7 +361,7 @@ async function visitFarm(uid){
     const data=(await sdk.get(sdk.ref(db,`publicFarms/${uid}`))).val();
     if(stopped)return false;
     if(!data?.state){suspending=false;$('gate').hidden=true;throw new Error('Esta fazenda ainda não está disponível.')}
-    closeVisit();visitingUid=uid;mount(data.state,true,data.updatedAt);watchVisit(uid);return true;
+    closeVisit();visitingUid=uid;mount(data.state,true,data.updatedAt);watchVisit(uid,data);return true;
   }catch(e){suspending=false;if(connected&&!stopped)$('gate').hidden=true;status(e.message);throw e}
 }
 function row(uid,farm){
