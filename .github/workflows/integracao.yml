@@ -39,7 +39,7 @@ jobs:
       - run: npm install --no-save playwright@1.51.1
       - run: npx playwright install --with-deps webkit
       - run: python3 -m http.server 8080 --directory public > /tmp/mini-fazenda-http.log 2>&1 &
-      - run: MF_BROWSER=webkit node tests/legacy-account-browser.cjs && MF_BROWSER=webkit node tests/barn-click-browser.cjs && MF_BROWSER=webkit node tests/beta-regressions.cjs && MF_BROWSER=webkit node tests/offline-growth-browser.cjs && MF_BROWSER=webkit node tests/live-visits-browser.cjs && MF_BROWSER=webkit node tests/release-browser.cjs && MF_BROWSER=webkit node tests/crop-identity-browser.cjs && MF_BROWSER=webkit node tests/highdpi-browser.cjs && MF_BROWSER=webkit node tests/level-rewards-browser.cjs && MF_BROWSER=webkit node tests/move-controls-browser.cjs
+      - run: MF_BROWSER=webkit node tests/level-rewards-browser.cjs && MF_BROWSER=webkit node tests/move-controls-browser.cjs && MF_BROWSER=webkit node tests/legacy-account-browser.cjs && MF_BROWSER=webkit node tests/barn-click-browser.cjs && MF_BROWSER=webkit node tests/beta-regressions.cjs && MF_BROWSER=webkit node tests/offline-growth-browser.cjs && MF_BROWSER=webkit node tests/live-visits-browser.cjs && MF_BROWSER=webkit node tests/release-browser.cjs && MF_BROWSER=webkit node tests/crop-identity-browser.cjs && MF_BROWSER=webkit node tests/highdpi-browser.cjs
 
   regras-firebase:
     runs-on: ubuntu-latest
