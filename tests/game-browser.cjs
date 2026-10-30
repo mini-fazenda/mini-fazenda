@@ -30,9 +30,16 @@ const {chromium}=require('playwright');
    window.MFMoveControls.touchStart(b.x,b.y);window.MFMoveControls.touchEnd(b.x,b.y);
    if(o.gx!==12||o.gy!==5)throw Error('Segundo toque não reposicionou objeto');
    if(offsetX!==ox||offsetY!==oy)throw Error('Câmera moveu durante seleção');
-   window.MFMoveControls.touchStart(b.x,b.y);
-   const d=screen(13,5);window.MFMoveControls.touchMove(d.x,d.y);window.MFMoveControls.touchEnd(d.x,d.y);
-   if(o.gx!==13||o.gy!==5)throw Error('Arrastar objeto selecionado falhou');
+   const d=screen(13,5);
+   const touch=(type,x,y)=>{
+     const t=new Touch({identifier:1,target:canvas,clientX:x,clientY:y});
+     const ended=type==='touchend';
+     canvas.dispatchEvent(new TouchEvent(type,{bubbles:true,cancelable:true,
+       touches:ended?[]:[t],targetTouches:ended?[]:[t],changedTouches:[t]}));
+   };
+   touch('touchstart',b.x,b.y);touch('touchmove',d.x,d.y);touch('touchend',d.x,d.y);
+   if(o.gx!==13||o.gy!==5)throw Error('Arrastar objeto por gesto real falhou');
+   if(offsetX!==ox||offsetY!==oy)throw Error('Gesto de arrastar moveu a câmera');
    // Área inválida/ocupada: não perde objeto e não conclui seleção.
    terrenos.push({gx:14,gy:5,w:1,h:1,imgSrc:''});
    window.MFMoveControls.touchStart(d.x,d.y);window.MFMoveControls.touchEnd(d.x,d.y);
@@ -60,6 +67,17 @@ const {chromium}=require('playwright');
    canvas.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,button:0,clientX:q.x,clientY:q.y}));
    if(window.MFFences.isMoveSelected()||!window.MFFences.capture().segments.some(e=>MFFenceCore.key(e)===MFFenceCore.key(moved)))
      throw Error('Segundo clique não moveu a cerca');
+   // Uma cerca também pode ser selecionada e deslocada somente com o dedo.
+   const movedPoint=midpoint(moved);
+   window.MFMoveControls.touchStart(movedPoint.x,movedPoint.y);
+   window.MFMoveControls.touchEnd(movedPoint.x,movedPoint.y);
+   if(!window.MFFences.isMoveSelected())throw Error('Toque não selecionou cerca');
+   const next={...moved,gx:moved.gx+1,gy:moved.gy+1},nextPoint=midpoint(next);
+   window.MFMoveControls.touchStart(movedPoint.x,movedPoint.y);
+   window.MFMoveControls.touchMove(nextPoint.x,nextPoint.y);
+   window.MFMoveControls.touchEnd(nextPoint.x,nextPoint.y);
+   if(!window.MFFences.capture().segments.some(e=>MFFenceCore.key(e)===MFFenceCore.key(next)))
+     throw Error('Arraste no celular não reposicionou cerca');
    window.MFFences.restore(old);moedas=coins;setFarmMoveMode(false);
  });
  console.log('PASS: toque/arraste de objetos sem pan; cerca selecionável e movível');
