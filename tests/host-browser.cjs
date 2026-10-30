@@ -1,30 +1,8 @@
 const {chromium}=require('playwright');
-const mock=`
-const cloud=window.testCloud ||= JSON.parse(localStorage.getItem('test-cloud')||'{}');
-window.testConnected=true;const subs=window.testSubs ||= [];const callbacks=window.testAuthCallbacks ||= [];
-const snap=v=>({val:()=>v===undefined?null:structuredClone(v)});
-const notify=p=>subs.filter(s=>s.p===p).forEach(s=>s.cb(snap(cloud[p])));
-const persist=()=>localStorage.setItem('test-cloud',JSON.stringify(cloud));
-export const initializeApp=()=>({}),getAuth=()=>({}),getDatabase=()=>({});
-export const browserSessionPersistence={},setPersistence=async()=>{};
-export const onAuthStateChanged=(auth,cb)=>{callbacks.push(cb);queueMicrotask(()=>cb(localStorage.getItem('test-user')?{uid:'rodrigo'}:null))};
-export class GoogleAuthProvider{}
-export const signInWithPopup=async()=>{localStorage.setItem('test-user','yes');callbacks.forEach(cb=>cb({uid:'rodrigo'}))};
-export const signOut=async()=>{localStorage.removeItem('test-user');callbacks.forEach(cb=>cb(null))};
-export const ref=(db,p='')=>({p});
-export const get=async r=>snap(cloud[r.p]);
-export const set=async(r,v)=>{cloud[r.p]=structuredClone(v);persist();notify(r.p)};
-export const update=async(r,v)=>{Object.assign(cloud,structuredClone(v));persist()};
-export const serverTimestamp=()=>Date.now();
-export const runTransaction=async(r,fn)=>{if(r.p.startsWith('farms/')&&window.testFailMaxretry){window.testFailMaxretry--;const e=Error('maxretry');e.code='database/maxretry';throw e;}const result=fn(cloud[r.p]||null);if(result===undefined)return {committed:false,snapshot:snap(cloud[r.p])};cloud[r.p]=structuredClone(result);persist();notify(r.p);return {committed:true,snapshot:snap(result)}};
-export const onValue=(r,cb)=>{const s={p:r.p,cb};subs.push(s);queueMicrotask(()=>cb(snap(r.p==='.info/connected'?window.testConnected:cloud[r.p])));return ()=>subs.splice(subs.indexOf(s),1)};
-window.testReplaceSession=()=>{cloud['sessions/rodrigo']='other-device';persist();notify('sessions/rodrigo')};
-window.testDisconnect=()=>{window.testConnected=false;subs.filter(s=>s.p==='.info/connected').forEach(s=>s.cb(snap(false)))};
-window.testReconnect=()=>{window.testConnected=true;subs.filter(s=>s.p==='.info/connected').forEach(s=>s.cb(snap(true)))};
-export const query=r=>r,orderByKey=()=>{},limitToFirst=()=>{},startAfter=()=>{};
-`;
+const mock=require('./firebase-mock.cjs');
+
 (async()=>{
- const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ const browser=await chromium.launch({headless:true,...(process.env.MF_CHROMIUM_PATH?{executablePath:process.env.MF_CHROMIUM_PATH}:{}),args:['--no-sandbox']});
  const page=await browser.newPage();const errors=[],dialogs=[];
  page.on('pageerror',e=>errors.push(e.message));
  page.on('dialog',d=>{dialogs.push(d.type());d.dismiss()});
@@ -75,12 +53,12 @@ export const query=r=>r,orderByKey=()=>{},limitToFirst=()=>{},startAfter=()=>{};
  await f.evaluate(()=>{moedas=9877;saveGameState('revision-retry')});
  await page.waitForFunction(()=>testCloud['farms/rodrigo']?.state.moedas===9877);
  console.log('PASS: conflito de revisão da mesma conta foi recuperado');
- // maxretry no Firebase não pode excluir progresso nem gravar no cache da aba.
+ // Após confirmar no Firebase, a cópia pendente precisa ser apagada.
  await page.evaluate(()=>{window.testFailMaxretry=1});
  await f.evaluate(()=>{moedas=9878;saveGameState('maxretry')});
  await page.waitForFunction(()=>testCloud['farms/rodrigo']?.state.moedas===9878,{timeout:15000});
- if(await page.evaluate(()=>Object.keys(sessionStorage).some(k=>k.startsWith('mf-recovery-v2:'))))throw Error('Save gravado em sessionStorage');
- console.log('PASS: maxretry recupera somente no Firebase, sem cache de progresso');
+ if(await page.evaluate(()=>[...Object.keys(sessionStorage),...Object.keys(localStorage)].some(k=>k.startsWith('mf-recovery-v2:')||k.startsWith('mf-pending-v3:'))))throw Error('Save gravado em sessionStorage');
+ console.log('PASS: maxretry recupera e limpa a cópia pendente após confirmação');
  // Save legado sem farmName: a cópia pública precisa ter nome para visitas.
  await f.evaluate(()=>{window.__farmName='';saveGameState('legacy-no-name')});
  await page.waitForFunction(()=>testCloud['publicFarms/rodrigo']?.state?.farmName==='Fazenda');

@@ -20,6 +20,6 @@ test('resgate verifica ID e dono no Firebase e aborta revisão antiga',async()=>
  assert.equal(await redeemTestCredit(request),null);assert.equal(writes,0);
  code='986568';owner='other';assert.equal(await redeemTestCredit(request),null);assert.equal(writes,0);
  owner='owner';assert.equal(await redeemTestCredit({...request,revision:3}),null);assert.equal(current.state.moedas,30);
- assert.deepEqual(await redeemTestCredit(request),{amount:50000,revision:5});assert.equal(current.state.moedas,50030);
+ assert.deepEqual(await redeemTestCredit(request),{amount:50000,revision:5,saveId:TEST_CREDIT_ID});assert.equal(current.state.moedas,50030);
  assert.equal(await redeemTestCredit({...request,revision:5}),null);assert.equal(current.state.moedas,50030);
 });

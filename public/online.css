@@ -39,3 +39,8 @@ body:has(#farms[style*="display: flex"]) :is(#mf-bounds,#mf-truck-markers),body:
 /* Visitando: "Voltar à minha fazenda" no canto inferior direito */
 #toolbar #home{position:fixed;top:auto!important;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom))}
 @media (max-width:900px),(max-height:500px){#toolbar #home{width:72px!important;height:82px!important;right:max(6px,env(safe-area-inset-right));bottom:max(6px,env(safe-area-inset-bottom))}}
+
+/* Confirmação real de salvamento e tentativa manual, inclusive no celular. */
+#toolbar #sync{position:fixed;right:max(8px,env(safe-area-inset-right));top:max(68px,calc(env(safe-area-inset-top) + 58px));max-width:min(380px,70vw);white-space:normal;padding:5px 9px;font:600 11px system-ui;color:#e9f8e2;background:#24482bdd;border-radius:8px;pointer-events:auto;box-shadow:0 2px 5px #0003}
+#toolbar #sync[data-state="pending"]{background:#73541fee;color:#fff0b9}
+#toolbar #sync[data-state="error"]{background:#922f28;color:#fff}

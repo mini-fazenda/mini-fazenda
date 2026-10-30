@@ -23,3 +23,14 @@ export function clearLegacySaves(projectId){
     };
   }catch{}
 }
+
+// Recupera somente uma alteração baseada na mesma versão confirmada da nuvem.
+// O save em trânsito pode ter sido confirmado enquanto a página era encerrada.
+export function recoverPendingState(remote,recovery,now=Date.now()){
+  if(!recovery?.state||!Number.isFinite(recovery.at)||recovery.at>now+60000||now-recovery.at>86400000)return null;
+  const version=Number(remote?.revision)||0,base=Number(recovery.revision);
+  if(!Number.isSafeInteger(base)||base<0)return null;
+  const sameBase=version===base&&(recovery.baseSaveId??null)===(remote?.saveId??null);
+  const flightConfirmed=version===base+1&&!!recovery.inFlightId&&remote?.saveId===recovery.inFlightId&&remote?.sessionId===recovery.sessionId;
+  return sameBase||flightConfirmed?recovery.state:null;
+}
