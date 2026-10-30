@@ -15,7 +15,7 @@
   return {segments,foot,front,left,right,project,unproject};
  }
  function drawSprite(g,t,anchor,img){const m=geometry(t,anchor,img.src||t.imgSrc);if(!m)return false;
-  for(const s of m.segments){g.save();g.transform(s.a,s.b,0,s.d,s.e,s.f);g.beginPath();const x=s.side==='left'?0:m.foot.front[0],w=s.side==='left'?m.foot.front[0]:img.naturalWidth-m.foot.front[0];g.rect(x,0,w,img.naturalHeight);g.clip();g.drawImage(img,0,0);g.restore();}return true;
+  for(const s of m.segments){g.save();g.transform(s.a,s.b,0,s.d,s.e,s.f);g.beginPath();const overlap=1/Math.abs(s.a),x=s.side==='left'?0:m.foot.front[0]-overlap,w=s.side==='left'?m.foot.front[0]+overlap:img.naturalWidth-x;g.rect(x,0,w,img.naturalHeight);g.clip();g.drawImage(img,0,0);g.restore();}return true;
  }
  let hitCanvas,hitContext;
  function hit(t,img,x,y,anchor){const m=geometry(t,anchor,img.src||t.imgSrc);if(!m)return null;const p=m.unproject(x,y);
