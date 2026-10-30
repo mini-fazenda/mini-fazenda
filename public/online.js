@@ -61,6 +61,7 @@ async function flush(){
   if(saving)return saving;
   if(!pending||!connected||!sessionActive||stopped||visiting||!ready)return;
   const run=epoch,uid=user.uid,token=sessionId;
+  let failed=false;
   const operation=(async()=>{
     while(pending&&connected&&sessionActive&&!stopped&&run===epoch){
       const record=pending,base=revision;
@@ -84,6 +85,7 @@ async function flush(){
   saving=operation;
   try{await operation}
   catch(e){
+    failed=true;
     if(run!==epoch||stopped)return;
     if(e.code==='PERMISSION_DENIED'||e.code==='permission-denied'){
       const currentToken=await sdk.get(sdk.ref(db,`sessions/${uid}`)).then(s=>s.val()).catch(()=>null);
@@ -92,7 +94,7 @@ async function flush(){
     throw e;
   }finally{
     if(saving===operation)saving=null;
-    if(pending&&connected&&sessionActive&&!stopped&&run===epoch)queueMicrotask(()=>flush().catch(e=>{console.warn('[sync]',e);retryPending()}));
+    if(!failed&&pending&&connected&&sessionActive&&!stopped&&run===epoch)queueMicrotask(()=>flush().catch(e=>{console.warn('[sync]',e);retryPending()}));
   }
 }
 
@@ -313,6 +315,14 @@ async function init(){
   try{await sdk.setPersistence(auth,sdk.browserSessionPersistence)}catch(e){console.warn('[auth persistence]',e)}
   try{await sdk.getRedirectResult(auth)}catch(e){console.warn('[Google redirect]',e?.code);gate(`Falha ao concluir login Google (${e?.code||'erro desconhecido'}).`)}
   $('login').disabled=false;
-  sdk.onAuthStateChanged(auth,account=>{void boot(account).catch(fail)});
+  sdk.onAuthStateChanged(auth,account=>{void boot(account).catch(e=>{
+    console.warn('[Firebase initial connection]',e);
+    if(stopped)return;
+    if(transient(e)||!navigator.onLine){
+      gate('A conexão com Firebase falhou. Tentando novamente…');
+      clearTimeout(reconnectTimer);
+      reconnectTimer=setTimeout(()=>{if(auth.currentUser?.uid===account?.uid)void boot(account).catch(fail)},5000);
+    }else fail(e);
+  })});
 }
 init().catch(fail);
