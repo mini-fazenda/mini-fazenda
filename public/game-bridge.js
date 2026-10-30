@@ -20,7 +20,7 @@
   function actionState(actor){
     const a=actor.acaoAtual;
     if(!a?.alvo)return null;
-    return {...simple(a),alvo:{gx:a.alvo.gx,gy:a.alvo.gy},elapsed:a.startTime?Math.max(0,performance.now()-a.startTime):0};
+    return {...simple(a),alvo:{gx:a.alvo.gx,gy:a.alvo.gy},...(a.seed?{seed:clone(a.seed)}:{}),elapsed:a.startTime?Math.max(0,performance.now()-a.startTime):0};
   }
   let activeSeconds=0,background=null;
   function pauseBackground(){
@@ -121,7 +121,7 @@
       if(saved.action){
         const target=terrenos.find(t=>t.gx===saved.action.alvo.gx&&t.gy===saved.action.alvo.gy);
         if(target){actor.acaoAtual={...saved.action,alvo:target,startTime:performance.now()-(saved.action.elapsed || 0)};
-          if(actor===player&&saved.action.job)target._job={kind:saved.action.job,itemId:saved.action.itemId,price:saved.action.price||0};}
+          if(actor===player&&saved.action.job)target._job={kind:saved.action.job,itemId:saved.action.itemId,price:saved.action.price||0,...(saved.action.seed?{seed:clone(saved.action.seed)}:{})};}
       }
     }
     aradora.fila=(data.aradora?.fila || []).map(p=>terrenos.find(t=>t.gx===p.gx&&t.gy===p.gy)).filter(Boolean);
@@ -224,15 +224,15 @@
     }catch(e){console.warn('[MF] início de jogo',e)}
   }
   for(const type of ['click','pointerup','keyup'])window.addEventListener(type,()=>queueMicrotask(()=>host.changed(type)));
-  // O bootstrap original aplica o projeto em setTimeout(0).
-  setTimeout(() => {
+  // Restaure a conta somente após concluir a configuração inicial do catálogo.
+  Promise.resolve(window.MFProjectReady).then(() => {
     try {
       restore(host.bootState());
       if(document.hidden){background=null;pauseBackground();}
       if(!host.bootState() && !host.isVisiting()) { seedStarterFarm(); window.MFTutorial?.start(); }
       setTimeout(()=>window.MFCharacter?.init?.(),0);
       document.documentElement.style.visibility='visible';
-      host.attach({capture, pan:(dx,dy)=>{offsetX+=dx;offsetY+=dy;updateTruckDomPosition();requestRedraw()}});
+      host.attach({release:window.MF_BUILD_VERSION,capture, pan:(dx,dy)=>{offsetX+=dx;offsetY+=dy;updateTruckDomPosition();requestRedraw()}});
       window.MFFertilize?.watch?.();
       if(host.isVisiting()){
         const cover=document.createElement('div');
@@ -251,6 +251,6 @@
         window.addEventListener('keydown',e=>{e.preventDefault();e.stopImmediatePropagation()},true);
       }
     }catch(e){host.fail(e)}
-  }, 50);
+  }).catch(e=>host.fail(e));
 })();
 

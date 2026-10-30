@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import '../public/farm-economy.js';import '../public/sales-core.js';import '../public/sheep-animation.js';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import '../public/farm-economy.js';import '../public/sales-core.js';import '../public/sheep-animation.js';import '../public/planting-core.js';
 const html=fs.readFileSync(new URL('../public/game.html',import.meta.url),'utf8');
 const cfg=JSON.parse(html.match(/window.__MF_PROJECT = (.*?);<\/script>/)[1]),rice=cfg.items['item-arroz'];
 test('sementes ficam em ordem de tempo mesmo quando o nível é diferente',()=>{
@@ -12,7 +12,7 @@ test('arroz cobra 7000 e rende 10500 por colheita, com lucro de 50%',()=>{
 });
 test('arroz planta com sementes na água, muda aos 50%, amadurece em 24h e dá 100 estrelas uma vez',()=>{
  let now=1800000000000,stars=0,drops=0;
- const env={console,Date:{now:()=>now},setTimeout:()=>1,clearTimeout(){},preload(){},requestRedraw(){},window:{MFFarmEconomy,MFAdapter:{project:{items:cfg.items}}},CROP_STAGE_TABLE:{arroz:[rice.stage0,rice.stage1,rice.stage2]},CROP_TIME_TABLE:{arroz:86400000},CROP_FIRST_RATIO:{arroz:.5},placingItem:{id:'item-arroz',price:7000,xp:100},moedas:15000,moedasSpan:{textContent:''},addXP:n=>stars+=n,spawnLoot:()=>{drops++;return true;},gridToScreen:()=>({x:0,y:0}),MFViewport:{width:800,height:600},canvas:{width:800,height:600},offsetX:0,offsetY:0,zoom:1,TERRA_SECA_SRC:'terra-seca.png'};
+ const env={console,Date:{now:()=>now},setTimeout:()=>1,clearTimeout(){},preload(){},requestRedraw(){},window:{MFPlanting,MFFarmEconomy,MFAdapter:{project:{items:cfg.items}}},CROP_STAGE_TABLE:{arroz:[rice.stage0,rice.stage1,rice.stage2]},CROP_TIME_TABLE:{arroz:86400000},CROP_FIRST_RATIO:{arroz:.5},placingItem:{id:'item-arroz',price:7000,xp:100},moedas:15000,moedasSpan:{textContent:''},addXP:n=>stars+=n,spawnLoot:()=>{drops++;return true;},gridToScreen:()=>({x:0,y:0}),MFViewport:{width:800,height:600},canvas:{width:800,height:600},offsetX:0,offsetY:0,zoom:1,TERRA_SECA_SRC:'terra-seca.png'};
  vm.createContext(env);vm.runInContext(html.slice(html.indexOf('function startGrowthTimer('),html.indexOf('// Colheita (retorna terra-seca')),env);
  vm.runInContext(html.slice(html.indexOf('function plantCropAtTile('),html.indexOf("canvas.addEventListener('click'",html.indexOf('function plantCropAtTile('))),env);
  const t={gx:2,gy:2,imgSrc:'terra-arada.png'};env.plantCropAtTile(t);assert.equal(env.moedas,8000);assert.equal(stars,0);assert.equal(t.imgSrc,rice.stage0);const start=t.cultura.startTime;

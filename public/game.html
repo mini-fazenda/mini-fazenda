@@ -921,6 +921,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const 
 <script src="crop-sprites.js?v=2"></script>
 <script src="farm-economy.js?v=girassol-4"></script>
 <script src="growth-time.js?v=1"></script>
+<script src="planting-core.js?v=identity-1"></script>
 <script src="fertilizer-core.js?v=clock-fix-5"></script>
 <script src="animal-production.js?v=first-ready-2"></script>
 <script src="fences-core.js?v=atlas-1"></script>
@@ -1118,7 +1119,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const 
   <span>Ovelha</span>
 </div>
 <div class="card-item" data-category="mini" data-preco="500" data-xp="500" id="item-npc-aradora">
-<img oncontextmenu="return false" src="https://i.postimg.cc/3RqhZTHD/aradora-frente.png"/>
+<img oncontextmenu="return false" src="assets/332efb573e1371b44d5b-aradora-frente.png"/>
 <span>Caipira</span>
 </div>
 </div>
@@ -2310,7 +2311,7 @@ function clampCamera(){if(window.MFAdapter)window.MFAdapter.clampCamera()}
 const imgCache = {};
 const LOCAL_FARM_IMAGES={"icone-milho.png":"assets/f3c2a94cdb889df3ba40-icone-milho.png","milho-final.png":"assets/ba3dea47389b563b1101-milho-final.png","icone-botao-fechar.png":"assets/52822bffd4318c59c0b9-icone-botao-fechar.png","abacaxi-quase.png":"assets/733fe2565a332c731fdc-abacaxi-quase.png","icone-beterraba.png":"assets/2ea797d8f0d287d9c337-icone-beterraba.png","trigo-final.png":"assets/cultivos-novos/trigo-final.png","trigo-quase.png":"assets/cultivos-novos/trigo-quase.png","morango-quase.png":"assets/67841b85c4aaa07e737f-morango-quase.png","morango-final.png":"assets/7b73afd26b88a734994f-morango-final.png","icone-trigo.png":"assets/b1c195815ebb75911ecd-icone-trigo.png","cenoura-inicio.png":"assets/cultivos-novos/cenoura-inicio.png","abacaxi-final.png":"assets/266ee91980da38596c99-abacaxi-final.png","morango-inicio.png":"assets/ce27b8b245ad37596a2f-morango-inicio.png","icone-abaxi.png":"assets/61e796271d4d94617a3c-icone-abaxi.png","beterraba-final.png":"assets/a5787abf1311994a2f3f-beterraba-final.png","icone-bloqueado.png":"assets/789660136ed35cd21ba9-icone-bloqueado.png","beterraba-inicio.png":"assets/a8af1355be3becc02230-beterraba-inicio.png","melancia-inicio.png":"assets/9883700369e3dd55833c-melancia-inicio.png","cafe-final.png":"assets/c9fe142134e1258081ca-cafe-final.png","icone-cenoura.png":"assets/77ef8a9af9adacf38b3c-icone-cenoura.png","melancia-final.png":"assets/1649da0f642a8662aec8-melancia-final.png","cafe-inicio.png":"assets/bcd5f23abee672055bb7-cafe-inicio.png","terra-seca.png":"assets/90ef7652824df981f954-terra-seca.png","milho-inicio.png":"assets/c2099537475b77b44d82-milho-inicio.png","icone-mover.png":"assets/636ac0afa81258a6b629-icone-mover.png","icone-melancia.png":"assets/a4930100e545e1114d98-icone-melancia.png","cafe-quase.png":"assets/d1d9fad4ef7e890ab1ea-cafe-quase.png","terra-arada.png":"assets/f85800574c3422a19492-terra-arada.png","icone-trator.png":"assets/fa2c2ae500cc179aeae3-icone-trator.png","trigo-inicio.png":"assets/cultivos-novos/trigo-inicio.png","icone-leite.png":"assets/7fc2de79ae289a20560f-icone-leite.png","icone-morango.png":"assets/62db4d8b23ea18121b23-icone-morango.png","melancia-quase.png":"assets/f4566a4f4ec176730073-melancia-quase.png","cenoura-final.png":"assets/cultivos-novos/cenoura-final.png","beterraba-quase.png":"assets/e93dea16226bd0d84229-beterraba-quase.png","abacaxi-inicio.png":"assets/fd4a39ea5abe49d9a0c8-abacaxi-inicio.png","icone-moedas.png":"assets/ffd360086159ad51164a-icone-moedas.png","icone-terra.png":"assets/82fcefc4535a98260283-icone-terra.png","cenoura-quase.png":"assets/cultivos-novos/cenoura-quase.png","milho-quase.png":"assets/448b0c48796198df36a3-milho-quase.png","icone-cafe.png":"assets/a21b10464cd8b9b45e08-icone-cafe.png"};
 function resolveLocalFarmImage(src){return typeof src==='string'&&src.startsWith('https://i.postimg.cc/')?(LOCAL_FARM_IMAGES[src.split('/').pop()]||src):src;}
-function preload(src){ src=resolveLocalFarmImage(src);if(!src)return null;if(!imgCache[src]){const im=new Image();imgCache[src]=im;im.onload=()=>{if(typeof requestRedraw==='function')requestRedraw()};im.src=src;}return imgCache[src]}
+function preload(src){ src=resolveLocalFarmImage(src);if(!src)return null;if(!imgCache[src]||imgCache[src].src!==new URL(src,document.baseURI).href){const im=new Image();imgCache[src]=im;im.onload=()=>{if(typeof requestRedraw==='function')requestRedraw()};im.src=src;}return imgCache[src]}
 preload(PA_SRC); preload(FOICE_SRC); preload(TERRA_SECA_SRC); preload(TERRA_ARADA_SRC);
 MILHO_ETAPAS.forEach(preload);
 const LOOT_SPRITES = {
@@ -2387,13 +2388,14 @@ LOOT_SPRITES.melancia = 'assets/a4930100e545e1114d98-icone-melancia.png';
 
 const spritePa = imgCache[PA_SRC];
 const spriteFoice = imgCache[FOICE_SRC];
-const spriteArando = preload('https://i.postimg.cc/nhTpVRRs/arando-a-terra.png');
-const spriteFront = preload('https://i.postimg.cc/X73M455d/personagem-de-frente.png');
-const spriteBack = preload('https://i.postimg.cc/c4VmtNrk/Gemini-Generated-Image-ibf4glibf4glibf4-removebg-preview.png');
+function actorSprite(src){const img=new Image();img.onload=()=>requestRedraw();img.src=resolveLocalFarmImage(src);return img;}
+const spriteArando = actorSprite('assets/4af61ed5a1bace7feb06-arando-a-terra.png');
+const spriteFront = actorSprite('assets/b86748633e6ac8337f3b-personagem-de-frente.png');
+const spriteBack = actorSprite('assets/2f295405dbc0fd60266b-Gemini-Generated-Image-ibf4glibf4glibf4-removebg-preview.png');
 
 // === NPC Aradora sprites (adicionado) ===
-const aradoraFront = preload('https://i.postimg.cc/3RqhZTHD/aradora-frente.png');
-const aradoraBack  = preload('https://i.postimg.cc/28TN5zBz/aradora-costa.png');
+const aradoraFront = actorSprite('assets/332efb573e1371b44d5b-aradora-frente.png');
+const aradoraBack  = actorSprite('assets/8e7a2d4937b5eb0b9866-aradora-costa.png');
 // v4.4: sprites de movimento independentes e persistentes.
 // Não declarar os controles apenas no editor: o runtime também precisa deles.
 const mfHumanWalk={
@@ -3779,7 +3781,7 @@ function tryHarvestAtTile(tile) {
   // Plantação morta: a foice só limpa a terra (sem colheita nem XP).
   if (tipo === 'morta') {
     window.MFGameAudio?.event('harvest','item-morta');
-    tile.cultura = null;
+    tile.cultura = null;tile.itemId='item-terra';
     tile.imgSrc = TERRA_SECA_SRC;
     requestRedraw();
     return true;
@@ -3793,7 +3795,7 @@ function tryHarvestAtTile(tile) {
   const cfg=window.MFFarmEconomy.crops[tipo];
   if(cfg && tile.cultura.etapa===2){
     if(!spawnLoot(tipo,screenX,screenY))return false;window.MFGameAudio?.event('harvest','item-'+tipo);
-    tile.cultura=null;tile.imgSrc=TERRA_SECA_SRC;
+    tile.cultura=null;tile.itemId='item-terra';tile.imgSrc=TERRA_SECA_SRC;
     addXP(window.MFAdapter?.project?.items?.['item-'+tipo]?.harvestXP ?? cfg.xp);window.MFHost?.changed?.('crop-harvested');return true;
   }
   return false;
@@ -3859,7 +3861,8 @@ function queueJob(t, kind, item) {
   if (kind === 'plantar') {
     if (!item || !jobValid(t, { kind })) return false;
     if (moedas < plantsQueuedCost() + (Number(item.price) || 0)) return false; // reserva as moedas da fila
-    t._job = { kind, itemId: item.id, price: Number(item.price) || 0 };
+    const seed=window.MFPlanting.snapshot(item);if(!seed||!CROP_STAGE_TABLE[seed.id.slice(5)])return false;
+    t._job = { kind, itemId: seed.id, price: seed.price, seed };
   } else if (kind === 'colher' || kind === 'animal' || kind === 'tree') {
     if (!jobValid(t, { kind })) return false;
     t._job = { kind };
@@ -3881,9 +3884,8 @@ function finishJob(t, a, completedAt=Date.now()) {
   if(job.kind==='tree'){collectTreeFruit(t);return;}
   if (job.kind === 'plantar') {
     const card = document.getElementById(job.itemId); if (!card) return;
-    const keep = placingItem;
-    placingItem = { id: card.id, w: parseInt(card.dataset.w || 1), h: parseInt(card.dataset.h || 1), imgSrc: card.dataset.img || '', price: parseInt(card.dataset.preco || 0), tipo: card.dataset.tipo || 'dependente', xp: parseInt(card.dataset.xp || 0), visualScale: parseFloat(card.dataset.visualscale || '1') };
-    try { plantCropAtTile(t,completedAt); } finally { placingItem = keep; }
+    const seed=window.MFPlanting.fromJob(a.seed?{...job,seed:a.seed}:job,card);
+    if(seed)plantCropAtTile(t,completedAt,seed);
     return;
   }
   t.imgSrc = TERRA_ARADA_SRC;
@@ -3895,7 +3897,7 @@ function iniciarArar(terra) {
   if (!jobValid(terra, job)) { delete terra._job; player.acaoAtual = null; if (filaAcoes.length > 0) iniciarArar(filaAcoes.shift()); return; }
   player.path = findPath(player.gx, player.gy, terra.gx, terra.gy);
   const remoto = !!findPath.blocked;
-  player.acaoAtual = { remoto, tipo: 'arar', job: job.kind, itemId: job.itemId || '', price: job.price || 0, alvo: terra, state: 'indo', startTime: 0, duration: JOB_TIME[job.kind] || 3000, targetGx: terra.gx, targetGy: terra.gy };
+  player.acaoAtual = { remoto, tipo: 'arar', job: job.kind, itemId: job.itemId || '', price: job.price || 0, seed:job.seed?{...job.seed}:null, alvo: terra, state: 'indo', startTime: 0, duration: JOB_TIME[job.kind] || 3000, targetGx: terra.gx, targetGy: terra.gy };
 }
 function processArar(dt) {
   if (!player.acaoAtual || player.acaoAtual.tipo !== 'arar') {
@@ -4429,11 +4431,12 @@ window.addEventListener("mouseup", () => {
   spawnedTiles.clear();
 });
 // === Função auxiliar para plantar ===
-function plantCropAtTile(terreno,plantedAt=Date.now()) {
-  if (!placingItem || !terreno || terreno.cultura || !String(terreno.imgSrc||'').includes('terra-arada')) return false;
+function plantCropAtTile(terreno,plantedAt=Date.now(),requestedSeed=placingItem) {
+  const seed=window.MFPlanting.snapshot(requestedSeed);
+  if (!seed || !terreno || terreno.cultura || !String(terreno.imgSrc||'').includes('terra-arada')) return false;
 
-  let tipo = placingItem.id.replace("item-", "");
-  let etapas, totalTime = 30000, xp = placingItem.xp || 0;
+  let tipo = seed.id.replace("item-", "");
+  let etapas, totalTime = 30000, xp = seed.xp || 0;
 
   switch (tipo) {
     case "milho": etapas = MILHO_ETAPAS; totalTime = 20000; break;
@@ -4446,18 +4449,19 @@ function plantCropAtTile(terreno,plantedAt=Date.now()) {
   case "cafe": etapas = CAFE_ETAPAS; totalTime = 145000; break;
   default: // plantações novas (espinafre, soja, cana...) vêm da configuração do projeto
     etapas = CROP_STAGE_TABLE[tipo]; if (!etapas) return;
-    totalTime = Number(window.MFAdapter?.project?.items?.[placingItem.id]?.growTime) || CROP_TIME_TABLE[tipo] || 30000;
+    totalTime = Number(window.MFAdapter?.project?.items?.[seed.id]?.growTime) || CROP_TIME_TABLE[tipo] || 30000;
   }
 
-  if (moedas >= placingItem.price) {
+  if (moedas >= seed.price) {
     window.MFValueSource?.tile(terreno, "plantio");
-    moedas -= placingItem.price;
+    moedas -= seed.price;
     if (moedasSpan) moedasSpan.textContent = moedas;
-    addXP(Number(window.MFAdapter?.project?.items?.[placingItem.id]?.plantXP ?? xp));
+    addXP(Number(window.MFAdapter?.project?.items?.[seed.id]?.plantXP ?? xp));
 
-    terreno.cultura = { tipo, etapa: 0, startTime: plantedAt, totalTime };
+    terreno.itemId='item-'+tipo;
+    terreno.cultura = { tipo, seedId:seed.id, paidCoins:seed.price, etapa: 0, startTime: plantedAt, totalTime };
     terreno.imgSrc = etapas[0];
-    startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
+    startGrowthTimer(terreno);window.MFGameAudio?.event('plant',seed.id);
     window.MFHost?.changed?.('crop-planted');
     return true;
   }
@@ -4518,113 +4522,7 @@ if (
       const terreno = findTerrainAt(px, py);
       if (window.__mfJobQueue) return; // plantio vai pela fila (mousedown)
 
-      // Dependente: cada crop é tratado aqui com um if/else-if encadeado
-      if(window.MFAdapter?.project?.items?.[placingItem.id]?.custom && placingItem.tipo==='dependente') {
-        const def=window.MFAdapter.project.items[placingItem.id],type=placingItem.id.replace(/^item-/,''),stages=CROP_STAGE_TABLE[type];
-        if(terreno && terreno.imgSrc && terreno.imgSrc.includes('terra-arada') && !terreno.cultura && stages && moedas>=placingItem.price){
-          moedas-=placingItem.price;if(moedasSpan)moedasSpan.textContent=moedas;
-          addXP(placingItem.xp||0);terreno.cultura={tipo:type,etapa:0,startTime:Date.now(),totalTime:Number(def.growTime)||30000};
-          terreno.imgSrc=stages[0];startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
-        }
-      } else if (placingItem.id === 'item-milho') {
-        if (terreno && terreno.imgSrc && terreno.imgSrc.indexOf('terra-arada') !== -1 && !terreno.cultura) {
-          if (moedas >= placingItem.price) {
-            moedas -= placingItem.price; if (moedasSpan) moedasSpan.textContent = moedas;
-            if (placingItem.xp) addXP(placingItem.xp);
-            terreno.cultura = { tipo: 'milho', etapa: 0, startTime: Date.now(), totalTime: 20000 };
-            terreno.imgSrc = MILHO_ETAPAS[0];
-            startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
-          }
-        } else {
-          console.log('Só pode plantar milho em terra-arada vazia!');
-        }
-      } else if (placingItem.id === 'item-cenoura') {
-        if (terreno && terreno.imgSrc && terreno.imgSrc.indexOf('terra-arada') !== -1 && !terreno.cultura) {
-          if (moedas >= placingItem.price) {
-            moedas -= placingItem.price; if (moedasSpan) moedasSpan.textContent = moedas;
-            if (placingItem.xp) addXP(placingItem.xp);
-            terreno.cultura = { tipo: 'cenoura', etapa: 0, startTime: Date.now(), totalTime: 40000 };
-            terreno.imgSrc = CENOURA_ETAPAS[0];
-            startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
-          }
-        } else {
-          console.log('Só pode plantar cenoura em terra-arada vazia!');
-        }
-      } else if (placingItem.id === 'item-morango') {
-        if (terreno && terreno.imgSrc && terreno.imgSrc.indexOf('terra-arada') !== -1 && !terreno.cultura) {
-          if (moedas >= placingItem.price) {
-            moedas -= placingItem.price; if (moedasSpan) moedasSpan.textContent = moedas;
-            if (placingItem.xp) addXP(placingItem.xp);
-            terreno.cultura = { tipo: 'morango', etapa: 0, startTime: Date.now(), totalTime: 75000 };
-            terreno.imgSrc = MORANGO_ETAPAS[0];
-            if (!imgCache[MORANGO_ETAPAS[0]]) { const img = new Image(); img.src = MORANGO_ETAPAS[0]; imgCache[MORANGO_ETAPAS[0]] = img; }
-            startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
-
-      } else if (placingItem.id === 'item-melancia') {
-        if (terreno && terreno.imgSrc && terreno.imgSrc.indexOf('terra-arada') !== -1 && !terreno.cultura) {
-          if (moedas >= placingItem.price) {
-            moedas -= placingItem.price; if (moedasSpan) moedasSpan.textContent = moedas;
-            if (placingItem.xp) addXP(placingItem.xp);
-            terreno.cultura = { tipo: 'melancia', etapa: 0, startTime: Date.now(), totalTime: 55000 };
-            terreno.imgSrc = MELANCIA_ETAPAS[0];
-            if (!imgCache[MELANCIA_ETAPAS[0]]) { const img = new Image(); img.src = MELANCIA_ETAPAS[0]; imgCache[MELANCIA_ETAPAS[0]] = img; }
-            startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
-          }
-        } else {
-          console.log('Só pode plantar melancia em terra-arada vazia!');
-        }
-          }
-        } else {
-          console.log('Só pode plantar morango em terra-arada vazia!');
-        }
-      } else if (placingItem.id === 'item-trigo') {
-        if (terreno && terreno.imgSrc && terreno.imgSrc.indexOf('terra-arada') !== -1 && !terreno.cultura) {
-          if (moedas >= placingItem.price) {
-            moedas -= placingItem.price; if (moedasSpan) moedasSpan.textContent = moedas;
-            if (placingItem.xp) addXP(placingItem.xp);
-            terreno.cultura = { tipo: 'trigo', etapa: 0, startTime: Date.now(), totalTime: 25000 };
-            terreno.imgSrc = TRIGO_ETAPAS[0];
-            startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
-          }
-        } else {
-          console.log('Só pode plantar trigo em terra-arada vazia!');
-        }
-      } else if (placingItem.id === 'item-beterraba') {
-      } else if (placingItem.id === 'item-abacaxi') {
-        if (terreno && terreno.imgSrc.includes('terra-arada') && !terreno.cultura) {
-          if (moedas >= placingItem.price) {
-            moedas -= placingItem.price; if (moedasSpan) moedasSpan.textContent = moedas;
-            addXP(placingItem.xp || 80);
-            terreno.cultura = { tipo: 'abacaxi', etapa: 0, startTime: Date.now(), totalTime: 55000 };
-            terreno.imgSrc = ABACAXI_ETAPAS[0];
-            startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
-          }
-        }
-      } else if (placingItem.id === 'item-cafe') {
-        if (terreno && terreno.imgSrc.includes('terra-arada') && !terreno.cultura) {
-          if (moedas >= placingItem.price) {
-            moedas -= placingItem.price; if (moedasSpan) moedasSpan.textContent = moedas;
-            addXP(placingItem.xp || 80);
-            terreno.cultura = { tipo: 'cafe', etapa: 0, startTime: Date.now(), totalTime: 145000 };
-            terreno.imgSrc = CAFE_ETAPAS[0];
-            startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
-          }
-        }
-
-        if (terreno && terreno.imgSrc && terreno.imgSrc.indexOf('terra-arada') !== -1 && !terreno.cultura) {
-          if (moedas >= placingItem.price) {
-            moedas -= placingItem.price; if (moedasSpan) moedasSpan.textContent = moedas;
-            if (placingItem.xp) addXP(placingItem.xp);
-            terreno.cultura = { tipo: 'beterraba', etapa: 0, startTime: Date.now(), totalTime: 35000 };
-            terreno.imgSrc = BETERRABA_ETAPAS[0];
-            startGrowthTimer(terreno);window.MFGameAudio?.event('plant',placingItem.id);
-          }
-        } else {
-          console.log('Só pode plantar beterraba em terra-arada vazia!');
-        }
-      } else {
-        console.log('Dependente desconhecido');
-      }
+      plantCropAtTile(terreno);
 
       // salva imediatamente após plantar / colocar item (melhor para mobile)
       if (typeof saveGameState === 'function') {
@@ -7249,7 +7147,8 @@ function mfSyncItemInstances(id, entry){
   const animal=String(obj.animal?.tipo||'').toLowerCase();
   const crop=String(obj.cultura?.tipo||'').toLowerCase();
   const objType=String(obj.itemId||obj.catalogId||obj.tipo||'').replace(/^item-/,'').toLowerCase();
-  const matching=animal===type||crop===type||objType===type;
+  const matching=window.MFPlanting.matches(obj,type);
+  if(!obj.cultura&&!obj.animal&&(CROP_STAGE_TABLE[type]||entry.category==='plantacoes'))continue;
   if(!matching)continue;
   if(obj.fruitTree&&window.MFFruitTrees){window.MFFruitTrees.sync(obj);continue;}
   if(id==='item-celeiro'&&window.MFBarn){window.MFBarn.normalize(obj);continue;}
@@ -7434,6 +7333,7 @@ function apply(p,opts={}){project=merge(copy(def),p||{});
  if(aradora.path?.length===0 && !aradora.acaoAtual)aradora.currentSprite=mfHumanSprite(aradora,false,false);
  if(project.game&&!opts.skipGame)applyState(project.game);
  else if(Array.isArray(project.scene)&&project.scene.length&&!opts.skipGame)restoreTerrenosFromSnapshot(project.scene);
+ if(window.__mfCharacter)window.MFCharacter?.apply(window.__mfCharacter);
  window.MFOnlineUI?.apply(project);clampNewCamera();cache.sig='';requestRedraw();return project
 }
 
@@ -7498,9 +7398,15 @@ canvas.addEventListener('wheel',e=>{e.preventDefault();e.stopImmediatePropagatio
  zoom=Math.min(project.camera.maxZoom,Math.max(project.camera.minZoom,zoom*Math.exp(-e.deltaY*.0008)));
  offsetX=sx-MFViewport.width/2-wx*zoom;offsetY=sy-MFViewport.height/3-wy*zoom;clampNewCamera();requestRedraw();}, {capture:true,passive:false});
 window.addEventListener('resize',()=>{MFViewport.resize(canvas);applyLayoutProfile();cache.sig='';clampNewCamera();requestRedraw()});
+// Safari pode restaurar a página preservando o JS, mas descartando os buffers gráficos.
+function refreshRenderSurface(){MFViewport.resize(canvas);cache.sig='';applyLayoutProfile();clampNewCamera();requestRedraw();}
+window.addEventListener('pageshow',refreshRenderSurface);
+window.visualViewport?.addEventListener('resize',refreshRenderSurface);
+canvas.addEventListener('contextrestored',refreshRenderSurface);
+
 window.addEventListener('blur',()=>{panning=false;cancelGlide()});
 // A versão editável usa JSON como fonte única. A versão exportada contém apenas este adaptador + jogo.
-setTimeout(()=>{try{apply(project);if(!project.game&&typeof loadGameState==='function')loadGameState()}catch(err){console.error('[MF] Erro na inicialização',err)}},0);
+window.MFProjectReady=new Promise((resolve,reject)=>{setTimeout(()=>{try{apply(project);if(!project.game&&typeof loadGameState==='function')loadGameState();resolve()}catch(err){console.error('[MF] Erro na inicialização',err);reject(err)}},0)});
 })();
 
 </script>

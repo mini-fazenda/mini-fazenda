@@ -659,9 +659,10 @@
   const CHAR_GIRL = { idle: 'assets/menina/parada.gif', back: 'assets/menina/costas.png', plow: 'assets/menina/arando.png', walkFront: 'assets/menina/andando-frente.gif', walkBack: 'assets/menina/andando-costas.gif', card: 'assets/menina/frente.png' };
   let CHAR_BOY = null;
   function rememberBoy() {
-    if (CHAR_BOY) return;
+
     try {
-      CHAR_BOY = { idle: spriteFront.src, back: spriteBack.src, plow: spriteArando.src, walkFront: mfHumanWalk.playerFront.src, walkBack: mfHumanWalk.playerBack.src, card: 'assets/b86748633e6ac8337f3b-personagem-de-frente.png' };
+      const sprites=window.MFAdapter?.project?.sprites||{};
+      CHAR_BOY = { idle:sprites.playerFront||'assets/6aca82b20c0def5da472.gif', back:sprites.playerBack||'assets/2f295405dbc0fd60266b-Gemini-Generated-Image-ibf4glibf4glibf4-removebg-preview.png', plow:'assets/4af61ed5a1bace7feb06-arando-a-terra.png', walkFront:sprites.playerWalkFront||'', walkBack:sprites.playerWalkBack||'', card:'assets/b86748633e6ac8337f3b-personagem-de-frente.png' };
     } catch (e) { }
   }
   function applyCharacter(kind) {

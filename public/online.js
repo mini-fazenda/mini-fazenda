@@ -4,7 +4,7 @@ import {nextDocument,clearLegacySaves,recoverPendingState} from './persistence.j
 import {redeemTestCredit} from './test-credit.js?v=2';
 import {startFriends,stopFriends,publishProfile,api as friendsApi} from './friends.js?v=block-12h';
 // A versão do módulo publicado também identifica o HTML do jogo no cache.
-const releaseVersion=new URL(import.meta.url).searchParams.get('v')||'artes-melancia-v3';
+const releaseVersion=window.MF_BUILD_VERSION||new URL(import.meta.url).searchParams.get('v')||'artes-melancia-v3';
 const $=id=>document.getElementById(id);
 const config=window.MINI_FAZENDA_FIREBASE;
 let sdk,auth,db,user,sessionId,revision=0,epoch=0;
@@ -51,7 +51,7 @@ function gate(text){$('farms').close();$('gate').hidden=false;$('message').textC
 function freeze(){ready=false;sessionActive=false;stopped=true;pending=null;clearTimeout(retryTimer);clearTimeout(reconnectTimer);clearTimeout(projectionTimer);$('game-container').replaceChildren();bridge=null;$('toolbar').hidden=true}
 function fail(error){
   if(stopped)return;
-  console.error(error);freeze();gate(String(error?.message||'').startsWith('save/incompatible')?error.message:'Não foi possível conectar à fazenda. Recarregue a página para tentar novamente.');
+  console.error(error);freeze();if(error?.message==='release/mismatch'){gate('O navegador carregou arquivos de versões diferentes. Recarregue a página para atualizar sem alterar sua conta.');const button=document.createElement('button');button.textContent='Atualizar jogo';button.onclick=()=>location.reload();$('message').append(document.createElement('br'),button);return;}gate(String(error?.message||'').startsWith('save/incompatible')?error.message:'Não foi possível conectar à fazenda. Recarregue a página para tentar novamente.');
 }
 async function disconnectPrevious(){
   if(stopped)return;
@@ -203,6 +203,7 @@ window.MFOnline={
   },
   attach(api){
     if(stopped)return;
+    if(window.MF_BUILD_VERSION&&api.release!==window.MF_BUILD_VERSION){fail(new Error('release/mismatch'));return;}
     bridge=api;ready=true;
     if(connected&&sessionActive){$('gate').hidden=true;if(!visiting)checkpoint()}
   },fail
