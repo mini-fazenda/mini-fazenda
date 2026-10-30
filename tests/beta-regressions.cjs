@@ -161,6 +161,19 @@ const {chromium,webkit,devices}=require('playwright');
   await f.evaluate(()=>{MFGrowthInfo.update();if(document.getElementById('mf-growth-info').hidden)throw Error('Informação sumiu após soltar o toque');});
  }
  console.log('PASS: toque mostra porcentagem e tempo persistentes para plantação, árvore, leite e lã');
+ await f.evaluate(()=>{
+  window.MFCancelPlacing();filaAcoes=[];player.acaoAtual=null;player.path=[];terrenos=[];
+  for(const o of [0,1]){const t=MFBarnCore.start(COLS-(o?6:4),ROWS-(o?4:6),o,0);t.barnXPGranted=true;MFBarn.normalize(t);terrenos.push(t);preload(t.imgSrc);}
+ });
+ await f.waitForFunction(()=>terrenos.every(t=>preload(t.imgSrc)?.naturalWidth>0));
+ await f.evaluate(()=>{
+  for(const t of terrenos){const a=gridToScreen(t.gx+(t.w-1)/2,t.gy+(t.h-1)/2),img=preload(t.imgSrc),geometry=MFBarnCore.geometry(t,a,img.src),p=geometry.project(320,250);
+   if(!MFBarn.hit(t,img,p.x,p.y))throw Error('Clique não acompanha arte corrigida');
+   const corner=gridToScreen(COLS-.5,ROWS-.5);if(Math.abs(geometry.front.x-corner.x)>.01||Math.abs(geometry.front.y-corner.y)>.01)throw Error('Base não encostou na borda');
+   const surface=document.createElement('canvas');surface.width=800;surface.height=700;const g=surface.getContext('2d');g.translate(400-a.x,400-a.y);if(!MFBarn.drawSprite(g,t,a,img))throw Error('Celeiro não desenhou');
+  }
+ });
+ console.log('PASS: base do celeiro encosta no limite lógico nas duas posições e clique acompanha a arte');
  if(errors.length)throw Error(errors.join('\n'));console.log('PASS: celeiro 200 moedas, obra autônoma 5min, giro, save, 5 estrelas únicas e toque abre vendas ('+(ios?'WebKit/iOS':'Chromium/toque')+')');
  await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});

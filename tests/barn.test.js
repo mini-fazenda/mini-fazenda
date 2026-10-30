@@ -13,3 +13,13 @@ test('obra dura cinco minutos, completa offline e concede cinco estrelas uma ún
 test('visitar não concede estrelas; mover/guardar preservam recibo e prazo da obra',()=>{
  const t=c.start(3,3,1,1000);assert.equal(c.sync(t,301000,false).stars,0);assert.equal(t.barnXPGranted,false);const stored=JSON.parse(JSON.stringify(t));assert.equal(c.sync(stored,400000,true).stars,5);assert.equal(c.sync(JSON.parse(JSON.stringify(stored)),500000,true).stars,0);
 });
+test('base visível encaixa nos limites reais em ambas as orientações e fases',()=>{
+ const iso=(gx,gy)=>({x:(gx-gy)*48,y:(gx+gy)*24});
+ for(const orientation of [0,1])for(const src of ['celeiro-'+orientation+'.png','fundacao.svg','estrutura.svg'])for(const [gx,gy]of [[0,0],[14,14]]){
+  const t=c.start(gx,gy,orientation,0),a=iso(gx+(t.w-1)/2,gy+(t.h-1)/2),g=c.geometry(t,a,src);
+  for(const [key,target]of [['left',iso(gx-.5,gy+t.h-.5)],['front',iso(gx+t.w-.5,gy+t.h-.5)],['right',iso(gx+t.w-.5,gy-.5)]]){
+   const point=g.project(...g.foot[key]);assert.ok(Math.abs(point.x-target.x)<1e-8);assert.ok(Math.abs(point.y-target.y)<1e-8);
+  }
+  for(const p of [[100,200],[500,300],[336,400]]){const projected=g.project(...p),back=g.unproject(projected.x,projected.y);assert.ok(Math.abs(back.x-p[0])<1e-8);assert.ok(Math.abs(back.y-p[1])<1e-8);}
+ }
+});

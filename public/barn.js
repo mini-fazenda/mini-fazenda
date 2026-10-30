@@ -7,7 +7,7 @@
  const turn=document.createElement('button');turn.id='mf-barn-rotate';turn.type='button';turn.textContent='↻ Girar celeiro (R)';turn.hidden=true;
  Object.assign(turn.style,{position:'fixed',bottom:'115px',left:'50%',transform:'translateX(-50%)',zIndex:'1600',background:'#72b83d',border:'3px solid #4c702c',borderRadius:'12px',padding:'9px 15px',color:'white',font:'18px Amfost,Arial',cursor:'pointer'});document.body.append(turn);
  const active=()=>placingItem?.id===core.ID;
- function updatePreview(){const l=core.layout(orientation),src=`assets/construcoes/celeiro-${orientation}.png`;Object.assign(placingItem,l,{imgSrc:src});if(selectedItem?.id===core.ID)Object.assign(selectedItem,l,{imgSrc:src});preview.img=preload(src);requestRedraw();}
+ function updatePreview(){const l=core.layout(orientation),src=`assets/construcoes/celeiro-${orientation}.png`;Object.assign(placingItem,l,{imgSrc:src,barnOrientation:orientation});if(selectedItem?.id===core.ID)Object.assign(selectedItem,l,{imgSrc:src,barnOrientation:orientation});preview.img=preload(src);requestRedraw();}
  function rotate(){if(visiting())return;if(active()){orientation=orientation?0:1;updatePreview();return;}if(modoMover&&core.is(estruturaMovendo)){if(!core.rotate(estruturaMovendo,COLS,ROWS,terrenos)){window.MFToast?.('Falta espaço para girar o celeiro.');return;}preview.gridX=estruturaMovendo.gx;preview.gridY=estruturaMovendo.gy;preview.img=preload(estruturaMovendo.imgSrc);changed();}}
  turn.onclick=rotate;
  function select(){if(visiting()||moedas<200)return;window.MFFences?.stop();window.MFHoe?.stop();setFarmMoveMode(false);orientation=0;placingItem={id:core.ID,tipo:'proprio',price:200,xp:5,...core.layout(0),imgSrc:'assets/construcoes/celeiro-0.png'};selectedItem={...placingItem};continuousSelection=false;modoColocar='placing';preview.active=true;updatePreview();turn.hidden=false;}
@@ -28,7 +28,15 @@
  function format(ms){const n=Math.max(0,Math.ceil(ms/1000));return Math.floor(n/60)+':'+String(n%60).padStart(2,'0');}
  function tick(){let dirty=false;const award=!visiting()&&(!window.MFHost||window.MFHost.playing());for(const t of terrenos){if(!core.is(t))continue;const result=core.sync(t,Date.now(),award);if(result.stars)addXP(result.stars);dirty ||= result.changed;}turn.hidden=visiting()||!(active()||modoMover&&core.is(estruturaMovendo));if(dirty)changed();}
  setInterval(tick,500);
- window.MFBarn={select,place,rotate,tick,normalize,is:core.is,src:t=>core.is(t)?core.art(t):null,draw(g){
+ function drawSprite(g,t,anchor,img){if(!core.is(t))return false;
+  const geometry=core.geometry(t,anchor,img.src||t.imgSrc);
+  for(const m of geometry.segments){g.save();g.transform(m.a,m.b,0,m.d,m.e,m.f);g.beginPath();g.rect(m.x0,0,m.x1-m.x0,512);g.clip();g.drawImage(img,0,0,640,512);g.restore();}return true;
+ }
+ const hitCanvas=document.createElement('canvas');hitCanvas.width=hitCanvas.height=1;const hitContext=hitCanvas.getContext('2d',{willReadFrequently:true});
+ function hit(t,img,x,y){const anchor=gridToScreen(t.gx+(t.w-1)/2,t.gy+(t.h-1)/2),p=core.geometry(t,anchor,img.src||t.imgSrc).unproject(x,y);if(p.x<0||p.x>=640||p.y<0||p.y>=512)return false;
+  hitContext.clearRect(0,0,1,1);hitContext.drawImage(img,p.x,p.y,1,1,0,0,1,1);return hitContext.getImageData(0,0,1,1).data[3]>40;
+ }
+ window.MFBarn={select,place,rotate,tick,normalize,drawSprite,hit,is:core.is,src:t=>core.is(t)?core.art(t):null,draw(g){
   for(const t of terrenos){if(!core.is(t)||Date.now()>=t.barnReadyAt||modoMover&&estruturaMovendo===t)continue;
    const a=gridToScreen(t.gx+(t.w-1)/2,t.gy+(t.h-1)/2),progress=Math.min(1,Math.max(0,(Date.now()-t.barnStartedAt)/core.TIME)),x=a.x-72,y=a.y-278;
    g.save();g.fillStyle='#513824';g.fillRect(x,y,144,34);g.fillStyle='#78c63f';g.fillRect(x+3,y+3,138*progress,9);g.font='15px Arial';g.textAlign='center';g.fillStyle='#fff4cc';g.fillText('Construindo '+format(t.barnReadyAt-Date.now()),a.x,y+28);g.restore();
