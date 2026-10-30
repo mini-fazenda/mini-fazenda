@@ -16,3 +16,9 @@ test('corredor de um quadrado permanece separado; artes de vizinhos encostam',()
  assert.equal(corridor.left.x-adjacent.left.x,48);assert.equal(corridor.left.y-adjacent.left.y,24);
  assert.equal(MFCropSprites.geometry(t,project(.5,.5),'vaca.png'),null);
 });
+test('todos os arquivos de estágios locais têm base calibrada',async()=>{
+ const {readdir}=await import('node:fs/promises');
+ for(const dir of ['public/assets','public/assets/cultivos-novos'])for(const name of await readdir(dir)){
+  if(/-(inicio|quase|final)(-v3)?\.(png|webp)$/.test(name))assert.ok(MFCropSprites.bases[name],name);
+ }
+});
