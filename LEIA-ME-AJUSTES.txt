@@ -267,3 +267,10 @@ REVISAO 19 - PASSAROS E CENARIO COM AS ARTES ENVIADAS
 - Preservadas estrada, ponte, tunel, cascata, tamanho da fazenda e regras de expansao.
 - Tres fases e icone do arroz substituidos pelas artes novas, sem mudar tempo, preco, venda ou estrelas. Saves antigos recebem somente a nova arte.
 - 41 testes passaram; scripts inline compilados; composicao do cenario e recortes conferidos em renderizacao Canvas. Teste de navegacao/login no browser nao executado nesta revisao.
+
+REVISAO 20 - DIVISORIA, CERCAS DA FOLHA E ZOOM
+- Borda tracejada clara com contorno verde e leve destaque dentro do terreno, calculada a partir de COLS/ROWS e acompanhando expansoes. Apenas visual, sem bloquear o personagem.
+- Cercas com flores, arame e branca usam o atlas recortado da folha enviada, com trilhos nas duas direcoes e postes compartilhados nos cantos. Icones da loja e do MiniBau atualizados.
+- Mantidas cercas salvas, precos (50/50/80), mover, guardar, encaixe e colisao existentes.
+- Zoom minimo de 60% para 25%, tanto no botao de afastar quanto na pinca, para enxergar o mapa no celular.
+- 43 testes unitarios passaram; scripts inline compilados; recortes e composicao conferidos em Canvas. Adicionado teste de navegador para botao e pinca ate 25%.

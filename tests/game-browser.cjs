@@ -17,6 +17,22 @@ const {chromium}=require('playwright');
  await page.waitForFunction(()=>window.attached);await page.waitForTimeout(1500);
  let frame=page.frames().find(f=>/game\.html/.test(f.url()));
  console.log('initial',await page.evaluate(()=>{const s=testAPI.capture();return {moedas:s.moedas,level:s.playerLevel,terrenos:s.terrenos.length}}));
+ // O botão e o gesto de pinça usam o mesmo limite de 25%, inclusive no celular.
+ await frame.evaluate(()=>{
+  const original={zoom,offsetX,offsetY};zoom=.6;
+  const button=document.getElementById('mf-zoom-out');if(!button)throw Error('Botão de afastar não carregou');
+  for(let i=0;i<15;i++)button.click();
+  if(Math.abs(zoom-.25)>.0001)throw Error('Botão não afastou até 25%: '+zoom);
+  zoom=.6;
+  const pinch=(type,positions)=>{
+   const touches=positions.map((p,i)=>new Touch({identifier:i+1,target:canvas,clientX:p[0],clientY:p[1]}));
+   canvas.dispatchEvent(new TouchEvent(type,{bubbles:true,cancelable:true,touches,targetTouches:touches,changedTouches:touches}));
+  };
+  pinch('touchstart',[[200,200],[600,200]]);pinch('touchmove',[[360,200],[440,200]]);pinch('touchend',[]);
+  if(Math.abs(zoom-.25)>.0001)throw Error('Pinça não afastou até 25%: '+zoom);
+  ({zoom,offsetX,offsetY}=original);requestRedraw();
+ });
+ console.log('PASS: botão e pinça permitem afastar até 25%');
  // Movimento em celular: toque seleciona, segundo toque posiciona e a câmera permanece imóvel.
  await frame.evaluate(()=>{
    if(!window.MFMoveControls||!window.MFFences?.selectMoveAt)throw Error('Controles de mover não carregaram');

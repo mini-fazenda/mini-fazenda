@@ -1,6 +1,6 @@
 /* Cercas vivem nas arestas da grade: um trecho e um poste por posição. */
 (function(root){
- const catalog={flowers:{name:'Cerca de madeira com flores',price:50,id:'item-cerca-flores',icon:'assets/cercas/flores.svg'},wire:{name:'Cerca de madeira com arame',price:50,id:'item-cerca-arame',icon:'assets/cercas/arame.svg'},white:{name:'Cerca branca',price:80,id:'item-cerca-branca',icon:'assets/cercas/branca.svg'}};
+ const catalog={flowers:{name:'Cerca de madeira com flores',price:50,id:'item-cerca-flores',icon:'assets/cercas/flores.png'},wire:{name:'Cerca de madeira com arame',price:50,id:'item-cerca-arame',icon:'assets/cercas/arame.png'},white:{name:'Cerca branca',price:80,id:'item-cerca-branca',icon:'assets/cercas/branca.png'}};
  const key=e=>`${e.axis}:${e.gx}:${e.gy}`;
  const valid=e=>!!e&&!!catalog[e.type]&&['x','y'].includes(e.axis)&&Number.isSafeInteger(e.gx)&&Number.isSafeInteger(e.gy)&&e.gx>=0&&e.gy>=0&&e.gx<=100&&e.gy<=100;
  const ends=e=>[{gx:e.gx,gy:e.gy},{gx:e.gx+(e.axis==='x'?1:0),gy:e.gy+(e.axis==='y'?1:0)}];
