@@ -118,6 +118,20 @@ export const query=r=>r,orderByKey=()=>{},limitToFirst=()=>{},startAfter=()=>{};
  f=page.frames().find(f=>f.url().includes('game.html'));
  if(await f.evaluate(()=>moedas)!==ownCoins)throw Error('Visita alterou a própria fazenda');
  console.log('PASS: visita e retorno carregam a fazenda da conta');
+ // Crédito de teste é exclusivo do ID e sobrevive aos saves sem repetir.
+ await page.evaluate(()=>{
+   testCloud['userCodes/rodrigo']='986568';testCloud['codes/986568']='rodrigo';
+   localStorage.setItem('test-cloud',JSON.stringify(testCloud));
+ });
+ await page.reload();await page.waitForFunction(()=>document.querySelector('#gate').hidden);
+ f=page.frames().find(f=>f.url().includes('game.html'));
+ if(await f.evaluate(()=>moedas)!==ownCoins+50000)throw Error('Crédito do dono não foi somado');
+ await f.evaluate(()=>{moedas-=25;saveGameState('credit-purchase')});
+ await page.waitForFunction(coins=>testCloud['farms/rodrigo']?.state.moedas===coins,ownCoins+50000-25);
+ await page.reload();await page.waitForFunction(()=>document.querySelector('#gate').hidden);
+ f=page.frames().find(f=>f.url().includes('game.html'));
+ if(await f.evaluate(()=>moedas)!==ownCoins+50000-25)throw Error('Crédito repetiu ao recarregar');
+ console.log('PASS: 50000 moedas somente ao ID 986568, uma vez após salvar e recarregar');
  await page.evaluate(()=>testReplaceSession());
  await page.waitForFunction(()=>document.querySelector('iframe')===null && !document.querySelector('#login').hidden);
  if(!await page.locator('#message').innerText().then(t=>t.includes('outro dispositivo')))throw Error('Sessão antiga não foi desconectada');

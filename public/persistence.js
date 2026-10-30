@@ -2,7 +2,8 @@
 export function nextDocument(current,{sessionId,revision,id,state,timestamp}){
   if(current?.saveId===id)return undefined;
   if(current&&current.revision!==revision)return undefined;
-  return {sessionId,revision:revision+1,saveId:id,state,updatedAt:timestamp};
+  return {sessionId,revision:revision+1,saveId:id,state,updatedAt:timestamp,
+    ...(current?.creditReceipts?{creditReceipts:current.creditReceipts}:{})};
 }
 // Remove somente os saves antigos da Mini Fazenda. Credenciais Firebase e preferências não são progresso.
 export function clearLegacySaves(projectId){

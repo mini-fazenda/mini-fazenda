@@ -274,3 +274,9 @@ REVISAO 20 - DIVISORIA, CERCAS DA FOLHA E ZOOM
 - Mantidas cercas salvas, precos (50/50/80), mover, guardar, encaixe e colisao existentes.
 - Zoom minimo de 60% para 25%, tanto no botao de afastar quanto na pinca, para enxergar o mapa no celular.
 - 43 testes unitarios passaram; scripts inline compilados; recortes e composicao conferidos em Canvas. Adicionado teste de navegador para botao e pinca ate 25%.
+
+REVISAO 21 - CREDITO UNICO DE TESTE AO ID 986568
+- Credito de 50000 moedas solicitado pelo dono, aplicado somente ao entrar na conta autenticada vinculada ao ID 986568 (verificacao em userCodes e codes).
+- Transacao no documento da fazenda soma ao saldo e grava recibo unico, preservado em todos os saves seguintes; nenhuma regra do Firebase foi afrouxada.
+- Preservados progresso, inventario, plantacoes e demais jogadores. Resgate ocorre antes de abrir a fazenda.
+- 46 testes unitarios passaram. Teste de navegador verifica resgate, gasto, salvamento e recarga sem repetir o credito.
