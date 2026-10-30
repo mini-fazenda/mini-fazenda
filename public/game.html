@@ -5170,6 +5170,7 @@ if(!window.MFBarn?.drawSprite(ctx,placingItem,anchor,img)&&!window.MFCropSprites
 
   // cursor overlay (draw last so it's on top)
   drawCursorOverlay();
+  window.MFFertilize?.syncStars?.();
 }
 
 // Renderização acontece em um único ciclo (loop abaixo).
@@ -7788,7 +7789,7 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 })();
 </script>
 
-<script src="extras.js?v=block-12h"></script>
+<script src="extras.js?v=stars-follow-4"></script>
 <script src="sales-core.js?v=1"></script>
 <script src="inventory-sales.js?v=estoque-4"></script>
 <script src="daily-state.js?v=2"></script>

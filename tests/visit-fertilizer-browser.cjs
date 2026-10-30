@@ -20,6 +20,11 @@ const assert=require('node:assert/strict');const {chromium}=require('playwright'
  await f.waitForFunction(()=>document.querySelectorAll('.mf-fertilized-stars').length===1);
  await f.waitForFunction(()=>{const img=document.querySelector('.mf-fertilized-stars img');return img?.complete&&img.naturalWidth>0;});
  const art=await f.evaluate(()=>{const img=document.querySelector('.mf-fertilized-stars img');return {src:img.getAttribute('src'),animation:getComputedStyle(img).animationName,width:img.naturalWidth};});assert.equal(art.src,'assets/fertilizante/estrelas-v2.webp');assert.equal(art.animation,'mfFertilizedGlow');assert.equal(art.width,512);
+ const alignment=await f.evaluate(()=>{
+  const el=document.querySelector('.mf-fertilized-stars'),before={x:parseFloat(el.style.left),y:parseFloat(el.style.top)};
+  offsetX+=83;offsetY-=27;draw();
+  return {dx:parseFloat(el.style.left)-before.x,dy:parseFloat(el.style.top)-before.y,width:parseFloat(el.style.width),expected:72*zoom};
+ });assert.ok(Math.abs(alignment.dx-83)<.01);assert.ok(Math.abs(alignment.dy+27)<.01);assert.ok(Math.abs(alignment.width-alignment.expected)<.01);
  const state=await page.evaluate(()=>visitBridge.capture());assert.equal(state.terrenos[0].cultura.fertilizada,true);assert.equal(state.terrenos[0].fertilizerUntil-state.terrenos[0].fertilizerAt,43200000);assert.equal(state.terrenos[0].cultura.fertWindows.length,1);
  await f.evaluate(()=>{const snap=getTerrenosSnapshot();restoreTerrenosFromSnapshot(snap);Object.assign(terrenos[0].cultura,snap[0].cultura);reapplyGrowthFromTime(terrenos[0]);});
  assert.equal(await f.evaluate(()=>terrenos[0].cultura.totalTime),600000);
