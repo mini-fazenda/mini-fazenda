@@ -188,6 +188,45 @@ const {chromium,webkit,devices}=require('playwright');
   const card=document.querySelector('#mf-shop .mfs-card[data-id="item-girassol"]');if(!card||!card.textContent.includes('1400')||!card.textContent.includes('1000'))throw Error('Girassol ausente ou preço incorreto na categoria Flores');
  });
  console.log('PASS: girassol em Flores, 6h, 50%, save, 50 estrelas na colheita, venda 1400 e lucro 400');
+
+ await f.evaluate(()=>{
+  window.MFCancelPlacing();document.getElementById('overlay-loja').style.display='none';clearInventoryFromSave();terrenos=[];filaAcoes=[];player.acaoAtual=null;player.path=[];moedas=2000;
+  for(let i=0;i<4;i++){
+   const t={gx:4+i*2,gy:4,w:2,h:2,imgSrc:TERRA_ARADA_SRC};terrenos.push(t);placingItem={id:'item-espinafre',price:100,xp:2};plantCropAtTile(t);
+   if(tryHarvestAtTile(t)||!t.cultura)throw Error('Espinafre imaturo foi perdido');
+   t.cultura.startTime-=t.cultura.totalTime+1;reapplyGrowthFromTime(t);
+  }
+  window.MFCancelPlacing();for(const t of terrenos)MFJobs.queue(t,'colher');
+  for(let i=0;i<4;i++){const a=player.acaoAtual;if(!a)throw Error('Fila de espinafre perdida');player.path=[];player.gx=a.alvo.gx;player.gy=a.alvo.gy;a.state='ararando';a.startTime=performance.now()-a.duration-10;processArar();}
+  if(__gameInventory.map.espinafre?.count!==4||terrenos.some(t=>t.cultura))throw Error('Espinafre não entrou no estoque');
+ });
+ // Recarrega antes de terminar o voo dos produtos ao Celeiro.
+ await reload();f=frame();await f.evaluate(()=>{
+  const item=__gameInventory.map.espinafre,slot=__gameInventory.slots[item?.slotIndex];
+  if(item?.count!==4||slot?.dataset.count!=='4'||!slot.querySelector('img').src.endsWith('produtos/espinafre.png'))throw Error('Espinafre perdido ou invisível depois de recarregar');
+  if(terrenos.some(t=>t.cultura)||moedas!==1600)throw Error('Plantio/colheita não persistiu');
+  const before=moedas;document.querySelector('#mf-sales-actions button:nth-child(2)').click();if(moedas!==before+560)throw Error('Quatro espinafres deveriam render 560 moedas');
+  clearInventoryFromSave();for(let i=0;i<25;i++)addToInventory('produto-teste-'+i,1,'');addToInventory('espinafre',4,'');
+  const occupied=Object.values(__gameInventory.map).map(x=>x.slotIndex);if(new Set(occupied).size!==26)throw Error('Inventário sobrepôs outro produto');
+  const t={gx:4,gy:4,w:2,h:2,imgSrc:TERRA_ARADA_SRC};terrenos=[t];placingItem={id:'item-espinafre',price:100,xp:2};plantCropAtTile(t);t.cultura.startTime-=t.cultura.totalTime+1;reapplyGrowthFromTime(t);
+  const add=window.addToInventory;window.addToInventory=()=>false;if(tryHarvestAtTile(t)||!t.cultura)throw Error('Colheita apagada sem crédito no inventário');window.addToInventory=add;
+  clearInventoryFromSave();
+ });
+ console.log('PASS: quatro espinafres na fila, estoque após reload imediato, venda 560, slots distintos e colheita preservada se crédito falhar');
+ await f.evaluate(()=>{
+  clearInventoryFromSave();for(const type of ['trigo','cenoura','girassol','espinafre','limao','maca','laranja','acerola'])addToInventory(type,7,'antiga.png');
+  for(const item of Object.values(__gameInventory.map))item.imgSrc='antiga.png';
+ });
+ await reload();f=frame();await f.evaluate(()=>{
+  for(const type of ['trigo','cenoura','girassol','espinafre','limao','maca','laranja','acerola']){
+   const item=__gameInventory.map[type],slot=__gameInventory.slots[item.slotIndex];if(item.count!==7||!slot.querySelector('img').src.endsWith('produtos/'+type+'.png'))throw Error('Migração de ícone perdeu estoque: '+type);
+  }
+  document.getElementById('overlay-bau').style.display='flex';
+ });
+ await f.waitForFunction(()=>[...document.querySelectorAll('#bau-inventario .bau-slot img')].every(img=>img.complete&&img.naturalWidth>0));
+ if(process.env.MF_INVENTORY_SCREENSHOT)await page.screenshot({path:process.env.MF_INVENTORY_SCREENSHOT});
+ console.log('PASS: oito ícones novos carregam no Celeiro e migram save antigo preservando quantidades');
+
  if(errors.length)throw Error(errors.join('\n'));console.log('PASS: celeiro 200 moedas, obra autônoma 5min, giro, save, 5 estrelas únicas e toque abre vendas ('+(ios?'WebKit/iOS':'Chromium/toque')+')');
  await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
