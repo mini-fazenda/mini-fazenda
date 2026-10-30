@@ -258,7 +258,7 @@
     { k: 'veiculos', l: 'Veículos' },
     { k: 'upgrades', l: 'Upgrades' },
   ];
-  const SUB = { arroz: 'graos', morango: 'frutas', abacaxi: 'frutas', melancia: 'frutas', cenoura: 'vegetais', beterraba: 'vegetais', soja: 'vegetais', espinafre: 'vegetais', cebola: 'vegetais', cana: 'vegetais', feijao: 'vegetais', milho: 'graos', trigo: 'graos', cafe: 'graos' };
+  const SUB = { girassol: 'flores', arroz: 'graos', morango: 'frutas', abacaxi: 'frutas', melancia: 'frutas', cenoura: 'vegetais', beterraba: 'vegetais', soja: 'vegetais', espinafre: 'vegetais', cebola: 'vegetais', cana: 'vegetais', feijao: 'vegetais', milho: 'graos', trigo: 'graos', cafe: 'graos' };
   const CAT = { plantacoes: 'sementes', sementes: 'sementes', animais: 'animais', arvores: 'arvores', construcoes: 'construcoes', decoracoes: 'decoracoes', veiculos: 'veiculos', mini: 'upgrades', upgrades: 'upgrades', promo: 'promo' };
   // unidades que cada colheita manda para o Mini Baú (igual ao jogo)
   const YIELD = { milho: 6, cenoura: 5, morango: 3, trigo: 6, beterraba: 4, abacaxi: 5, cafe: 5, melancia: 4 };
