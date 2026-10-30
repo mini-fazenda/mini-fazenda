@@ -20,8 +20,11 @@ const assert=require('node:assert/strict');const {chromium}=require('playwright'
  await f.waitForFunction(()=>document.querySelectorAll('.mf-fertilized-stars').length===1);
  await f.waitForFunction(()=>{const img=document.querySelector('.mf-fertilized-stars img');return img?.complete&&img.naturalWidth>0;});
  const art=await f.evaluate(()=>{const img=document.querySelector('.mf-fertilized-stars img');return {src:img.getAttribute('src'),animation:getComputedStyle(img).animationName,width:img.naturalWidth};});assert.equal(art.src,'assets/fertilizante/estrelas-v2.webp');assert.equal(art.animation,'mfFertilizedGlow');assert.equal(art.width,512);
- const state=await page.evaluate(()=>visitBridge.capture());assert.equal(state.terrenos[0].cultura.fertilizada,true);assert.equal(state.terrenos[0].cultura.fertilizedDuration,390000);
+ const state=await page.evaluate(()=>visitBridge.capture());assert.equal(state.terrenos[0].cultura.fertilizada,true);assert.equal(state.terrenos[0].fertilizerUntil-state.terrenos[0].fertilizerAt,43200000);assert.equal(state.terrenos[0].cultura.fertWindows.length,1);
  await f.evaluate(()=>{const snap=getTerrenosSnapshot();restoreTerrenosFromSnapshot(snap);Object.assign(terrenos[0].cultura,snap[0].cultura);reapplyGrowthFromTime(terrenos[0]);});
- assert.equal(await f.evaluate(()=>terrenos[0].cultura.totalTime),390000);assert.equal(await f.evaluate(()=>moedas),before.coins);assert.equal(await f.evaluate(()=>terrenos.length),before.n);
+ assert.equal(await f.evaluate(()=>terrenos[0].cultura.totalTime),600000);
+ await f.evaluate(()=>{const t=terrenos[0];t.cultura=null;});await page.waitForTimeout(200);assert.equal(await f.locator('.mf-fertilized-stars').count(),1);
+ await f.evaluate(()=>{const t=terrenos[0];t.cultura={tipo:'espinafre',startTime:Date.now(),totalTime:1200000,etapa:0};reapplyGrowthFromTime(t);});
+ assert.ok(await f.evaluate(()=>{const t=terrenos[0];return MFFertilizerCore.delay(t.cultura,1200000)<=780000&&t.cultura.fertWindows.length===1;}));assert.equal(await f.evaluate(()=>moedas),before.coins);assert.equal(await f.evaluate(()=>terrenos.length),before.n);
  assert.deepEqual(errors,[]);console.log('PASS: visita permite zoom, câmera e tela cheia; estrelas e duração persistem sem alterar moedas/objetos');
 }finally{await browser.close()}})().catch(e=>{console.error(e);process.exit(1)});

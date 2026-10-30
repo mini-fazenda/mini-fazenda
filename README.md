@@ -176,8 +176,10 @@ Referência: https://firebase.google.com/docs/database/rest/save-data#section-co
 
 A atualização permite zoom por botões, roda do mouse e pinça durante visitas.
 O adubo preserva a porcentagem atual e reduz em 35% o tempo restante.
-As estrelas persistem até a colheita e todos os visitantes consultam o mesmo
-registro por plantio. Replantar cria outro ciclo; mover conserva a identificação.
+O bloco fica adubado por 12 horas, inclusive entre colheitas e novos plantios.
+As estrelas permanecem no bloco enquanto o prazo estiver ativo. Todos os
+visitantes consultam o mesmo registro por coordenada. Após 12 horas, outro
+amigo pode adubar novamente.
 
 **Publicação necessária no Firebase:** copie o conteúdo completo de
 `database.rules.json` para Realtime Database → Regras → Publicar. Alternativa
@@ -187,5 +189,5 @@ regras, o novo adubo será bloqueado, sem consumir a cota. O zoom funciona norma
 
 Cota, evento e marca compartilhada são gravados em uma única atualização
 atômica. Um segundo amigo não pode sobrescrever a mesma marca nem consumir
-sua cota numa tentativa recusada. Os registros de ciclos anteriores não são
-aplicados em uma plantação nova.
+sua cota numa tentativa recusada. Cada novo plantio dentro das 12 horas herda a aceleração. Depois do prazo,
+o crescimento volta ao ritmo normal, inclusive em culturas ainda crescendo.

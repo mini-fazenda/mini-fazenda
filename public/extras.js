@@ -728,8 +728,8 @@
     apply(list) {
       const by = {};
       for (const e of list || []) {
-        const t = e.key?terrenos.find(t=>t.cultura&&MFFertilizerCore.key(t)===e.key):findTerrainAt(e.gx, e.gy);
-        if (t?.cultura && !t.cultura.fertilizada && boost(t,e)) { by[e.name] = (by[e.name] || 0) + 1; const q = tileScreen(t); sparkleAt(q.x, q.y); }
+        const t = e.key?.startsWith('block_')?terrenos.find(t=>MFFertilizerCore.key(t)===e.key):findTerrainAt(e.gx,e.gy);
+        if (t && boost(t,e)) { if(!MFFertilizerCore.active(t))continue;by[e.name] = (by[e.name] || 0) + 1; const q = tileScreen(t); sparkleAt(q.x, q.y); }
       }
       const names = Object.entries(by);
       if(names.length&&!visiting())window.MFHost?.changed?.();
@@ -747,7 +747,7 @@
   const stars=new Map();
   setInterval(()=>{
     const active=new Set();
-    for(const t of terrenos){if(!t.cultura?.fertilizada)continue;active.add(t);
+    for(const t of terrenos){if(window.MFFertilizerCore.bind(t))startGrowthTimer(t);if(!window.MFFertilizerCore.active(t))continue;active.add(t);
       let el=stars.get(t);if(!el){el=document.createElement('div');el.className='mf-fertilized-stars';const art=document.createElement('img');art.src='assets/fertilizante/estrelas-v2.webp';art.alt='';art.draggable=false;el.appendChild(art);el.title='Plantação adubada';el.style.cssText='position:fixed;pointer-events:none;z-index:6;transform:translate(-50%,-85%)';stars.set(t,el);}
       const host=document.getElementById('mf-visit-cover')||document.body;if(el.parentNode!==host)host.appendChild(el);
       const q=tileScreen(t);el.style.width=(152*zoom)+'px';el.style.left=q.x+'px';el.style.top=q.y+'px';
@@ -772,7 +772,7 @@
       if (left == null) msg = 'Carregando fertilizantes…';
       else if (left === 0) msg = fertResetAt ? `Acabaram nessa fazenda! Voltam em ${fmtWait(fertResetAt - Date.now())}` : 'Acabaram nessa fazenda por hoje.';
       else if (!holding) msg = 'Toque aqui para pegar o fertilizante';
-      else msg = 'Toque numa plantação crescendo · 35% menos tempo restante · um adubo por plantio';
+      else msg = 'Toque numa plantação crescendo · 35% menos tempo restante · efeito de 12 horas por bloco';
     }
     visitBar.classList.toggle('empty', left === 0);
     visitBar.classList.toggle('holding', holding && left > 0);
@@ -841,7 +841,7 @@
       if (!t || !t.cultura) return;
       if (String(t.cultura.tipo) === 'morta') { renderVisitBar('Essa plantação já secou, não dá para fertilizar.'); return; }
       if (t.cultura.etapa === 2) { renderVisitBar('Essa já está pronta para colher!'); return; }
-      if (t.cultura.fertilizada) { renderVisitBar('Essa plantação já foi fertilizada.'); return; }
+      if (MFFertilizerCore.active(t)) { renderVisitBar('Esse bloco já está adubado por 12 horas. Escolha outro.'); return; }
       if (fertLeft === 0) { renderVisitBar(); return; }
       fertBusy = true; syncCursor();
       try {
@@ -851,7 +851,7 @@
         await pourAt(q);
         fertLeft = res.left; if (res.resetIn) fertResetAt = Date.now() + res.resetIn;
         boost(t,{key,at:res.at}); sparkleAt(q.x, q.y, host);
-        renderVisitBar(fertLeft ? `Adubada! 35% menos tempo restante` : undefined);
+        renderVisitBar(fertLeft ? `Bloco adubado por 12 horas! Aceleração de 35%` : undefined);
       } catch (e) { if (/fertilizantes nessa fazenda/.test(e?.message || '')) fertLeft = 0; renderVisitBar(e?.message || 'Não deu para fertilizar.'); }
       finally { fertBusy = false; syncCursor(); }
     },
