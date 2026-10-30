@@ -35,11 +35,14 @@
   if(visitor())return;
   try{
    try{window.MFValueSource?.element?.(box,'venda');}catch(e){console.warn('[efeito da venda]',e);}
-   const result=MFSalesCore.sell(inv().map,selection,quote);
-   moedas+=result.total;if(result.stars)addXP(result.stars);
-   document.getElementById('valor-moedas').textContent=moedas;
-   for(const row of result.rows){const slot=inv().slots[row.slotIndex];if(slot)window.MFRenderInventorySlot(slot,row.left?row.type:'',row.left,row.imgSrc);}
-   window.MFGameAudio?.event('sell');reset();window.MFHost?.changed?.('inventory-sale');requestRedraw();
+   const result=MFSalesCore.sell(inv().map,selection,quote,{get:()=>moedas,set:value=>{moedas=value;}});
+   if(result.stars)addXP(result.stars);
+   // O save recebe saldo e estoque juntos, antes dos efeitos e da renderização.
+   window.MFHost?.changed?.('inventory-sale');
+   const effect=fn=>{try{fn();}catch(e){console.warn('[interface da venda]',e);}};
+   effect(()=>{document.getElementById('valor-moedas').textContent=moedas;});
+   for(const row of result.rows)effect(()=>{const slot=inv().slots[row.slotIndex];if(slot)window.MFRenderInventorySlot(slot,row.left?row.type:'',row.left,row.imgSrc);});
+   effect(()=>window.MFGameAudio?.event('sell'));reset();effect(()=>requestRedraw());
    summary.replaceChildren();const panel=document.createElement('section');panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','Resumo da venda');
    const title=document.createElement('h2');title.textContent='Venda concluída!';panel.append(title);
    const table=document.createElement('table');table.innerHTML='<thead><tr><th>Produto</th><th>Qtd.</th><th>Moedas</th></tr></thead>';const body=document.createElement('tbody');
