@@ -3,6 +3,8 @@ const {chromium}=require('playwright');
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  const page=await browser.newPage({viewport:{width:1280,height:800}}),errors=[],failed=[];
  page.on('pageerror',e=>{errors.push(e.message);console.log('PAGEERROR',e.message)});page.on('console',m=>{if(m.type()==='error')console.log('CONSOLE',m.text())});page.on('requestfailed',r=>failed.push(r.url()));
+ // Este teste usa um host simulado. Não carregue o Firebase real em paralelo.
+ await page.route('**/firebase-config.js',r=>r.fulfill({contentType:'application/javascript',body:'window.MINI_FAZENDA_FIREBASE=null;'}));
  await page.goto('http://localhost:8080');await page.waitForTimeout(200);
  console.log('unconfigured',await page.locator('#message').innerText(),'iframes',await page.locator('iframe').count());
  await page.evaluate(()=>{
