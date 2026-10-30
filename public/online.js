@@ -14,7 +14,6 @@ let ready=false,connected=false,sessionActive=false,stopped=false,visiting=false
 let bridge=null,initialState=null,ownState=null,pending=null,saving=null,lastText='',lastKey=null;
 let stopConnection,stopSession,resolveConnection,connectionReady,projectionTimer,retryTimer,reconnectTimer;
 let retryDelay=1000,loginAttempt=false;
-let projectionPending=null;
 let projectionPending=null,projectionSaving=null,stopVisit=null,visitSequence=0,visitData=null,visitRevision=-1;
 let confirmedSaveId=null,inFlightRecord=null,saveBlocked=false,lastSaveError='';
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
