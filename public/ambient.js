@@ -29,9 +29,9 @@
   const ready = img => img?.complete && img.naturalWidth > 0;
   // Arte pintada (lagoa com túnel/ponte/cachoeira, serra do fundo, enfeites e chão).
   const art = {};
-  for (const [key, file] of [['scene', 'cena.webp'], ['mount', 'montanhas.webp'], ['decor', 'enfeites.webp'], ['ground', 'chao.webp']]) {
+  for (const [key, file] of [['scene', 'cena.webp'], ['mount', 'montanhas.webp'], ['decor', 'enfeites.webp'], ['ground', 'chao.webp'], ['grass', 'grama.webp']]) {
     const img = new Image(); art[key] = img;
-    img.onload = () => { sceneryRevision++; if (key === 'decor') { DECOR = null; LAYOUT_SIG = ''; } if (key === 'ground') GROUND = null; window.MFAdapter?.flush?.(); };
+    img.onload = () => { sceneryRevision++; if (key === 'decor') { DECOR = null; LAYOUT_SIG = ''; } if (key === 'ground') GROUND = null; if (key === 'grass') GRASS = null; window.MFAdapter?.flush?.(); };
     img.onerror = () => console.warn('[MF] Não foi possível carregar', file);
     img.src = new URL(file, assetBase).href;
   }
@@ -430,6 +430,20 @@
     return (GROUND = { key, c, x: minX, y: minY, w: maxX - minX, h: maxY - minY });
   }
   function drawGround(b) { const G = groundCanvas(); if (!G) return false; b.drawImage(G.c, G.x, G.y, G.w, G.h); return true; }
+  // Grama pintada contínua para o mapa todo (fora da área de plantar).
+  // Bloco que se repete: N×N quadrados da grade = retângulo 96N × 48N no mundo.
+  let GRASS = null;
+  function grassPattern(b) {
+    const img = art.grass; if (!ready(img)) return null;
+    if (GRASS) return GRASS;
+    const pat = b.createPattern(img, 'repeat');
+    if (pat && pat.setTransform) pat.setTransform(new DOMMatrix().scale(0.5, 0.5)); // textura em meio tamanho no mundo
+    return (GRASS = pat);
+  }
+  function drawGrass(b, view) {
+    const pat = grassPattern(b); if (!pat) return false;
+    b.fillStyle = pat; b.fillRect(view.l - 200, view.t - 200, view.r - view.l + 400, view.b - view.t + 400); return true;
+  }
 
   function fallGeom(L) {
     const t = L.fallTop, fp = L.mountains[1].pts, fi = Math.max(0, Math.min(fp.length - 1, Math.round((t.x - fp[0].x) / 22)));
@@ -631,13 +645,12 @@
     if (!fxCanvas) ensureFx();
     const L = LAYOUT, view = viewRect();
     // puxa o verde do fundo para o mesmo tom da grama pintada
-    if (ready(art.scene)) { b.fillStyle = 'rgba(132,192,30,0.5)'; b.fillRect(view.l - 200, view.t - 200, view.r - view.l + 400, view.b - view.t + 400); }
+    if (!drawGrass(b, view) && ready(art.scene)) { b.fillStyle = 'rgba(132,192,30,0.5)'; b.fillRect(view.l - 200, view.t - 200, view.r - view.l + 400, view.b - view.t + 400); }
     if (!drawMountainArt(b, L, view)) drawMountains(b, L, view);
     for (const it of L.low) drawSprite(b, it, view);
     drawRoad(b, L);
     drawRiver(b, L, view);
     drawScene(b, L);
-    drawGround(b);
     // sombras de tudo antes dos objetos
     b.fillStyle = 'rgba(20,50,10,0.22)';
     for (const it of L.props) if (it.shadow && it.x > view.l && it.x < view.r && it.y > view.t && it.y < view.b) { b.beginPath(); b.ellipse(it.x + 6 * it.k, it.y, 30 * it.k, 11 * it.k, 0, 0, 7); b.fill(); }
@@ -656,6 +669,6 @@
     for (let i = 1; i < pts.length; i++) if (p.x <= pts[i].x) { const a = pts[i - 1], c = pts[i], t = (p.x - a.x) / ((c.x - a.x) || 1); y = a.y + (c.y - a.y) * Math.max(0, Math.min(1, t)); break; }
     return p.y - y;
   }
-  function groundReady() { return enabled() && !!groundCanvas(); }
+  function groundReady() { return false; } // a área de plantar continua com o chão original
   window.MFAmbient = { draw, enabled, tunnel, bridgeLift, groundReady, inspect(){const L=layout(),r=fallAssetRect(L);return {trees:L.props.filter(p=>['palm','pine','leafy'].includes(p.kind)).length,palms:L.props.filter(p=>p.kind==='palm').length,bankRocks:L.props.filter(p=>p.kind==='bankRock').length,riverStart:L.fallTop,waterOutlet:{x:r.x+r.w*.23,y:r.y+r.h*.92}};}, version: 5, signature: () => (enabled() ? 'amb5:' + COLS + 'x' + ROWS + ':' + sceneryRevision : 'off') };
 })();
