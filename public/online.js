@@ -2,7 +2,7 @@ import {conditionalSave,isMaxRetry} from './conditional-save.js?v=1';
 import {normalizeSave,documentRevision,progressText} from './save-compat.js?v=legacy-1';
 import {nextDocument,clearLegacySaves,recoverPendingState} from './persistence.js?v=legacy-1';
 import {redeemTestCredit} from './test-credit.js?v=2';
-import {startFriends,stopFriends,publishProfile,api as friendsApi} from './friends.js?v=permissao-fert-1';
+import {startFriends,stopFriends,publishProfile,api as friendsApi} from './friends.js?v=single-fert-2';
 // A versão do módulo publicado também identifica o HTML do jogo no cache.
 const releaseVersion=new URL(import.meta.url).searchParams.get('v')||'artes-melancia-v3';
 const $=id=>document.getElementById(id);
@@ -182,6 +182,7 @@ window.MFOnline={
   isFullscreen:isHostFullscreen,
   requestFullscreen:requestHostFullscreen,
   exitFullscreen:exitHostFullscreen,
+  ownUid:()=>user?.uid,
   isVisiting:()=>visiting,playing,
   visitingUid:()=>visiting?visitingUid:null,
   bootState:()=>initialState,

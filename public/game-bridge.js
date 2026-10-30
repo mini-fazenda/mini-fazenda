@@ -209,19 +209,20 @@
       setTimeout(()=>window.MFCharacter?.init?.(),0);
       document.documentElement.style.visibility='visible';
       host.attach({capture, pan:(dx,dy)=>{offsetX+=dx;offsetY+=dy;updateTruckDomPosition();requestRedraw()}});
+      window.MFFertilize?.watch?.();
       if(host.isVisiting()){
         const cover=document.createElement('div');
         cover.style.cssText='position:fixed;inset:0;z-index:2147483647;touch-action:none';
-        let p;
+        let p;const pointers=new Map();let pinch=0,multi=false;
         let start=null;
-        cover.onpointerdown=e=>{p={x:e.clientX,y:e.clientY};start={x:e.clientX,y:e.clientY};cover.setPointerCapture(e.pointerId)};
-        cover.onpointermove=e=>{if(p){offsetX+=e.clientX-p.x;offsetY+=e.clientY-p.y;p={x:e.clientX,y:e.clientY};updateTruckDomPosition();requestRedraw()}};
+        cover.onpointerdown=e=>{pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size>1){multi=true;const [a,b]=[...pointers.values()];pinch=Math.hypot(a.x-b.x,a.y-b.y);p=null;start=null;cover.setPointerCapture(e.pointerId);return;}multi=false;p={x:e.clientX,y:e.clientY};start={x:e.clientX,y:e.clientY};cover.setPointerCapture(e.pointerId)};
+        cover.onpointermove=e=>{if(pointers.has(e.pointerId))pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size>1){const [a,b]=[...pointers.values()],d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch>0)window.MFVisit?.zoomBy?.(d/pinch);pinch=d;return;}if(p){offsetX+=e.clientX-p.x;offsetY+=e.clientY-p.y;p={x:e.clientX,y:e.clientY};updateTruckDomPosition();requestRedraw()}};
         // toque sem arrastar = fertilizar a plantação do amigo
-        cover.onpointerup=e=>{if(start&&Math.hypot(e.clientX-start.x,e.clientY-start.y)<8)window.MFVisit?.tap(e.clientX,e.clientY);p=null;start=null};
-        cover.onpointercancel=()=>{p=null;start=null};
+        cover.onpointerup=e=>{pointers.delete(e.pointerId);pinch=0;if(!multi&&start&&Math.hypot(e.clientX-start.x,e.clientY-start.y)<8)window.MFVisit?.tap(e.clientX,e.clientY);p=null;start=null};
+        cover.onpointercancel=()=>{pointers.clear();pinch=0;multi=false;p=null;start=null};
         cover.id='mf-visit-cover';
         setTimeout(()=>window.MFVisit?.init(cover),0);
-        cover.onwheel=e=>{e.preventDefault();zoom=Math.max(.15,Math.min(2,zoom*(e.deltaY>0?.95:1.05)));updateTruckDomPosition();requestRedraw()};
+        cover.onwheel=e=>{e.preventDefault();window.MFVisit?.zoomBy?.(e.deltaY>0?.95:1.05)};
         document.body.append(cover);
         window.addEventListener('keydown',e=>{e.preventDefault();e.stopImmediatePropagation()},true);
       }

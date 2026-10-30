@@ -171,3 +171,21 @@ A troca de transporte não exige regras novas; as regras de compatibilidade de c
 sem revisão, descritas acima, continuam necessárias para esses documentos específicos.
 
 Referência: https://firebase.google.com/docs/database/rest/save-data#section-conditional-requests
+
+### Adubação compartilhada e zoom em visitas
+
+A atualização permite zoom por botões, roda do mouse e pinça durante visitas.
+O adubo preserva a porcentagem atual e reduz em 35% o tempo restante.
+As estrelas persistem até a colheita e todos os visitantes consultam o mesmo
+registro por plantio. Replantar cria outro ciclo; mover conserva a identificação.
+
+**Publicação necessária no Firebase:** copie o conteúdo completo de
+`database.rules.json` para Realtime Database → Regras → Publicar. Alternativa
+com acesso autenticado ao projeto: `firebase deploy --only database --project mini-fazenda-9b007`.
+O GitHub Pages publica apenas o site, não essas regras. Sem a atualização das
+regras, o novo adubo será bloqueado, sem consumir a cota. O zoom funciona normalmente.
+
+Cota, evento e marca compartilhada são gravados em uma única atualização
+atômica. Um segundo amigo não pode sobrescrever a mesma marca nem consumir
+sua cota numa tentativa recusada. Os registros de ciclos anteriores não são
+aplicados em uma plantação nova.

@@ -57,7 +57,7 @@ function watch() {
   stops.push(() => clearInterval(timer));
   stops.push(sdk.onValue(sdk.ref(db, `fertilize/${uid}`), snap => {
     const list = [];
-    for (const [from, items] of Object.entries(snap.val() || {})) for (const [id, it] of Object.entries(items || {})) list.push({ from, id, gx: Number(it?.gx), gy: Number(it?.gy), name: it?.name || 'Amigo', at: it?.at || 0 });
+    for (const [from, items] of Object.entries(snap.val() || {})) for (const [id, it] of Object.entries(items || {})) list.push({ from, id, gx: Number(it?.gx), gy: Number(it?.gy), name: it?.name || 'Amigo', at: it?.at || 0,key:it?.key||'' });
     if (list.length) void deliverFertilize(list);
   }, e => console.warn('[amigos] fertilizar', e)));
   stops.push(sdk.onValue(sdk.ref(db, `friendRequests/${uid}`), snap => {
@@ -154,6 +154,10 @@ export const api = {
     try { await sdk.update(sdk.ref(db), { [`friends/${uid}/${other}`]: null, [`friends/${other}/${uid}`]: null }); } catch (e) { throw new Error(friendly(e)); }
   },
   visit(other) { return ctx?.visit?.(other); },
+  watchFertilized(owner,callback){
+    if(!ctx)return ()=>{};const {sdk,db}=ctx;
+    return sdk.onValue(sdk.ref(db,`fertilizedPlots/${owner}`),snap=>callback(Object.entries(snap.val()||{}).map(([key,e])=>({...e,key}))),e=>console.warn('[adubos compartilhados]',e));
+  },
   // Quantos fertilizantes ainda restam para ESTE amigo nas últimas 24h (5 por amigo).
   async fertilizeLeft(owner) {
     if (!ctx || !owner) return { left: 0, resetIn: 0 };
@@ -177,13 +181,17 @@ export const api = {
       if (!u || now - (Number(u.start) || 0) >= DAY) usage = { start: now, n: 1 };
       else if ((Number(u.n) || 0) < FERT_PER_DAY) usage = { start: Number(u.start), n: (Number(u.n) || 0) + 1 };
       else { const h = Math.ceil(((Number(u.start) || 0) + DAY - now) / 3600000); throw new Error(`Você já usou os ${FERT_PER_DAY} fertilizantes nessa fazenda. Volte em ${h}h.`); }
+      if(!/^[a-zA-Z0-9_-]{1,180}$/.test(plot.key||''))throw new Error('Atualize o jogo antes de adubar.');
+      stage='a consulta da plantação';
+      if((await sdk.get(sdk.ref(db,`fertilizedPlots/${owner}/${plot.key}`))).val())throw new Error('Essa plantação já foi adubada. Escolha outra.');
       stage='o envio';
       const id = now.toString(36) + Math.random().toString(36).slice(2, 7);
       await sdk.update(sdk.ref(db), {
         [`fertUsage/${uid}/${owner}`]: usage,
-        [`fertilize/${owner}/${uid}/${id}`]: { gx: Math.floor(plot.gx), gy: Math.floor(plot.gy), at: sdk.serverTimestamp(), name: String(me?.name || myName || 'Amigo').slice(0, 12) },
+        [`fertilize/${owner}/${uid}/${id}`]: { gx: Math.floor(plot.gx), gy: Math.floor(plot.gy), at: sdk.serverTimestamp(), name: String(me?.name || myName || 'Amigo').slice(0, 12),key:plot.key },
+        [`fertilizedPlots/${owner}/${plot.key}`]:{gx:Math.floor(plot.gx),gy:Math.floor(plot.gy),at:sdk.serverTimestamp(),name:String(me?.name||myName||'Amigo').slice(0,12),from:uid,event:id},
       });
-      return { left: FERT_PER_DAY - usage.n, resetIn: usage.start + DAY - now };
+      return { left: FERT_PER_DAY - usage.n, resetIn: usage.start + DAY - now,at:now };
     } catch (e) { throw fertilizeError(e,stage); }
   },
 };

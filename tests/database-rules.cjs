@@ -2,8 +2,8 @@
 for (const k of ['HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy']) delete process.env[k];
 process.env.NODE_USE_ENV_PROXY='0';
 const {initializeTestEnvironment,assertSucceeds,assertFails}=require('@firebase/rules-unit-testing');
-const {ref,set,get,query,orderByKey,limitToFirst,runTransaction,update}=require('firebase/database');
-const fs=require('fs');
+const {ref,set,get,query,orderByKey,limitToFirst,runTransaction,update,serverTimestamp}=require('firebase/database');
+const fs=require('fs');const assert=require('node:assert/strict');
 (async()=>{
  const env=await initializeTestEnvironment({projectId:'demo-mini-fazenda',database:{host:'127.0.0.1',port:9000,rules:fs.readFileSync('database.rules.json','utf8')}});
  try{
@@ -55,11 +55,23 @@ const fs=require('fs');
  await assertSucceeds(get(ref(other,'friends/other/owner')));
  await assertSucceeds(get(ref(other,'fertUsage/other/owner')));
  const now=Date.now();
- for(let n=1;n<=5;n++)await assertSucceeds(update(ref(other),{'fertUsage/other/owner':{start:now,n},['fertilize/owner/other/event'+n]:{gx:n,gy:2,at:now,name:'Amigo'}}));
+ for(let n=1;n<=5;n++)await assertSucceeds(update(ref(other),{'fertUsage/other/owner':{start:now,n},['fertilize/owner/other/event'+n]:{gx:n,gy:2,at:serverTimestamp(),name:'Amigo',key:'plot'+n},['fertilizedPlots/owner/plot'+n]:{gx:n,gy:2,at:serverTimestamp(),name:'Amigo',from:'other',event:'event'+n}}));
+ await assertSucceeds(get(ref(other,'fertilizedPlots/owner')));
+ const third=env.authenticatedContext('third').database();
+ await env.withSecurityRulesDisabled(async c=>{await set(ref(c.database(),'friends/owner/third'),1);await set(ref(c.database(),'friends/third/owner'),1);});
+ await assertFails(update(ref(third),{'fertUsage/third/owner':{start:now,n:1},'fertilize/owner/third/duplicate':{gx:1,gy:2,at:serverTimestamp(),name:'Outro',key:'plot1'},'fertilizedPlots/owner/plot1':{gx:1,gy:2,at:serverTimestamp(),name:'Outro',from:'third',event:'duplicate'}}));
+ assert.equal((await get(ref(third,'fertUsage/third/owner'))).val(),null);
+ await assertFails(set(ref(own,'fertilizedPlots/owner/plot1'),null));
+ await assertSucceeds(update(ref(third),{'fertUsage/third/owner':{start:now,n:1},'fertilize/owner/third/newcycle':{gx:1,gy:2,at:serverTimestamp(),name:'Outro',key:'plot1newcycle'},'fertilizedPlots/owner/plot1newcycle':{gx:1,gy:2,at:serverTimestamp(),name:'Outro',from:'third',event:'newcycle'}}));
  await assertFails(update(ref(other),{'fertUsage/other/owner':{start:now,n:6},'fertilize/owner/other/sixth':{gx:6,gy:2,at:now,name:'Amigo'}}));
  await assertFails(set(ref(other,'fertilize/owner/other/no-quota'),{gx:1,gy:1,at:now,name:'Amigo'}));
  await assertSucceeds(get(ref(own,'fertilize/owner')));
  await assertSucceeds(set(ref(own,'fertilize/owner/other/event1'),null));
+ const racers=['raceA','raceB'];
+ await env.withSecurityRulesDisabled(async c=>{for(const id of racers)await set(ref(c.database(),'friends/owner/'+id),1);});
+ const outcomes=await Promise.allSettled(racers.map(id=>{const db=env.authenticatedContext(id).database();return update(ref(db),{['fertUsage/'+id+'/owner']:{start:Date.now(),n:1},['fertilize/owner/'+id+'/race']:{gx:9,gy:9,at:serverTimestamp(),name:id,key:'sameCycle'},'fertilizedPlots/owner/sameCycle':{gx:9,gy:9,at:serverTimestamp(),name:id,from:id,event:'race'}});}));
+ assert.equal(outcomes.filter(r=>r.status==='fulfilled').length,1);
+ console.log('PASS: dois amigos simultâneos: apenas um adubo aceito no mesmo plantio');
  console.log('PASS: amigos fertilizam cinco vezes com quota atômica; sexta e envio sem quota negados; dono recebe e confirma.');
  console.log('PASS: 21 verificações de regras, isolamento de contas, visita, paginação, sessão e transação.');
  }finally{await env.cleanup()}

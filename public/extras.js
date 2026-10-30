@@ -704,7 +704,6 @@
 
 
   // ================= FERTILIZAR (amizade) =================
-  const FERT_BOOST = 0.35;
   function sparkleAt(x, y, host = document.body) {
     for (let i = 0; i < 7; i++) {
       const s = document.createElement('div'); s.className = 'mf-spark'; s.textContent = i % 2 ? '✨' : '🌱';
@@ -716,11 +715,9 @@
     const p = gridToScreen(t.gx + ((t.w || 1) - 1) / 2, t.gy + ((t.h || 1) - 1) / 2), r = canvas.getBoundingClientRect();
     return { x: r.left + MFViewport.width / 2 + offsetX + p.x * zoom, y: r.top + MFViewport.height / 3 + offsetY + p.y * zoom };
   }
-  function boost(t) {
-    const c = t.cultura; const total = Number(c.totalTime) || 0; if (!total) return false;
-    c.startTime = (Number(c.startTime) || Date.now()) - Math.round(total * FERT_BOOST);
-    c.fertilizada = true;
-    try { startGrowthTimer(t); } catch (e) { } requestRedraw(); return true;
+  function boost(t,event={at:Date.now()}) {
+    if(!window.MFFertilizerCore.apply(t,event))return false;
+    try{startGrowthTimer(t);}catch(e){} requestRedraw();return true;
   }
   const growing = t => t && t.cultura && String(t.cultura.tipo) !== 'morta' && t.cultura.etapa !== 2;
   // Dono: aplica o que os amigos mandaram.
@@ -728,14 +725,32 @@
     apply(list) {
       const by = {};
       for (const e of list || []) {
-        const t = findTerrainAt(e.gx, e.gy);
-        if (growing(t) && !t.cultura.fertilizada && boost(t)) { by[e.name] = (by[e.name] || 0) + 1; const q = tileScreen(t); sparkleAt(q.x, q.y); }
+        const t = e.key?terrenos.find(t=>t.cultura&&MFFertilizerCore.key(t)===e.key):findTerrainAt(e.gx, e.gy);
+        if (t?.cultura && !t.cultura.fertilizada && boost(t,e)) { by[e.name] = (by[e.name] || 0) + 1; const q = tileScreen(t); sparkleAt(q.x, q.y); }
       }
       const names = Object.entries(by);
-      if (names.length) toast(names.map(([n, k]) => `${n} fertilizou ${k} plantaç${k > 1 ? 'ões' : 'ão'} sua${k > 1 ? 's' : ''}!`).join(' ') + ' 🌱 +35%');
+      if(names.length&&!visiting())window.MFHost?.changed?.();
+      if (names.length&&!visiting()) toast(names.map(([n, k]) => `${n} fertilizou ${k} plantaç${k > 1 ? 'ões' : 'ão'} sua${k > 1 ? 's' : ''}!`).join(' ') + ' 🌱 35% menos tempo restante');
       return true;
     }
   };
+  let stopFertilized;
+  window.MFFertilize.watch=function(){
+    stopFertilized?.();
+    const owner=window.MFHost?.visitingUid?.()||window.MFHost?.ownUid?.();
+    if(owner&&FR()?.watchFertilized)stopFertilized=FR().watchFertilized(owner,list=>window.MFFertilize.apply(list));
+  };
+  window.addEventListener('pagehide',()=>stopFertilized?.(),{once:true});
+  const stars=new Map();
+  setInterval(()=>{
+    const active=new Set();
+    for(const t of terrenos){if(!t.cultura?.fertilizada)continue;active.add(t);
+      let el=stars.get(t);if(!el){el=document.createElement('div');el.className='mf-fertilized-stars';el.textContent='✦  ★  ✦';el.title='Plantação adubada';el.style.cssText='position:fixed;pointer-events:none;z-index:6;color:#ffed55;text-shadow:0 1px 2px #765600;font:22px Arial;transform:translate(-50%,-70%)';stars.set(t,el);}
+      const host=document.getElementById('mf-visit-cover')||document.body;if(el.parentNode!==host)host.appendChild(el);
+      const q=tileScreen(t);el.style.left=q.x+'px';el.style.top=q.y+'px';
+    }
+    for(const [t,el]of stars)if(!active.has(t)){el.remove();stars.delete(t);}
+  },150);
   // Visitante: barra com 5 fertilizantes POR AMIGO (voltam 24h depois do primeiro uso nessa fazenda).
   const FERT_IMG = 'assets/fertilizante/saco.png', FERT_POUR = 'assets/fertilizante/despejar.webp', FERT_FRAMES = 29, FERT_MAX = 5;
   let visitBar = null, fertLeft = null, fertBusy = false, fertResetAt = 0, fertTimer = 0, holding = true, cursorEl = null;
@@ -754,7 +769,7 @@
       if (left == null) msg = 'Carregando fertilizantes…';
       else if (left === 0) msg = fertResetAt ? `Acabaram nessa fazenda! Voltam em ${fmtWait(fertResetAt - Date.now())}` : 'Acabaram nessa fazenda por hoje.';
       else if (!holding) msg = 'Toque aqui para pegar o fertilizante';
-      else msg = 'Toque numa plantação crescendo · cada um acelera 35%';
+      else msg = 'Toque numa plantação crescendo · 35% menos tempo restante · um adubo por plantio';
     }
     visitBar.classList.toggle('empty', left === 0);
     visitBar.classList.toggle('holding', holding && left > 0);
@@ -789,7 +804,13 @@
     });
   }
   window.MFVisit = {
+    zoomBy,
     async init(cover) {
+      const camera=document.createElement('div');camera.id='mf-visit-camera';camera.style.cssText='position:absolute;right:12px;bottom:130px;display:flex;gap:8px;z-index:10';
+      for(const [label,title,factor]of [['+','Aproximar',1.2],['−','Afastar',1/1.2]]){const b=document.createElement('button');b.textContent=label;b.title=title;b.setAttribute('aria-label',title);b.style.cssText='width:46px;height:46px;border:2px solid #357cba;border-radius:10px;background:#48a4e4;color:white;font:bold 30px Arial';b.onclick=e=>{e.stopPropagation();zoomBy(factor);};camera.appendChild(b);}
+      const full=document.createElement('button');full.textContent='⛶';full.title='Tela cheia';full.setAttribute('aria-label','Tela cheia');full.style.cssText=camera.firstChild.style.cssText;full.onclick=e=>{e.stopPropagation();window.MFHost?.requestFullscreen?.();};camera.appendChild(full);
+      for(const type of ['pointerdown','pointerup'])camera.addEventListener(type,e=>e.stopPropagation());cover.appendChild(camera);
+
       const owner = window.MFHost?.visitingUid?.();
       if (!FR()?.fertilize || !owner) return;
       visitBar = document.createElement('div'); visitBar.id = 'mf-visit-bar'; cover.appendChild(visitBar);
@@ -821,12 +842,13 @@
       if (fertLeft === 0) { renderVisitBar(); return; }
       fertBusy = true; syncCursor();
       try {
-        const res = await F.fertilize(owner, { gx: t.gx, gy: t.gy });
+        const key=MFFertilizerCore.key(t);
+        const res = await F.fertilize(owner, { gx: t.gx, gy: t.gy,key });
         const q = { x, y }; // despeja onde o jogador tocou
         await pourAt(q);
         fertLeft = res.left; if (res.resetIn) fertResetAt = Date.now() + res.resetIn;
-        boost(t); sparkleAt(q.x, q.y, host);
-        renderVisitBar(fertLeft ? `Fertilizada! +35% de crescimento` : undefined);
+        boost(t,{key,at:res.at}); sparkleAt(q.x, q.y, host);
+        renderVisitBar(fertLeft ? `Adubada! 35% menos tempo restante` : undefined);
       } catch (e) { if (/fertilizantes nessa fazenda/.test(e?.message || '')) fertLeft = 0; renderVisitBar(e?.message || 'Não deu para fertilizar.'); }
       finally { fertBusy = false; syncCursor(); }
     },
