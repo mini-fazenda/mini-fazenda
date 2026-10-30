@@ -3,6 +3,8 @@ const {chromium}=require('playwright');
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  const page=await browser.newPage({viewport:{width:1280,height:800}}),errors=[],failed=[];
  page.on('pageerror',e=>{errors.push(e.message);console.log('PAGEERROR',e.message)});page.on('console',m=>{if(m.type()==='error')console.log('CONSOLE',m.text())});page.on('requestfailed',r=>failed.push(r.url()));
+ // Este teste usa um host simulado. Não carregue o Firebase real em paralelo.
+ await page.route('**/firebase-config.js',r=>r.fulfill({contentType:'application/javascript',body:'window.MINI_FAZENDA_FIREBASE=null;'}));
  await page.goto('http://localhost:8080');await page.waitForTimeout(200);
  console.log('unconfigured',await page.locator('#message').innerText(),'iframes',await page.locator('iframe').count());
  await page.evaluate(()=>{
@@ -14,6 +16,73 @@ const {chromium}=require('playwright');
  await page.waitForFunction(()=>window.attached);await page.waitForTimeout(1500);
  let frame=page.frames().find(f=>f.url().endsWith('game.html'));
  console.log('initial',await page.evaluate(()=>{const s=testAPI.capture();return {moedas:s.moedas,level:s.playerLevel,terrenos:s.terrenos.length}}));
+ // Movimento em celular: toque seleciona, segundo toque posiciona e a câmera permanece imóvel.
+ await frame.evaluate(()=>{
+   if(!window.MFMoveControls||!window.MFFences?.selectMoveAt)throw Error('Controles de mover não carregaram');
+   const o={gx:10,gy:5,w:1,h:1,imgSrc:'',visualScale:1};
+   terrenos.push(o);setFarmMoveMode(true);
+   const screen=(gx,gy)=>{
+     const p=gridToScreen(gx,gy),r=canvas.getBoundingClientRect();
+     return {x:r.left+(p.x*zoom+canvas.width/2+offsetX)*r.width/canvas.width,
+             y:r.top+(p.y*zoom+canvas.height/3+offsetY)*r.height/canvas.height};
+   };
+   const a=screen(10,5),b=screen(12,5),ox=offsetX,oy=offsetY;
+   window.MFMoveControls.touchStart(a.x,a.y);window.MFMoveControls.touchEnd(a.x,a.y);
+   if(estruturaMovendo!==o)throw Error('Primeiro toque não selecionou objeto');
+   window.MFMoveControls.touchStart(b.x,b.y);window.MFMoveControls.touchEnd(b.x,b.y);
+   if(o.gx!==12||o.gy!==5)throw Error('Segundo toque não reposicionou objeto');
+   if(offsetX!==ox||offsetY!==oy)throw Error('Câmera moveu durante seleção');
+   const d=screen(13,5);
+   const touch=(type,x,y)=>{
+     const t=new Touch({identifier:1,target:canvas,clientX:x,clientY:y});
+     const ended=type==='touchend';
+     canvas.dispatchEvent(new TouchEvent(type,{bubbles:true,cancelable:true,
+       touches:ended?[]:[t],targetTouches:ended?[]:[t],changedTouches:[t]}));
+   };
+   touch('touchstart',b.x,b.y);touch('touchmove',d.x,d.y);touch('touchend',d.x,d.y);
+   if(o.gx!==13||o.gy!==5)throw Error('Arrastar objeto por gesto real falhou');
+   if(offsetX!==ox||offsetY!==oy)throw Error('Gesto de arrastar moveu a câmera');
+   // Área inválida/ocupada: não perde objeto e não conclui seleção.
+   terrenos.push({gx:14,gy:5,w:1,h:1,imgSrc:''});
+   window.MFMoveControls.touchStart(d.x,d.y);window.MFMoveControls.touchEnd(d.x,d.y);
+   const occupied=screen(14,5);
+   window.MFMoveControls.touchStart(occupied.x,occupied.y);window.MFMoveControls.touchEnd(occupied.x,occupied.y);
+   if(o.gx!==13||estruturaMovendo!==o)throw Error('Destino ocupado deveria manter seleção');
+   setFarmMoveMode(false);terrenos.splice(terrenos.indexOf(o),1);
+   terrenos.splice(terrenos.findIndex(x=>x.gx===14&&x.gy===5&&x.imgSrc===''),1);
+   const old=window.MFFences.capture(),coins=moedas;moedas=99999;
+   window.MFFences.start('flowers');
+   const start=screen(10,4.5);
+   canvas.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true,button:0,clientX:start.x,clientY:start.y}));
+   const added=window.MFFences.capture().segments.find(e=>!old.segments.some(a=>MFFenceCore.key(a)===MFFenceCore.key(e)));
+   if(!added)throw Error('Cerca de teste não foi criada');
+   window.MFFences.stop();setFarmMoveMode(true);
+   const midpoint=e=>{const ends=MFFenceCore.ends(e),a=gridToScreen(ends[0].gx-.5,ends[0].gy-.5),b=gridToScreen(ends[1].gx-.5,ends[1].gy-.5);
+     const r=canvas.getBoundingClientRect();
+     return {x:r.left+((a.x+b.x)/2*zoom+canvas.width/2+offsetX)*r.width/canvas.width,
+             y:r.top+(((a.y+b.y)/2-17)*zoom+canvas.height/3+offsetY)*r.height/canvas.height};};
+   const p=midpoint(added);
+   canvas.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,button:0,clientX:p.x,clientY:p.y}));
+   if(!window.MFFences.isMoveSelected())throw Error('Clique em mover não selecionou a cerca');
+   const moved={...added,gx:added.gx+2,gy:added.gy+2};
+   const q=midpoint(moved);
+   canvas.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,button:0,clientX:q.x,clientY:q.y}));
+   if(window.MFFences.isMoveSelected()||!window.MFFences.capture().segments.some(e=>MFFenceCore.key(e)===MFFenceCore.key(moved)))
+     throw Error('Segundo clique não moveu a cerca');
+   // Uma cerca também pode ser selecionada e deslocada somente com o dedo.
+   const movedPoint=midpoint(moved);
+   window.MFMoveControls.touchStart(movedPoint.x,movedPoint.y);
+   window.MFMoveControls.touchEnd(movedPoint.x,movedPoint.y);
+   if(!window.MFFences.isMoveSelected())throw Error('Toque não selecionou cerca');
+   const next={...moved,gx:moved.gx+1,gy:moved.gy+1},nextPoint=midpoint(next);
+   window.MFMoveControls.touchStart(movedPoint.x,movedPoint.y);
+   window.MFMoveControls.touchMove(nextPoint.x,nextPoint.y);
+   window.MFMoveControls.touchEnd(nextPoint.x,nextPoint.y);
+   if(!window.MFFences.capture().segments.some(e=>MFFenceCore.key(e)===MFFenceCore.key(next)))
+     throw Error('Arraste no celular não reposicionou cerca');
+   window.MFFences.restore(old);moedas=coins;setFarmMoveMode(false);
+ });
+ console.log('PASS: toque/arraste de objetos sem pan; cerca selecionável e movível');
  await frame.evaluate(()=>{
   moedas=4321;playerXP=237;playerLevel=3;window.__farmName='Recanto';
   player.gx=7;player.gy=8;
