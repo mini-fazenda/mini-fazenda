@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';import '../public/fruit-trees.js';import '../public/animal-production.js';import '../public/growth-info.js';
+const {describe,format}=globalThis.MFGrowthInfo,now=1800000000000;
+test('plantação mostra porcentagem, tempo restante e pronta ao atingir 100%',()=>{
+ const t={cultura:{tipo:'cenoura',startTime:now-300000,totalTime:600000}};assert.deepEqual(describe(t,now,{}),{name:'cenoura',percent:50,remaining:300000,ready:false});assert.equal(describe(t,now+300000,{}).percent,100);assert.equal(describe(t,now+300000,{}).ready,true);
+});
+test('árvore mostra ciclo atual após coleta',()=>{const t={itemId:'item-arvore-limao'};MFFruitTrees.start(t,now);assert.equal(describe(t,now+900000,{}).percent,50);assert.equal(describe(t,now+1800000,{}).ready,true);MFFruitTrees.collect(t,now+1800000);assert.equal(describe(t,now+1800000,{}).percent,0);});
+test('vaca e ovelha distinguem crescimento de produção',()=>{for(const [tipo,c]of Object.entries(MFAnimalProduction.types)){const t={animal:{tipo,startTime:now,totalTime:300000,etapa:0}};assert.equal(describe(t,now+150000,{}).percent,50);assert.match(describe(t,now+150000,{}).name,/crescimento/);const state=describe(t,now+300000+c.cycle/2,{});assert.equal(state.name,c.name);assert.equal(state.percent,50);assert.equal(describe(t,now+300000+c.cycle,{}).ready,true);t.animal.production={readyAt:now+300000+2*c.cycle};assert.equal(describe(t,now+300000+c.cycle,{}).percent,0);}});
+test('tempo formatado em horas, minutos e segundos',()=>{assert.equal(format(86400000),'24h 0min');assert.equal(format(300000),'5min 0s');assert.equal(format(900),'1s');assert.equal(describe({}),null);});

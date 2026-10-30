@@ -5151,70 +5151,6 @@ ctx.drawImage(img, drawX, drawY, drawW, drawH);
     ctx.restore();
   }
 
-  // === Informações Prévias (hover sobre cultura) ===
-  if (window.MFAdapter?.project?.display?.cropInfo!==false && hoveredInfo && hoveredInfo.terreno && (hoveredInfo.terreno.cultura || hoveredInfo.terreno.animal)) {
-    const t = hoveredInfo.terreno;
-    const c = t.cultura || t.animal;
-    const img = imgCache[t.imgSrc];
-    if (img && img.complete) {
-      const anchor = gridToScreen(t.gx + (t.w - 1) / 2, t.gy + (t.h - 1) / 2);
-      const targetW = TILE_W * (t.w || 1);
-      const scale = targetW / img.naturalWidth;
-      const vs = window.MFAdapter?.scaleForStructure?.(t,((typeof t.visualScale === 'number') ? t.visualScale : (parseFloat(t.visualScale || '1') || 1))) ?? ((typeof t.visualScale === 'number') ? t.visualScale : (parseFloat(t.visualScale || '1') || 1));
-      const drawW = img.naturalWidth * scale * vs;
-      const drawH = img.naturalHeight * scale * vs;
-      const drawX = anchor.x - drawW / 2;
-      const drawY = anchor.y - drawH + TILE_H * 0.9;
-
-      const now = Date.now();
-      const elapsed = now - (c.startTime || now);
-      const pct = Math.min(100, Math.floor((elapsed / (c.totalTime || 1)) * 100));
-
-      // Se chegou em 100% e por algum motivo o sprite ainda não está no estágio final,
-      // forçamos a cultura para etapa 2 e sprite correto, sem precisar recarregar o jogo.
-      if (pct >= 100 && c.etapa !== 2) {
-        c.etapa = 2;
-        const tipoLower = (c.tipo || '').toLowerCase();
-        try {
-          if (tipoLower === 'milho' && typeof MILHO_ETAPAS !== 'undefined') {
-            terreno.imgSrc = MILHO_ETAPAS[2];
-          } else if (tipoLower === 'cenoura' && typeof CENOURA_ETAPAS !== 'undefined') {
-            terreno.imgSrc = CENOURA_ETAPAS[2];
-          } else if (tipoLower === 'trigo' && typeof TRIGO_ETAPAS !== 'undefined') {
-            terreno.imgSrc = TRIGO_ETAPAS[2];
-          } else if (tipoLower === 'abacaxi' && typeof ABACAXI_ETAPAS !== 'undefined') {
-            terreno.imgSrc = ABACAXI_ETAPAS[2];
-          } else if (tipoLower === 'cafe' && typeof CAFE_ETAPAS !== 'undefined') {
-            terreno.imgSrc = CAFE_ETAPAS[2];
-          } else if (tipoLower === 'morango' && typeof MORANGO_ETAPAS !== 'undefined') {
-            terreno.imgSrc = MORANGO_ETAPAS[2];
-          } else if (tipoLower === 'beterraba' && typeof BETERRABA_ETAPAS !== 'undefined') {
-            terreno.imgSrc = BETERRABA_ETAPAS[2];
-          } else if (tipoLower === 'melancia' && typeof MELANCIA_ETAPAS !== 'undefined') {
-            terreno.imgSrc = MELANCIA_ETAPAS[2];
-          }
-        } catch (e) {
-          console.warn('Falha ao forçar sprite final da cultura em 100%', e);
-        }
-      }
-
-      const nome = c.tipo.charAt(0).toUpperCase() + c.tipo.slice(1);
-      const production=t.animal?window.MFAnimalProduction.sync(t.animal):null;
-      const texto=production?(production.ready?`${production.name}: pronto para coletar`:`${production.name}: ${Math.ceil(production.remaining/60000)} min`):`${nome}: ${pct}%`;
-
-      ctx.save();
-      ctx.font = 'bold 26px Amfost';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = 'black';
-      ctx.fillStyle = 'white';
-      ctx.strokeText(texto, anchor.x, drawY + 82);
-      ctx.fillText(texto, anchor.x, drawY + 82);
-      ctx.restore();
-    }
-  }
-
   // botões de expansão já foram desenhados acima
   window.MFBirds?.draw(ctx,performance.now());
   ctx.restore(); // restore world transform
@@ -7905,6 +7841,7 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 <script src="barn-ui.js?v=1"></script>
 <script src="animal-tools.js?v=1"></script>
 <script src="job-feedback.js?v=1"></script>
+<script src="growth-info.js?v=1"></script>
 <script src="sheep-animation.js?v=suave-2"></script>
 <script src="animal-indicators.js?v=1"></script>
 <script src="fence-art.js?v=1"></script>
