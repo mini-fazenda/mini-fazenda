@@ -70,6 +70,16 @@
     if(data.truckOrder)data.truckOrder={...data.truckOrder,aberto:false};
     return clone(data);
   }
+  function applyVisit(state,updatedAt){
+    if(!host.isVisiting())return;
+    const camera={offsetX,offsetY,zoom};
+    restore({...state,savedAt:state.savedAt||updatedAt});
+    offsetX=camera.offsetX;offsetY=camera.offsetY;zoom=camera.zoom;
+    if(window.__mfCharacter)window.MFCharacter?.apply(window.__mfCharacter);
+    syncAllGrowth(Date.now());window.MFAdapter.flush();requestRedraw();
+  }
+  // Crescimento visual continua pelo relógio do servidor, sem executar ações do dono.
+  setInterval(()=>{if(host.isVisiting()&&!document.hidden){syncAllGrowth(Date.now());requestRedraw();}},1000);
   function restore(data) {
     if (!data) return;
     data=window.MFSaveRuntime.refresh(data,window.MFAdapter.project);
@@ -232,7 +242,7 @@
       if(!host.bootState() && !host.isVisiting()) { seedStarterFarm(); window.MFTutorial?.start(); }
       setTimeout(()=>window.MFCharacter?.init?.(),0);
       document.documentElement.style.visibility='visible';
-      host.attach({release:window.MF_BUILD_VERSION,capture, pan:(dx,dy)=>{offsetX+=dx;offsetY+=dy;updateTruckDomPosition();requestRedraw()}});
+      host.attach({release:window.MF_BUILD_VERSION,capture,applyVisit, pan:(dx,dy)=>{offsetX+=dx;offsetY+=dy;updateTruckDomPosition();requestRedraw()}});
       window.MFFertilize?.watch?.();
       if(host.isVisiting()){
         const cover=document.createElement('div');

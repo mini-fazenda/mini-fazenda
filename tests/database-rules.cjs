@@ -2,7 +2,7 @@
 for (const k of ['HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy']) delete process.env[k];
 process.env.NODE_USE_ENV_PROXY='0';
 const {initializeTestEnvironment,assertSucceeds,assertFails}=require('@firebase/rules-unit-testing');
-const {ref,set,get,query,orderByKey,limitToFirst,runTransaction,update,serverTimestamp}=require('firebase/database');
+const {ref,set,get,query,orderByKey,limitToFirst,runTransaction,update,onValue,serverTimestamp}=require('firebase/database');
 const fs=require('fs');const assert=require('node:assert/strict');
 (async()=>{
  const env=await initializeTestEnvironment({projectId:'demo-mini-fazenda',database:{host:'127.0.0.1',port:9000,rules:fs.readFileSync('database.rules.json','utf8')}});
@@ -51,6 +51,17 @@ const fs=require('fs');const assert=require('node:assert/strict');
  const verified=(await get(ref(legacyDb,'farms/legacy'))).val();
  if(verified.legacyStateBackup.moedas!==4321||verified.oldMetadata!=='preservar')throw Error('Migration lost original save');
  console.log('PASS: migração de revisão ausente preserva backup, exige dono/sessão e não permite reiniciar revisão.');
+ // Save e cena pública são confirmados juntos pelas regras existentes.
+ const beforeAtomic=(await get(ref(own,'farms/owner'))).val();
+ const atomic=nextDocument(beforeAtomic,{sessionId:'session-2',revision:beforeAtomic.revision,id:'atomic-visit',state,timestamp:5});
+ await assertSucceeds(update(ref(own),{'farms/owner':atomic,'publicFarms/owner':{state,revision:atomic.revision,updatedAt:5}}));
+ assert.equal((await get(ref(other,'publicFarms/owner'))).val().revision,(await get(ref(own,'farms/owner'))).val().revision);
+ await assertFails(update(ref(own),{'farms/owner':atomic,'publicFarms/owner':{state:{...state,farmName:'Obsoleta'},revision:999,updatedAt:6}}));
+ assert.equal((await get(ref(other,'publicFarms/owner'))).val().state.farmName,state.farmName);
+ const seen=new Promise((resolve,reject)=>{let stop;const timer=setTimeout(()=>{stop?.();reject(Error('Live visit did not update'));},5000);stop=onValue(ref(other,'publicFarms/owner'),s=>{if(s.val()?.state?.farmName==='Ao vivo'){clearTimeout(timer);stop();resolve();}},reject);});
+ const nextAtomic=nextDocument(atomic,{sessionId:'session-2',revision:atomic.revision,id:'live-visit',state:{...state,farmName:'Ao vivo'},timestamp:6});
+ await assertSucceeds(update(ref(own),{'farms/owner':nextAtomic,'publicFarms/owner':{state:nextAtomic.state,revision:nextAtomic.revision,updatedAt:6}}));await seen;
+ console.log('PASS: save/projeção atômicos, conflito rejeita as duas gravações e outro usuário recebe atualização via listener real.');
  await env.withSecurityRulesDisabled(async context=>{await set(ref(context.database(),'friends'),{owner:{other:1},other:{owner:1}});});
  await assertSucceeds(get(ref(other,'friends/other/owner')));
  await assertSucceeds(get(ref(other,'fertUsage/other/owner')));

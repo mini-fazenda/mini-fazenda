@@ -14,7 +14,16 @@ export const signOut=async()=>{localStorage.removeItem('test-user');callbacks.fo
 export const ref=(db,p='')=>({p});
 export const get=async r=>snap(cloud[r.p]);
 export const set=async(r,v)=>{cloud[r.p]=structuredClone(v);persist();notify(r.p)};
-export const update=async(r,v)=>{Object.assign(cloud,structuredClone(v));persist()};
+export const update=async(r,v)=>{
+ const farm=Object.keys(v).find(p=>p.startsWith('farms/'));
+ if(farm){
+  if(window.testHoldSaves)await new Promise(resolve=>window.testSaveWaiters.push(resolve));
+  const next=v[farm],uid=farm.split('/')[1];
+  if(window.testDenySave||next.sessionId!==cloud['sessions/'+uid]||next.revision!==(cloud[farm]?.revision||0)+1){const e=Error('denied');e.code='PERMISSION_DENIED';throw e;}
+  window.testAtomicSaves=(window.testAtomicSaves||0)+1;
+ }
+ Object.assign(cloud,structuredClone(v));persist();for(const p of Object.keys(v))notify(p);
+};
 export const serverTimestamp=()=>Date.now();
 window.testSaveWaiters=[];window.testReleaseSave=()=>window.testSaveWaiters.shift()?.();
 export const runTransaction=async(r,fn)=>{if(r.p.startsWith('farms/')){if(window.testHoldSaves)await new Promise(resolve=>window.testSaveWaiters.push(resolve));if(window.testDenySave){const e=Error('Permission denied');e.code='PERMISSION_DENIED';throw e;}}if(r.p.startsWith('farms/')&&window.testFailMaxretry){window.testFailMaxretry--;const e=Error('maxretry');e.code='database/maxretry';throw e;}const result=fn(cloud[r.p]||null);if(result===undefined)return {committed:false,snapshot:snap(cloud[r.p])};cloud[r.p]=structuredClone(result);persist();notify(r.p);return {committed:true,snapshot:snap(result)}};

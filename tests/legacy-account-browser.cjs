@@ -37,7 +37,7 @@ const mock=require('./firebase-mock.cjs');
  f=page.frames().find(f=>f.url().includes('game.html'));
  if(await f.evaluate(()=>moedas)!==12346)throw Error('Visita perdeu saldo');
  if(errors.length)throw Error(errors.join('\n'));
- if(!await page.evaluate(()=>testRestWrites>0&&testFailMaxretry>0))throw Error('Não recuperou maxretry no primeiro save da conta');
+ if(!await page.evaluate(()=>testAtomicSaves>0&&testFailMaxretry>0))throw Error('Não usou gravação atômica no primeiro save da conta');
  console.log('PASS: conta com maxretry persistente e sem revisão com números e listas antigos salva, recarrega, visita e retorna sem apagar progresso.');
  await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
