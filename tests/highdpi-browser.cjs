@@ -21,6 +21,26 @@ const {chromium,webkit}=require('playwright');
   });
   const size=await f.evaluate(()=>({dpr:devicePixelRatio,width:MFViewport.width,height:MFViewport.height,ratio:MFViewport.ratio,buffer:[canvas.width,canvas.height],cache:[MFAdapter.cache.canvas.width,MFAdapter.cache.canvas.height],css:[canvas.getBoundingClientRect().width,canvas.getBoundingClientRect().height],transform:ctx.getTransform().a}));
   assert.equal(size.dpr,3);assert.equal(size.ratio,2);assert.deepEqual(size.buffer,[1688,780]);assert.deepEqual(size.cache,size.buffer);assert.deepEqual(size.css,[844,390]);assert.equal(size.transform,2);
+  // A posição do mouse está em pixels CSS, inclusive nas camadas desenhadas por último.
+  await f.locator('#game').hover({position:{x:300,y:200}});
+  await f.evaluate(()=>{
+   const originalTool=MFAnimalTools.draw,originalImage=ctx.drawImage;
+   const saved={...lastMouse},savedTractor=modoTrator;
+   try{
+    modoTrator=false;
+    const seen=[];
+    MFAnimalTools.draw=(g,kind,x,y)=>{const p=g.getTransform().transformPoint({x,y});seen.push({kind,x:p.x,y:p.y});};
+    for(const kind of ['bucket','shears']){lastMouse.animalTool=kind;originalDrawCursorOverlay();}
+    for(const p of seen)if(Math.abs(p.x-600)>.01||Math.abs(p.y-400)>.01)throw Error('Ferramenta afastada do mouse em DPR alto: '+JSON.stringify(p));
+    if(seen.length!==2)throw Error('Cursor não foi desenhado');
+    let particle;
+    ctx.drawImage=function(img,x,y,w,h){const p=this.getTransform().transformPoint({x:x+w/2,y:y+h/2});particle=p;};
+    lootParticles.push({screenX:350,screenY:210,time:0,duration:1000,img:{complete:true}});drawLoots();lootParticles.pop();
+    if(!particle||particle.x!==700||particle.y!==420)throw Error('Drop fora da posição em DPR alto');
+    if(ctx.getTransform().a!==MFViewport.ratio)throw Error('Camada não restaurou transformação');
+   }finally{MFAnimalTools.draw=originalTool;ctx.drawImage=originalImage;Object.assign(lastMouse,saved);modoTrator=savedTractor;}
+  });
+  console.log('PASS: mouse real em 300×200 mantém balde/tesoura em 600×400 físicos; drops seguem escala 2x');
   await f.waitForFunction(()=>preload(terrenos[0].imgSrc)?.naturalWidth>0);
   const pos=await f.evaluate(()=>{const t=terrenos[0],p=gridToScreen(t.gx+.5,t.gy+.5);return {x:MFViewport.width/2+offsetX+p.x*zoom,y:MFViewport.height/3+offsetY+(p.y-25)*zoom};});
   await f.locator('#game').tap({position:pos});await f.waitForFunction(()=>!document.getElementById('mf-growth-info').hidden);
