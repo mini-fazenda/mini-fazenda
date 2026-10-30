@@ -1,3 +1,4 @@
+import {conditionalSave,isMaxRetry} from './conditional-save.js?v=1';
 import {normalizeSave,documentRevision,progressText} from './save-compat.js?v=legacy-1';
 import {nextDocument,clearLegacySaves,recoverPendingState} from './persistence.js?v=legacy-1';
 import {redeemTestCredit} from './test-credit.js?v=2';
@@ -9,6 +10,7 @@ let ready=false,connected=false,sessionActive=false,stopped=false,visiting=false
 let bridge=null,initialState=null,ownState=null,pending=null,saving=null,lastText='',lastKey=null;
 let stopConnection,stopSession,resolveConnection,connectionReady,projectionTimer,retryTimer,reconnectTimer;
 let retryDelay=1000,loginAttempt=false;
+let useRestSaves=false;
 let confirmedSaveId=null,inFlightRecord=null,saveBlocked=false,lastSaveError='';
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const transient=e=>['unavailable','database/network-error','network-request-failed','auth/network-request-failed','disconnected'].some(x=>String(e?.code||'').includes(x));
@@ -26,7 +28,7 @@ function forgetPending(){
 function saveError(error){
   lastSaveError=String(error?.code||error?.message||'sem confirmação').slice(0,120);
   saveBlocked=true;
-  gate('Não foi possível salvar sua fazenda ('+lastSaveError+').\nO jogo está pausado para proteger seu progresso. Tentando novamente…');
+  gate('Sua conta está conectada, mas o Firebase ainda não confirmou o salvamento ('+lastSaveError+').\nSua fazenda está pausada. Tentando novamente…');
   status('Falha ao salvar: '+lastSaveError+'. Toque para tentar.');
 }
 function retryPending(error){
@@ -86,17 +88,26 @@ function scheduleProjection(state,version,run){
 async function flush(){
   if(saving)return saving;
   if(!pending||!connected||!sessionActive||stopped||visiting||!ready)return;
-  const run=epoch,uid=user.uid,token=sessionId;
+  const run=epoch,uid=user.uid,token=sessionId,account=user;
   let watchdog;
   const watch=()=>{clearTimeout(watchdog);watchdog=setTimeout(()=>{if(run===epoch&&!stopped&&pending&&connected&&sessionActive)saveError({code:'save/timeout'});},12000);};
-  let failed=false;
+  let failed=false,conflicts=0;
   const operation=(async()=>{
     while(pending&&connected&&sessionActive&&!stopped&&run===epoch){
       const record=pending,base=revision;inFlightRecord=record;rememberPending();watch();
-      const result=await sdk.runTransaction(sdk.ref(db,`farms/${uid}`),current=>{
+      const update=current=>{
         if(run!==epoch||!sessionActive||stopped)return;
         return nextDocument(current,{sessionId:token,revision:base,id:record.id,state:record.state,timestamp:sdk.serverTimestamp()});
-      },{applyLocally:false});
+      };
+      const rest=()=>conditionalSave({databaseURL:config.databaseURL,uid,getToken:refresh=>sdk.getIdToken(account,refresh),update,active:()=>run===epoch&&sessionActive&&!stopped});
+      let result;
+      if(useRestSaves)result=await rest();
+      else try{result=await sdk.runTransaction(sdk.ref(db,`farms/${uid}`),update,{applyLocally:false});}
+      catch(e){
+        if(!isMaxRetry(e))throw e;
+        // Não repita indefinidamente a mesma transação que atingiu o limite do SDK.
+        useRestSaves=true;status('Restabelecendo salvamento…');result=await rest();
+      }
       clearTimeout(watchdog);
       if(run!==epoch||stopped||!sessionActive)return;
       if(!result.committed&&result.snapshot.val()?.saveId!==record.id){
@@ -104,7 +115,7 @@ async function flush(){
         if(currentToken!==token){await disconnectPrevious();return}
         // Outra gravação da mesma sessão foi confirmada: atualiza a revisão e tenta novamente.
         const remoteRevision=Number(result.snapshot.val()?.revision);
-        if(Number.isSafeInteger(remoteRevision)&&remoteRevision>revision){revision=remoteRevision;confirmedSaveId=result.snapshot.val().saveId||null;rememberPending();continue}
+        if(result.snapshot.val()?.sessionId===token&&Number.isSafeInteger(remoteRevision)&&remoteRevision>revision&&conflicts++<3){revision=remoteRevision;confirmedSaveId=result.snapshot.val().saveId||null;rememberPending();continue}
         throw new Error('save/revision-conflict');
       }
       revision=result.snapshot.val().revision;confirmedSaveId=result.snapshot.val().saveId;inFlightRecord=null;
@@ -208,7 +219,7 @@ async function reconnect(run){
 }
 async function boot(account){
   const run=++epoch;
-  stopConnection?.();stopSession?.();clearTimeout(projectionTimer);clearTimeout(retryTimer);clearTimeout(reconnectTimer);retryDelay=1000;
+  stopConnection?.();stopSession?.();clearTimeout(projectionTimer);clearTimeout(retryTimer);clearTimeout(reconnectTimer);retryDelay=1000;useRestSaves=false;
   ready=false;sessionActive=false;connected=false;stopped=false;bridge=null;pending=null;saving=null;
   user=account;ownState=null;lastText='';saveBlocked=false;lastSaveError='';confirmedSaveId=null;inFlightRecord=null;$('game-container').replaceChildren();$('toolbar').hidden=true;
   if(!user){stopFriends();$('login').hidden=false;gate('Entre com sua conta Google para continuar.');return}

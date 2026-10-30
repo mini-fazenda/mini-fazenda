@@ -5,6 +5,7 @@ const snap=v=>({val:()=>v===undefined?null:structuredClone(v)});
 const notify=p=>subs.filter(s=>s.p===p).forEach(s=>s.cb(snap(cloud[p])));
 const persist=()=>localStorage.setItem('test-cloud',JSON.stringify(cloud));
 export const initializeApp=()=>({}),getAuth=()=>({}),getDatabase=()=>({});
+export const getIdToken=async()=> 'test-token';
 export const browserSessionPersistence={},setPersistence=async()=>{};
 export const onAuthStateChanged=(auth,cb)=>{callbacks.push(cb);queueMicrotask(()=>cb(localStorage.getItem('test-user')?{uid:'rodrigo'}:null))};
 export class GoogleAuthProvider{}
@@ -21,5 +22,23 @@ export const onValue=(r,cb)=>{const s={p:r.p,cb};subs.push(s);queueMicrotask(()=
 window.testReplaceSession=()=>{cloud['sessions/rodrigo']='other-device';persist();notify('sessions/rodrigo')};
 window.testDisconnect=()=>{window.testConnected=false;subs.filter(s=>s.p==='.info/connected').forEach(s=>s.cb(snap(false)))};
 window.testReconnect=()=>{window.testConnected=true;subs.filter(s=>s.p==='.info/connected').forEach(s=>s.cb(snap(true)))};
+const originalFetch=window.fetch.bind(window);
+window.testRestWrites=0;window.testRestReads=0;
+window.fetch=async(url,options={})=>{
+ const u=new URL(url,location.href);if(u.hostname!=='firebase.test')return originalFetch(url,options);
+ const path=u.pathname.slice(1,-5),current=cloud[path]||null;
+ const etag=JSON.stringify(String(current?.revision||0)+':'+String(current?.saveId||''));
+ const reply=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{ETag:etag,'Content-Type':'application/json'}});
+ if(options.method==='GET'){window.testRestReads++;return reply(current);}
+ if(options.method!=='PUT')throw Error('Unexpected REST method');
+ if(window.testHoldSaves)await new Promise(resolve=>window.testSaveWaiters.push(resolve));
+ if(window.testDenySave)return reply({error:'denied'},403);
+ if(options.headers['If-Match']!==etag)return reply(cloud[path]||null,412);
+ const next=JSON.parse(options.body),uid=path.split('/')[1];
+ if(next.sessionId!==cloud['sessions/'+uid]||next.revision!==(cloud[path]?.revision||0)+1)return reply({error:'denied'},403);
+ cloud[path]=next;persist();notify(path);window.testRestWrites++;
+ if(window.testRestLoseReply){window.testRestLoseReply=false;throw Error('lost response');}
+ return reply(next);
+};
 export const query=r=>r,orderByKey=()=>{},limitToFirst=()=>{},startAfter=()=>{};
 `;

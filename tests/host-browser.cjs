@@ -6,7 +6,7 @@ const mock=require('./firebase-mock.cjs');
  const page=await browser.newPage();const errors=[],dialogs=[];
  page.on('pageerror',e=>errors.push(e.message));
  page.on('dialog',d=>{dialogs.push(d.type());d.dismiss()});
- await page.route('**/firebase-config.js',r=>r.fulfill({contentType:'application/javascript',body:`window.MINI_FAZENDA_FIREBASE={apiKey:'demo',authDomain:'demo',databaseURL:'demo',projectId:'demo',appId:'demo'};`}));
+ await page.route('**/firebase-config.js',r=>r.fulfill({contentType:'application/javascript',body:`window.MINI_FAZENDA_FIREBASE={apiKey:'demo',authDomain:'demo',databaseURL:'https://firebase.test',projectId:'demo',appId:'demo'};`}));
  await page.route('https://www.gstatic.com/firebasejs/12.5.0/*',r=>r.fulfill({contentType:'application/javascript',body:mock}));
  await page.goto('http://localhost:8080');await page.locator('#login:not([disabled])').waitFor();
  if(await page.locator('iframe').count())throw Error('Jogo abriu antes do login');
@@ -54,11 +54,12 @@ const mock=require('./firebase-mock.cjs');
  await page.waitForFunction(()=>testCloud['farms/rodrigo']?.state.moedas===9877);
  console.log('PASS: conflito de revisão da mesma conta foi recuperado');
  // Após confirmar no Firebase, a cópia pendente precisa ser apagada.
- await page.evaluate(()=>{window.testFailMaxretry=1});
+ await page.evaluate(()=>{window.testFailMaxretry=100});
  await f.evaluate(()=>{moedas=9878;saveGameState('maxretry')});
  await page.waitForFunction(()=>testCloud['farms/rodrigo']?.state.moedas===9878,{timeout:15000});
  if(await page.evaluate(()=>[...Object.keys(sessionStorage),...Object.keys(localStorage)].some(k=>k.startsWith('mf-recovery-v2:')||k.startsWith('mf-pending-v3:'))))throw Error('Save gravado em sessionStorage');
- console.log('PASS: maxretry recupera e limpa a cópia pendente após confirmação');
+ if(!await page.evaluate(()=>testRestWrites>0&&testFailMaxretry>0))throw Error('Não usou recuperação condicional com maxretry persistente');
+ console.log('PASS: maxretry persistente usa gravação condicional e limpa pendência após confirmação');
  // Save legado sem farmName: a cópia pública precisa ter nome para visitas.
  await f.evaluate(()=>{window.__farmName='';saveGameState('legacy-no-name')});
  await page.waitForFunction(()=>testCloud['publicFarms/rodrigo']?.state?.farmName==='Fazenda');
