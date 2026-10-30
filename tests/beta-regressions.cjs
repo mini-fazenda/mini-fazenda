@@ -132,6 +132,16 @@ const {chromium,webkit,devices}=require('playwright');
    await f.locator('#game').tap({position:pos});await page.waitForTimeout(80);
   }
   await f.evaluate(kind=>{const jobs=[player.acaoAtual?.alvo,...filaAcoes].filter(Boolean);if(jobs.length!==4||new Set(jobs).size!==4)throw Error('Toques perderam fila de '+kind+': '+jobs.length);},kind);
+  await f.evaluate(kind=>{
+   const a=player.acaoAtual;a.state='ararando';a.progress=.5;a.startTime=performance.now()-a.duration*.5;MFJobFeedback.update();
+   const feedback=document.getElementById('mf-job-feedback'),bar=feedback.querySelector('[role=progressbar]'),img=feedback.querySelector('img');
+   if(feedback.hidden||bar.getAttribute('aria-valuenow')!=='50')throw Error('Barra da tarefa ausente');
+   if(kind!=='plantar'&&!img.getAttribute('src').endsWith(kind==='arar'?'2a42eaeaca5ad4540099-pa.png':'3f2959e898593fc5d408-foice.png'))throw Error('Ferramenta incorreta');
+   const r=feedback.getBoundingClientRect();if(r.top<0||r.bottom>innerHeight)throw Error('Barra fora da tela');
+  },kind);
+  await f.waitForFunction(()=>{const img=document.querySelector('#mf-job-feedback img');return img.complete&&img.naturalWidth>0;});
+  await f.evaluate(()=>{const img=document.querySelector('#mf-job-feedback img'),r=img.getBoundingClientRect();if(r.height>50||r.width>45)throw Error('Ferramenta gigante');});
+
  }
  console.log('PASS: quatro toques consecutivos preservam filas de arar, colher e plantar sem esperar o personagem');
  if(errors.length)throw Error(errors.join('\n'));console.log('PASS: celeiro 200 moedas, obra autônoma 5min, giro, save, 5 estrelas únicas e toque abre vendas ('+(ios?'WebKit/iOS':'Chromium/toque')+')');
