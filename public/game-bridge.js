@@ -31,9 +31,10 @@
       if(terrenos[i]?.cultura)t.cultura=clone(terrenos[i].cultura);
     });
     Object.assign(data, { version: 2, savedAt:Date.now(), offsetX, offsetY, zoom,activeSeconds,character:window.__mfCharacter||null,
-      player: {...data.player, x:player.x,y:player.y,facing:player.facing,path:clone(player.path),action:actionState(player)},
-      aradora: {...data.aradora,x:aradora.x,y:aradora.y,facing:aradora.facing,
+      player: {...window.MFSaveRuntime.actorProgress(data.player), x:player.x,y:player.y,facing:player.facing,path:clone(player.path),action:actionState(player)},
+      aradora: {...window.MFSaveRuntime.actorProgress(data.aradora),x:aradora.x,y:aradora.y,facing:aradora.facing,
         path:clone(aradora.path || []),action:actionState(aradora),fila:clone((aradora.fila || []).map(t=>({gx:t.gx,gy:t.gy})))},
+      runtimeVersion:1,
       truck: simple(caminhaoVendas),nextTruckAt:window.__mfTruckDue || 0,
       aradoraWelcomeShown:!!window.__aradoraWelcomeShown,
       missions:window.MFMissions.capture(),
@@ -44,10 +45,12 @@
       actionQueue:filaAcoes.map(t=>({gx:t.gx,gy:t.gy,...(t._job?{job:clone(t._job)}:{})})),
       loot: lootParticles.map(p=>simple(p))
     });
+    if(data.truckOrder)data.truckOrder={...data.truckOrder,aberto:false};
     return clone(data);
   }
   function restore(data) {
     if (!data) return;
+    data=window.MFSaveRuntime.refresh(data,window.MFAdapter.project);
     data={...data,terrenos:clone(data.terrenos || []),inventory:data.inventory || {}};
     // Normalize antes de montar os timers: não reinicie relógios legados no login.
     for(const t of data.terrenos){const c=t?.cultura;if(!c||c.tipo==='morta')continue;
@@ -63,6 +66,7 @@
     // Cancele callbacks de objetos antigos antes de trocar o mapa.
     terrenos.forEach(t=>{(t._timers || []).forEach(clearTimeout);clearInterval(t._milkInterval)});
     window.MFAdapter.applyState(data);
+    terrenos.forEach(t=>{window.MFBarn?.normalize(t);if(t.fruitTree)window.MFFruitTrees?.sync(t);});
     terrenos.forEach((t,i)=>{
       const saved=data.terrenos?.[i];
       if(saved?.cultura){

@@ -194,7 +194,7 @@ function mount(state,visit,savedAt){
   $('farm-title').textContent=visit?`Visitando: ${state.farmName||'Fazenda'}`:state?.farmName||'Minha fazenda';
   gate(visit?'Abrindo visita…':'Carregando sua fazenda…');
   const frame=document.createElement('iframe');frame.title=visit?'Visita à fazenda (somente visualização)':'Minha fazenda';
-  frame.src='game.html?v=legacy-1';frame.allow='fullscreen';$('game-container').replaceChildren(frame);
+  frame.src='game.html?v=runtime-1';frame.allow='fullscreen';$('game-container').replaceChildren(frame);
   status(visit?'Somente visualização':'Online');
 }
 async function reconnect(run){

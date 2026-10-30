@@ -8,6 +8,8 @@ const mock=require('./firebase-mock.cjs');
  await page.route('https://www.gstatic.com/firebasejs/12.5.0/*',r=>r.fulfill({contentType:'application/javascript',body:mock}));
  await page.route('https://i.postimg.cc/**',r=>r.abort());
  await page.goto('http://localhost:8080');
+ // Termine a inicialização sem usuário antes de instalar o documento legado.
+ await page.waitForFunction(()=>window.testAuthCallbacks?.length&&document.getElementById('message').textContent.includes('Entre com sua conta'));
  await page.evaluate(()=>{
   localStorage.setItem('test-user','yes');
   const old={moedas:'12345',playerXP:'345',playerLevel:'4',COLS:'25',ROWS:'23',farmName:'Legada',character:'menino',terrenos:{2:{gx:3,gy:4,w:1,h:1,imgSrc:''}},inventory:{milho:{count:'25'}},player:{gx:'6',gy:'7',path:[]},customLegacy:{preserve:true}};

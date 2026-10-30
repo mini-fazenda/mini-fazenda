@@ -10,6 +10,6 @@
  #caminhao-actions{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;display:flex!important;justify-content:center!important;gap:12px!important;align-items:center!important;height:auto!important;flex-wrap:wrap!important}#caminhao-actions img{width:112px!important;height:auto!important;cursor:pointer}#mf-truck-deliver{font:20px Amfost,Arial;color:white;background:linear-gradient(#8acf4c,#408d28);border:2px solid #366e24;border-radius:10px;padding:10px 15px;cursor:pointer}#mf-truck-help{font:14px Arial;color:#fff5cd;text-align:center;margin:8px 0}
  `;document.head.append(css);
  const actions=document.getElementById('caminhao-actions');const deliver=document.createElement('button');deliver.id='mf-truck-deliver';deliver.textContent='Entregar disponíveis';deliver.type='button';
- deliver.onclick=()=>{if(window.MFHost?.isVisiting?.()||!window.truckOrder)return;for(const slot of window.__gameInventory?.slots||[])tentarEntregarDoSlot(slot);};actions?.prepend(deliver);
+ deliver.onclick=()=>{if(window.MFHost?.isVisiting?.()||!window.truckOrder)return;for(const slot of window.__gameInventory?.slots||[])tentarEntregarDoSlot(slot,{explicit:true});};actions?.prepend(deliver);
  const help=document.createElement('p');help.id='mf-truck-help';help.textContent='Entregue os produtos do Celeiro. Aceitar libera após completar o pedido.';actions?.before(help);
 })();

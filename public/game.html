@@ -5972,6 +5972,7 @@ window.__gameInventory.slots.forEach(slotEl => {
         // slot vazio visual
         slotEl.dataset.tipo = '';
         slotEl.removeAttribute('data-tipo');
+        slotEl.dataset.count='0';
         return;
       }
 
@@ -6944,7 +6945,7 @@ function atualizarUIOverlayCaminhao() {
             const slotEl = slots[i];
             if (slotEl.dataset && slotEl.dataset.tipo === p.tipo) {
               if (typeof tentarEntregarDoSlot === 'function') {
-                tentarEntregarDoSlot(slotEl);
+                tentarEntregarDoSlot(slotEl,{explicit:true});
               }
               break;
             }
@@ -6990,95 +6991,25 @@ function abrirOverlayCaminhao() {
   atualizarUIOverlayCaminhao();
 }
 // Tenta enviar itens de um slot do baú para o pedido do caminhão
-function tentarEntregarDoSlot(slotEl) {
-  if (!slotEl || !window.truckOrder || !window.truckOrder.aberto) return;
-
-  const tipo = slotEl.dataset.tipo;
-  if (!tipo) return;
-
-  const order = window.truckOrder;
-  const pedido = order.pedidos.find(p => p.tipo === tipo);
-  if (!pedido) return;
-
-  let falta = pedido.qtd - pedido.entregue;
-  if (falta <= 0) return;
-
-  const inv = window.__gameInventory && window.__gameInventory.map;
-  const slots = window.__gameInventory && window.__gameInventory.slots;
-  if (!slots) return;
-
-  // 🔹 Tenta achar o "slot real" via map (se existir)
-  let entry = inv && inv[tipo] ? inv[tipo] : null;
-  let realSlot = slotEl;
-
-  if (entry && typeof entry.slotIndex === 'number' && slots[entry.slotIndex]) {
-    realSlot = slots[entry.slotIndex];
-  } else {
-    // Se não tiver entry, vamos criar um depois usando esse slot
-  }
-
-  // 🔹 Quantidade que o slot realmente tem (confia no que está no slot)
-  let disponivel = 0;
-  const datasetCount = parseInt(realSlot.dataset.count || '0', 10);
-  if (!isNaN(datasetCount)) disponivel = datasetCount;
-
-  // Se o map tiver um valor diferente, sincroniza com o visual
-  if (entry) {
-    if (typeof entry.count !== 'number' || entry.count !== disponivel) {
-      entry.count = disponivel;
-    }
-  } else if (disponivel > 0 && inv) {
-    // Não tinha entry, mas o slot tem item → cria entry novo
-    const idx = slots.indexOf(realSlot);
-    inv[tipo] = { count: disponivel, slotIndex: idx >= 0 ? idx : 0, imgSrc: '' };
-    entry = inv[tipo];
-  }
-
-  if (disponivel <= 0) return;
-
-  // 🔹 Quanto vamos realmente transferir
-  const transferir = Math.min(falta, disponivel);
-  if (transferir <= 0) return;
-
-  const novoCount = disponivel - transferir;
-
-  // 🔹 Atualiza map (se existir)
-  if (entry) {
-    entry.count = novoCount;
-    if (novoCount <= 0) {
-      delete inv[tipo];
-    }
-  }
-
-  // 🔹 Descobre a imagem pra redesenhar o slot
-  let imgSrc = (entry && entry.imgSrc) || '';
-  if (!imgSrc) {
-    const imgEl = realSlot.querySelector('img');
-    if (imgEl) imgSrc = imgEl.src;
-  }
-
-  // 🔹 Atualiza visual do slot e dataset.count
-  if (novoCount <= 0) {
-    if (typeof window.MFRenderInventorySlot === 'function') {
-      window.MFRenderInventorySlot(realSlot, null, 0, '');
-    } else {
-      realSlot.innerHTML = '';
-      realSlot.dataset.tipo = '';
-      realSlot.dataset.count = '0';
-      realSlot.removeAttribute('data-tipo');
-    }
-  } else {
-    if (typeof window.MFRenderInventorySlot === 'function') {
-      window.MFRenderInventorySlot(realSlot, tipo, novoCount, imgSrc || '');
-    }
-    realSlot.dataset.count = String(novoCount);
-  }
-
-  // 🔹 Atualiza entrega do caminhão
-  pedido.entregue += transferir;
-  if (pedido.entregue > pedido.qtd) pedido.entregue = pedido.qtd;
-
-  // Atualiza UI do overlay do caminhão
+function tentarEntregarDoSlot(slotEl, {explicit=false}={}) {
+  // Apenas uma ação no pedido visível pode entregar produtos. Nunca um clique no celeiro.
+  const overlay=document.getElementById('overlay-caminhao');
+  if(!explicit||!overlay||getComputedStyle(overlay).display==='none'||overlay.classList.contains('mf-closing')||window.MFHost?.isVisiting?.())return;
+  if(window.MFHost?.playing&&!window.MFHost.playing())return;
+  const order=window.truckOrder,inv=window.__gameInventory;
+  if(!slotEl||!order?.aberto||!Array.isArray(order.pedidos)||!inv)return;
+  const tipo=slotEl.dataset.tipo,entry=inv.map[tipo];
+  const pedido=order.pedidos.find(p=>p.tipo===tipo);
+  if(!entry||!pedido||!Number.isSafeInteger(entry.count)||entry.count<1)return;
+  const qtd=Number(pedido.qtd),entregue=Number(pedido.entregue)||0;
+  if(!Number.isSafeInteger(qtd)||!Number.isSafeInteger(entregue)||entregue<0||qtd<=entregue)return;
+  const realSlot=inv.slots[entry.slotIndex];
+  if(!realSlot||realSlot!==slotEl)return;
+  const transferir=Math.min(qtd-entregue,entry.count),left=entry.count-transferir;
+  // O mapa de estoque é a fonte de quantidade, nunca um dataset visual desatualizado.
+  if(left)entry.count=left;else delete inv.map[tipo];
+  pedido.entregue=entregue+transferir;
+  window.MFRenderInventorySlot(realSlot,left?tipo:'',left,entry.imgSrc||'');
   atualizarUIOverlayCaminhao();
   window.MFHost?.changed?.('truck-delivery');
 }
@@ -7846,10 +7777,10 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 
 <script src="extras.js?v=girassol-3"></script>
 <script src="sales-core.js?v=1"></script>
-<script src="inventory-sales.js?v=produtos-3"></script>
+<script src="inventory-sales.js?v=estoque-4"></script>
 <script src="daily-state.js?v=2"></script>
 <script src="daily-rewards.js?v=3"></script>
-<script src="truck-ui.js?v=1"></script>
+<script src="truck-ui.js?v=entrega-explicita-1"></script>
 <script src="object-storage.js?v=encaixe-4"></script>
 <script src="pointer-menu.js?v=1"></script>
 <script src="barn-ui.js?v=1"></script>
@@ -7876,4 +7807,5 @@ canvas.addEventListener('contextmenu', e => { if (window.MFCancelPlacing()) e.pr
 <script src="animal-sell.js?v=1"></script>
 <script src="ajustes-celular.js?v=3"></script>
 <script src="tutorial.js?v=1"></script>
-<script src="game-bridge.js?v=offline-growth-2"></script>
+<script src="save-runtime.js?v=1"></script>
+<script src="game-bridge.js?v=runtime-1"></script>
