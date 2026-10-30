@@ -173,6 +173,9 @@
   .mf-fert-pour{position:fixed;z-index:7;width:130px;height:130px;pointer-events:none;background:url(assets/fertilizante/despejar.webp) 0 0/auto 100% no-repeat}
   @media (max-width:900px),(max-height:500px){#mf-visit-bar{font-size:14px;padding:4px 10px 5px;border-radius:14px}
     #mf-visit-bar .mfv-bags img{width:32px;height:38px}#mf-fert-cursor{width:48px;height:48px}.mf-fert-pour{width:100px;height:100px}#mf-visit-bar .mfv-count{font-size:14px}#mf-visit-bar small{font-size:10.5px}}
+  .mf-fertilized-stars img{display:block;width:100%;height:auto;pointer-events:none;animation:mfFertilizedGlow 2.6s ease-in-out infinite;filter:drop-shadow(0 0 3px #ffe65a77)}
+  @keyframes mfFertilizedGlow{0%,100%{transform:translateY(0) scale(.94);opacity:.78}50%{transform:translateY(-5px) scale(1.04);opacity:1}}
+  @media(prefers-reduced-motion:reduce){.mf-fertilized-stars img{animation:none;opacity:1}}
   .mf-spark{position:fixed;z-index:6;pointer-events:none;font-size:26px;animation:mfSpark 1.2s ease-out forwards}
   @keyframes mfSpark{0%{transform:translate(-50%,-50%) scale(.4);opacity:0}20%{opacity:1}100%{transform:translate(calc(-50% + var(--dx)),calc(-50% - 70px)) scale(1.2);opacity:0}}
 
@@ -745,9 +748,9 @@
   setInterval(()=>{
     const active=new Set();
     for(const t of terrenos){if(!t.cultura?.fertilizada)continue;active.add(t);
-      let el=stars.get(t);if(!el){el=document.createElement('div');el.className='mf-fertilized-stars';el.textContent='✦  ★  ✦';el.title='Plantação adubada';el.style.cssText='position:fixed;pointer-events:none;z-index:6;color:#ffed55;text-shadow:0 1px 2px #765600;font:22px Arial;transform:translate(-50%,-70%)';stars.set(t,el);}
+      let el=stars.get(t);if(!el){el=document.createElement('div');el.className='mf-fertilized-stars';const art=document.createElement('img');art.src='assets/fertilizante/estrelas-v2.webp';art.alt='';art.draggable=false;el.appendChild(art);el.title='Plantação adubada';el.style.cssText='position:fixed;pointer-events:none;z-index:6;transform:translate(-50%,-85%)';stars.set(t,el);}
       const host=document.getElementById('mf-visit-cover')||document.body;if(el.parentNode!==host)host.appendChild(el);
-      const q=tileScreen(t);el.style.left=q.x+'px';el.style.top=q.y+'px';
+      const q=tileScreen(t);el.style.width=(152*zoom)+'px';el.style.left=q.x+'px';el.style.top=q.y+'px';
     }
     for(const [t,el]of stars)if(!active.has(t)){el.remove();stars.delete(t);}
   },150);
