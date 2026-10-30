@@ -1716,6 +1716,7 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   canvas.addEventListener('touchstart', function(e) {
+    window.__mfPointerType='touch';
     // No modo mover, o dedo pertence ao objeto selecionado, nunca à câmera.
     if (e.touches.length === 1 && window.MFMoveControls?.active()) {
       const t=e.touches[0];
@@ -1801,6 +1802,9 @@ document.addEventListener("DOMContentLoaded", function() {
   }, { passive: false });
 
   canvas.addEventListener('touchend', function(e) {
+    // O toque já dispara o fluxo abaixo; impeça o segundo clique nativo
+    // que desmarcava o canteiro recém-adicionado à fila.
+    e.preventDefault();
     if(touchMode==='move'){
       e.preventDefault();
       const t=e.changedTouches[0];
@@ -2869,6 +2873,7 @@ const aradora = {
 // hovered and mouse state
 let hoveredTile = null;
 let hoveredInfo = null;
+canvas.addEventListener('pointerdown',e=>{window.__mfPointerType=e.pointerType;},{passive:true});
 let lastMouse = { clientX:0, clientY:0, shovel:false, scythe:false };
 let isDragging = false, dragStart = {x:0,y:0}, cameraStart = {x:0,y:0};
 let expandButtons = [];
@@ -5249,12 +5254,14 @@ function drawCursorOverlay() {
   if(lastMouse.animalTool){window.MFAnimalTools?.draw(ctx,lastMouse.animalTool,lastMouse.clientX,lastMouse.clientY);}
   else if (lastMouse.scythe) {
     const img = spriteFoice;
-    const w = 48, h = 80;
+    const toolScale=(window.__mfPointerType==='touch'||matchMedia('(pointer:coarse)').matches)?0.5:1;
+    const w = 48*toolScale, h = 80*toolScale;
     if (img && img.complete)
       ctx.drawImage(img, lastMouse.clientX - w/2, lastMouse.clientY - h/2, w, h);
   } else if (lastMouse.shovel) {
     const img = spritePa;
-    const w = 45, h = 55;
+    const toolScale=(window.__mfPointerType==='touch'||matchMedia('(pointer:coarse)').matches)?0.5:1;
+    const w = 45*toolScale, h = 55*toolScale;
     if (img && img.complete)
       ctx.drawImage(img, lastMouse.clientX - w/2, lastMouse.clientY - h/2, w, h);
   }
