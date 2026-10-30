@@ -92,7 +92,15 @@
  },true);
  for(const event of ['mousedown','mousemove','mouseup','click'])window.addEventListener(event,e=>{
   if(e.target!==canvas||visiting())return;const p=mouse(e);
-  if(!mode&&modoMover&&!estruturaMovendo){const target=hit(p);if(event==='click'&&target){e.preventDefault();e.stopImmediatePropagation();mode={type:target.type};original=target;axis='auto';rotate.textContent='Direção: automática ↔';hover=target;toolbar.hidden=false;store.hidden=false;info.textContent='Mover cerca — escolha outro trecho ou guarde no MiniBaú';requestRedraw();return;}if(target&&(event==='mousedown'||event==='mouseup')){e.preventDefault();e.stopImmediatePropagation();return;}}
+  // Esta captura do window ocorre antes da captura do document/canvas.
+  // O fluxo de mover cercas precisa ser resolvido AQUI, antes do clique genérico.
+  if(event==='click'&&modoMover){
+   if(original){e.preventDefault();e.stopImmediatePropagation();commitMoveAt(e.clientX,e.clientY);return;}
+   if(!estruturaMovendo&&selectMoveAt(e.clientX,e.clientY)){e.preventDefault();e.stopImmediatePropagation();return;}
+  }
+  if(!mode&&modoMover&&!estruturaMovendo&&(event==='mousedown'||event==='mouseup')){
+   if(hit(p)){e.preventDefault();e.stopImmediatePropagation();return;}
+  }
   if(!mode&&!modoMover&&!modoTrator&&!modoColocar&&!placingItem&&event==='click'){const target=hit(p);if(target&&freeSpot(p)){e.preventDefault();e.stopImmediatePropagation();openMenu(target,e);return;}}
   if(!mode&&modoTrator){const target=hit(p);if(target){e.preventDefault();e.stopImmediatePropagation();if(event==='click'&&board.store(target))changed();return;}}
   if(!mode)return;e.preventDefault();e.stopImmediatePropagation();hover=closest(p,mode.type);canvas.style.cursor='crosshair';
