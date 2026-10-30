@@ -29,5 +29,21 @@ const {chromium,webkit,devices}=require('playwright');
  await f.evaluate(()=>{const t=terrenos[0];if(t.cultura.etapa!==2||MFGrowthInfo.describe(t).percent!==100)throw Error('Relógio legado foi reiniciado no login');});
  const legacyStart=await f.evaluate(()=>terrenos[0].cultura.startTime);await reload(0);f=frame();await f.evaluate(start=>{if(terrenos[0].cultura.startTime!==start||terrenos[0].cultura.etapa!==2)throw Error('Relógio legado reiniciou novamente');},legacyStart);
  console.log('PASS: cana de save legado usa data do último save e não reinicia na próxima entrada');
+ await page.evaluate(()=>testOffset=0);
+ await f.evaluate(()=>{
+  terrenos.forEach(t=>(t._timers||[]).forEach(clearTimeout));terrenos=[];filaAcoes=[];player.acaoAtual=null;player.path=[];moedas=10000;playerXP=0;playerLevel=1;
+  for(let i=0;i<3;i++){const t={gx:4+i*2,gy:4,w:2,h:2,imgSrc:TERRA_ARADA_SRC};terrenos.push(t);MFJobs.queue(t,'plantar',{id:'item-cana',price:1200});}
+  window.testHidden=true;Object.defineProperty(document,'hidden',{configurable:true,get:()=>window.testHidden});document.dispatchEvent(new Event('visibilitychange'));
+ });
+ const paused=await page.evaluate(()=>testAPI.capture());await page.evaluate(()=>testOffset+=12*3600000);
+ const later=await page.evaluate(()=>testAPI.capture());
+ if(later.savedAt!==paused.savedAt||later.player.action.elapsed!==paused.player.action.elapsed)throw Error('Save em segundo plano apagou tempo da fila');
+ await page.evaluate(()=>testPlaying=true);
+ await f.evaluate(()=>{window.testHidden=false;document.dispatchEvent(new Event('visibilitychange'));parent.testPlaying=false;
+  if(moedas!==6400||filaAcoes.length||player.acaoAtual||terrenos.some(t=>t.cultura?.etapa!==2))throw Error('Voltar à mesma aba não concluiu fila suspensa: '+JSON.stringify({moedas,queue:filaAcoes.length,action:player.acaoAtual?.state,crops:terrenos.map(t=>t.cultura)}));
+  document.dispatchEvent(new Event('visibilitychange'));if(moedas!==6400)throw Error('Retorno duplicou cobrança');
+  delete document.hidden;
+ });
+ console.log('PASS: ocultar e reabrir mesma aba conclui fila pelo tempo decorrido; saves ocultos preservam referência e não duplicam compra');
  if(errors.length)throw Error(errors.join('\n'));await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});

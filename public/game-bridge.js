@@ -22,15 +22,35 @@
     if(!a?.alvo)return null;
     return {...simple(a),alvo:{gx:a.alvo.gx,gy:a.alvo.gy},elapsed:a.startTime?Math.max(0,performance.now()-a.startTime):0};
   }
-  let activeSeconds=0;
+  let activeSeconds=0,background=null;
+  function pauseBackground(){
+    if(background||host.isVisiting())return;
+    const action=player.acaoAtual;
+    background={at:Date.now(),action,elapsed:action?.startTime?Math.max(0,performance.now()-action.startTime):Number(action?.elapsed)||0};
+  }
+  function resumeBackground(){
+    if(!background||document.hidden||!host.playing())return;
+    const paused=background;background=null;
+    if(paused.action&&player.acaoAtual===paused.action){
+      player.acaoAtual.elapsed=paused.elapsed;
+      resumeOfflinePlanting({savedAt:paused.at});
+      delete player.acaoAtual?.elapsed;
+    }
+    syncAllGrowth(Date.now());requestRedraw();host.changed();
+  }
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseBackground();else resumeBackground();});
+  window.addEventListener('pagehide',pauseBackground);
+  window.addEventListener('pageshow',resumeBackground);
+  setInterval(resumeBackground,1000);
   setInterval(()=>{if(host.playing())activeSeconds++},1000); // XP só vem das ações do jogador
   function capture() {
+    if(document.hidden)pauseBackground();
     const data = window.MFAdapter.captureState();
     data.terrenos.forEach((t,i)=>{
       if(terrenos[i]?.animal)t.animal=clone(terrenos[i].animal);
       if(terrenos[i]?.cultura)t.cultura=clone(terrenos[i].cultura);
     });
-    Object.assign(data, { version: 2, savedAt:Date.now(), offsetX, offsetY, zoom,activeSeconds,character:window.__mfCharacter||null,
+    Object.assign(data, { version: 2, savedAt:background?.at||Date.now(), offsetX, offsetY, zoom,activeSeconds,character:window.__mfCharacter||null,
       player: {...window.MFSaveRuntime.actorProgress(data.player), x:player.x,y:player.y,facing:player.facing,path:clone(player.path),action:actionState(player)},
       aradora: {...window.MFSaveRuntime.actorProgress(data.aradora),x:aradora.x,y:aradora.y,facing:aradora.facing,
         path:clone(aradora.path || []),action:actionState(aradora),fila:clone((aradora.fila || []).map(t=>({gx:t.gx,gy:t.gy})))},
@@ -45,6 +65,7 @@
       actionQueue:filaAcoes.map(t=>({gx:t.gx,gy:t.gy,...(t._job?{job:clone(t._job)}:{})})),
       loot: lootParticles.map(p=>simple(p))
     });
+    if(background&&data.player.action&&player.acaoAtual===background.action)data.player.action.elapsed=background.elapsed;
     if(data.truckOrder)data.truckOrder={...data.truckOrder,aberto:false};
     return clone(data);
   }
@@ -205,6 +226,7 @@
   setTimeout(() => {
     try {
       restore(host.bootState());
+      if(document.hidden){background=null;pauseBackground();}
       if(!host.bootState() && !host.isVisiting()) { seedStarterFarm(); window.MFTutorial?.start(); }
       setTimeout(()=>window.MFCharacter?.init?.(),0);
       document.documentElement.style.visibility='visible';
