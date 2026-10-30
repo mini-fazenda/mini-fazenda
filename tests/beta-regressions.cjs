@@ -174,6 +174,20 @@ const {chromium,webkit,devices}=require('playwright');
   }
  });
  console.log('PASS: base do celeiro encosta no limite lógico nas duas posições e clique acompanha a arte');
+ await f.evaluate(()=>{
+  window.MFCancelPlacing();setFarmMoveMode(false);terrenos=[];filaAcoes=[];player.acaoAtual=null;player.path=[];moedas=2000;clearInventoryFromSave();
+  const t={gx:4,gy:4,w:2,h:2,imgSrc:TERRA_ARADA_SRC};terrenos.push(t);const before=playerXP;placingItem={id:'item-girassol',price:1000,xp:50};plantCropAtTile(t);window.MFCancelPlacing();
+  if(moedas!==1000||playerXP!==before||t.cultura.totalTime!==21600000)throw Error('Compra, tempo ou estrelas do girassol incorretos');
+  t.cultura.startTime=Date.now()-10800001;reapplyGrowthFromTime(t);if(t.cultura.etapa!==1||!t.imgSrc.endsWith('girassol-quase.png')||tryHarvestAtTile(t))throw Error('Girassol não deve colher em 50%');
+ });
+ await reload();f=frame();await f.evaluate(()=>{
+  const t=terrenos[0];if(t.cultura.etapa!==1)throw Error('Crescimento do girassol perdeu ao sair');const before=playerXP;t.cultura.startTime-=10800001;reapplyGrowthFromTime(t);
+  if(!tryHarvestAtTile(t)||playerXP!==before+50||__gameInventory.map.girassol?.count!==1||tryHarvestAtTile(t))throw Error('Colheita do girassol não deu lote único e 50 estrelas');
+  document.querySelector('#mf-sales-actions button:nth-child(2)').click();if(moedas!==2400)throw Error('Girassol deveria vender por 1400, com lucro de 400');
+  MFShop.open();const flowers=[...document.querySelectorAll('#mf-shop .mfs-sub')].find(el=>el.textContent==='Flores');flowers.click();
+  const card=document.querySelector('#mf-shop .mfs-card[data-id="item-girassol"]');if(!card||!card.textContent.includes('1400')||!card.textContent.includes('1000'))throw Error('Girassol ausente ou preço incorreto na categoria Flores');
+ });
+ console.log('PASS: girassol em Flores, 6h, 50%, save, 50 estrelas na colheita, venda 1400 e lucro 400');
  if(errors.length)throw Error(errors.join('\n'));console.log('PASS: celeiro 200 moedas, obra autônoma 5min, giro, save, 5 estrelas únicas e toque abre vendas ('+(ios?'WebKit/iOS':'Chromium/toque')+')');
  await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
