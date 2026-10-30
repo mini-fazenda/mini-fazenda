@@ -1716,6 +1716,15 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   canvas.addEventListener('touchstart', function(e) {
+    // No modo mover, o dedo pertence ao objeto selecionado, nunca à câmera.
+    if (e.touches.length === 1 && window.MFMoveControls?.active()) {
+      const t=e.touches[0];
+      touchMode='move';
+      window.MFAdapter?.cancelGlide?.();
+      window.MFMoveControls.touchStart(t.clientX,t.clientY);
+      e.preventDefault(); // também evita click sintético duplicado
+      return;
+    }
     if (e.touches.length === 1) {
       const t = e.touches[0];
       touchMode = 'tap'; touchVX=touchVY=0;touchLastT=performance.now();window.MFAdapter?.cancelGlide();
@@ -1725,6 +1734,7 @@ document.addEventListener("DOMContentLoaded", function() {
       cameraStartX = typeof offsetX === 'number' ? offsetX : 0;
       cameraStartY = typeof offsetY === 'number' ? offsetY : 0;
     } else if (e.touches.length === 2) {
+      if(touchMode==='move')window.MFMoveControls?.touchCancel();
       const [t1, t2] = e.touches;
       touchMode = 'pinch';
       pinchStartDist = getTouchesDistance(t1, t2);
@@ -1733,6 +1743,11 @@ document.addEventListener("DOMContentLoaded", function() {
   }, { passive: false });
 
   canvas.addEventListener('touchmove', function(e) {
+    if(touchMode==='move'){
+      e.preventDefault();
+      if(e.touches.length===1)window.MFMoveControls?.touchMove(e.touches[0].clientX,e.touches[0].clientY);
+      return;
+    }
     if (touchMode === 'pinch' && e.touches.length === 2) {
       // Zoom com dois dedos
       e.preventDefault();
@@ -1786,6 +1801,14 @@ document.addEventListener("DOMContentLoaded", function() {
   }, { passive: false });
 
   canvas.addEventListener('touchend', function(e) {
+    if(touchMode==='move'){
+      e.preventDefault();
+      const t=e.changedTouches[0];
+      if(t)window.MFMoveControls?.touchEnd(t.clientX,t.clientY);
+      else window.MFMoveControls?.touchCancel();
+      touchMode=null;
+      return;
+    }
     if (touchMode === 'tap') {
       const now = (performance && performance.now) ? performance.now() : Date.now();
       const elapsed = now - touchStartTime;
@@ -1804,9 +1827,10 @@ document.addEventListener("DOMContentLoaded", function() {
       touchMode = null;
       pinchStartDist = 0;
     }
-  }, { passive: true });
+  }, { passive: false });
 
   canvas.addEventListener('touchcancel', function() {
+    window.MFMoveControls?.touchCancel();
     touchMode = null;
     pinchStartDist = 0;
   }, { passive: true });
@@ -5049,13 +5073,7 @@ if (modoMover && estruturaMovendo && preview.gridX !== undefined) {
   const clampY = Math.max(0, Math.min(ROWS - estruturaMovendo.h, gy));
 
   // Verifica se cabe (sem sobreposição)
-  const fits = !terrenos.some(t =>
-    t !== estruturaMovendo &&
-    !(t.gx + t.w - 1 < clampX ||
-      clampX + estruturaMovendo.w - 1 < t.gx ||
-      t.gy + t.h - 1 < clampY ||
-      clampY + estruturaMovendo.h - 1 < t.gy)
-  );
+  const fits=moveFits(estruturaMovendo,clampX,clampY);
 
   // Desenha tiles de feedback (verde/vermelho)
   for (let ry = 0; ry < estruturaMovendo.h; ry++) {
@@ -5376,13 +5394,79 @@ let modoMover = false;
 let estruturaMovendo = null;
 const MOVER_CURSOR_SRC = "https://i.postimg.cc/qM4NM7P1/mouse-mover-estruturas.png";
 const moverCursorImg = new Image(); moverCursorImg.src = MOVER_CURSOR_SRC;
-
+const mfMoveTip=document.createElement('div');
+mfMoveTip.id='mf-move-tip';
+mfMoveTip.hidden=true;
+mfMoveTip.setAttribute('role','status');
+mfMoveTip.style.cssText='position:fixed;z-index:1300;left:50%;bottom:160px;transform:translateX(-50%);background:#fff0be;border:2px solid #8f5b2c;color:#59401e;padding:7px 13px;border-radius:12px;max-width:86vw;pointer-events:none;text-align:center;font:15px Arial,sans-serif;box-shadow:0 3px 12px #0003';
+document.body.append(mfMoveTip);
+function moveHint(msg){
+  mfMoveTip.hidden=!modoMover;
+  mfMoveTip.textContent=msg||'Toque em um objeto ou cerca para selecionar.';
+}
+function movePoint(clientX,clientY){
+  const r=canvas.getBoundingClientRect();
+  const mx=((clientX-r.left)*canvas.width/r.width-canvas.width/2-offsetX)/zoom;
+  const my=((clientY-r.top)*canvas.height/r.height-canvas.height/3-offsetY)/zoom;
+  return {mx,my,tile:screenPointToTile(mx,my)};
+}
+function moveFits(obj,gx,gy){
+  const w=obj.w||1,h=obj.h||1;
+  return gx>=0&&gy>=0&&gx+w<=COLS&&gy+h<=ROWS&&!terrenos.some(t=>
+    t!==obj&&gx<(t.gx+(t.w||1))&&gx+w>t.gx&&gy<(t.gy+(t.h||1))&&gy+h>t.gy);
+}
+function moveTarget(tile){
+  if(!estruturaMovendo)return null;
+  const w=estruturaMovendo.w||1,h=estruturaMovendo.h||1;
+  if(w>COLS||h>ROWS)return null;
+  return {gx:Math.max(0,Math.min(COLS-w,tile.gx)),gy:Math.max(0,Math.min(ROWS-h,tile.gy))};
+}
+function selectStructure(clientX,clientY){
+  if(estruturaMovendo)return true;
+  const {mx,my}=movePoint(clientX,clientY);
+  const t=terrainAtPointer(mx,my);
+  if(!t)return false;
+  t.w=t.w||1;t.h=t.h||1;
+  estruturaMovendo=t;
+  preview.gridX=t.gx;preview.gridY=t.gy;
+  preview.active=true;preview.img=preload(t.imgSrc);
+  canvas.style.cursor='grabbing';
+  moveHint('Objeto selecionado! Arraste ou toque no destino para posicionar.');
+  requestRedraw();
+  return true;
+}
+function hoverStructure(clientX,clientY){
+  if(!estruturaMovendo)return;
+  const {tile}=movePoint(clientX,clientY);
+  preview.gridX=tile.gx;preview.gridY=tile.gy;
+  requestRedraw();
+}
+function dropStructure(clientX,clientY){
+  if(!estruturaMovendo)return false;
+  hoverStructure(clientX,clientY);
+  const dest=moveTarget(movePoint(clientX,clientY).tile);
+  if(!dest||!moveFits(estruturaMovendo,dest.gx,dest.gy)){
+    moveHint('Local ocupado ou inválido. Escolha outra posição.');
+    return false; // continua selecionado, sem perder a estrutura
+  }
+  estruturaMovendo.gx=dest.gx;estruturaMovendo.gy=dest.gy;
+  delete estruturaMovendo._orig;
+  estruturaMovendo=null;
+  preview.active=false;
+  canvas.style.cursor='move';
+  moveHint('Objeto movido! Toque em outro objeto ou saia do modo Mover.');
+  window.MFHost?.changed?.('move-object');
+  requestRedraw();
+  return true;
+}
 function setFarmMoveMode(active) {
   modoMover=active;estruturaMovendo=null;modoColocar=false;placingItem=null;modoTrator=false;
   preview.active=false;isHoldingScythe=false;isHoldingPlant=false;isHoldingShovel=false;isHoldingSpawn=false;
   canvas.style.cursor=active?'move':'default';
   btnMover?.setAttribute('aria-pressed',String(active));
-  if(btnMover)btnMover.title=active?'Mover: clique para pegar e novamente para soltar':'Seta: clique para ativar mover';
+  if(btnMover)btnMover.title=active?'Mover: selecione, arraste ou toque no destino':'Seta: clique para ativar mover';
+  if(!active)window.MFFences?.stop?.();
+  moveHint();
   requestRedraw();
 }
 if(btnMover)btnMover.addEventListener('click',e=>{
@@ -5390,115 +5474,49 @@ if(btnMover)btnMover.addEventListener('click',e=>{
   if(e.target.closest?.('[data-mf-move-menu]')){window.MFPointerMenu?.toggle();return;}
   setFarmMoveMode(false);window.MFPointerMenu?.close();window.MFPointerMenu?.sync();
 },true);
-// Cancelar mover ao clicar em botões/menus
 ["#btn-loja", "#btn-bau", "#overlay-bau", "#overlay-loja"].forEach(sel => {
   const el = document.querySelector(sel);
-  if (el) {
-    el.addEventListener("click", () => {
-      modoMover = false;
-      estruturaMovendo = null;
-      canvas.style.cursor = "default";
-    });
-  }
+  if(el)el.addEventListener('click',()=>setFarmMoveMode(false));
 });
-
-// Atualizar posição de estrutura durante modo mover
-canvas.addEventListener("mousemove", e => {
-  if (!modoMover) return;
-  canvas.style.cursor = estruturaMovendo ? 'grabbing' : 'move';
+canvas.addEventListener('mousemove',e=>{
+  if(!modoMover)return;
   lastMouse.shovel=false;lastMouse.scythe=false;
-  requestRedraw();
-  if (!estruturaMovendo) return;
-  
-  const rect = canvas.getBoundingClientRect();
-  const mx = (e.clientX - rect.left - canvas.width / 2 - offsetX) / zoom;
-  const my = (e.clientY - rect.top - canvas.height / 3 - offsetY) / zoom;
-  const tile = screenPointToTile(mx, my);
-
-  // Atualiza posição de preview (sem alterar ainda o terreno real)
-  preview.gridX = tile.gx;
-  preview.gridY = tile.gy;
+  canvas.style.cursor=estruturaMovendo?'grabbing':'move';
+  if(estruturaMovendo)hoverStructure(e.clientX,e.clientY);
 });
-
-
-// Clique para pegar ou soltar estrutura
-canvas.addEventListener("click", e => {
-  if (!modoMover) return; // Só intercepta se o modo estiver ativo
-  e.stopImmediatePropagation(); // Evita que o clique vá para outros handlers
-  e.preventDefault();
-
-  const rect = canvas.getBoundingClientRect();
-  const mx = (e.clientX - rect.left - canvas.width / 2 - offsetX) / zoom;
-  const my = (e.clientY - rect.top - canvas.height / 3 - offsetY) / zoom;
-  const tile = screenPointToTile(mx, my);
-
-// Pegar estrutura existente
-if (!estruturaMovendo) {
-  const t = terrainAtPointer(mx, my);
-  if (t) {
-    t.w=t.w||1;t.h=t.h||1;
-    preview.gridX=t.gx;preview.gridY=t.gy;
-    estruturaMovendo = t;
-    // salva a posição original para poder restaurar se for inválido
-    estruturaMovendo._orig = { gx: t.gx, gy: t.gy };
-    preview.active = true;
-    preview.img = preload(t.imgSrc);
-    canvas.style.cursor="grabbing";
-    requestRedraw();
-  } else {
-    // clicou fora: sai do modo
-    modoMover = false;
-    canvas.style.cursor = "default";
-  }
-  return;
-}
-// ===============================
-// Soltar estrutura (com validação e restauração se inválido)
-// ===============================
-if (!estruturaMovendo) return;
-
-const destinoGX = tile.gx;
-const destinoGY = tile.gy;
-
-// Limita dentro do mapa (clamp)
-const clampX = Math.max(0, Math.min(COLS - estruturaMovendo.w, destinoGX));
-const clampY = Math.max(0, Math.min(ROWS - estruturaMovendo.h, destinoGY));
-
-// Verifica se cabe (sem sobrepor) — reutiliza a mesma lógica do preview da loja
-const fits = !terrenos.some(t =>
-  t !== estruturaMovendo &&
-  !(t.gx + t.w - 1 < clampX ||
-    clampX + estruturaMovendo.w - 1 < t.gx ||
-    t.gy + t.h - 1 < clampY ||
-    clampY + estruturaMovendo.h - 1 < t.gy)
-);
-
-if (fits) {
-  // posição válida → aplica e limpa o registro de original
-  estruturaMovendo.gx = clampX;
-  estruturaMovendo.gy = clampY;
-  if (estruturaMovendo._orig) delete estruturaMovendo._orig;
-  console.log("✅ Estrutura movida para:", clampX, clampY);
-} else {
-  // inválido → restaura para a posição original (se existir)
-  if (estruturaMovendo._orig) {
-    estruturaMovendo.gx = estruturaMovendo._orig.gx;
-    estruturaMovendo.gy = estruturaMovendo._orig.gy;
-    delete estruturaMovendo._orig;
-    console.log("❌ Local inválido — estrutura restaurada para:", estruturaMovendo.gx, estruturaMovendo.gy);
-  } else {
-    console.log("❌ Local inválido — não havia posição original registrada.");
-  }
-}
-
-// terminar operação: mantém modoMover ativo, mas "solta" a referência
-estruturaMovendo = null;
-preview.active = false;
-canvas.style.cursor = "grab";
-requestRedraw();
-
-}, true);
-
+// Mouse: clique 1 seleciona; clique 2 posiciona. A cerca tem prioridade no listener de captura.
+canvas.addEventListener('click',e=>{
+  if(!modoMover)return;
+  e.stopImmediatePropagation();e.preventDefault();
+  if(!estruturaMovendo)selectStructure(e.clientX,e.clientY);
+  else dropStructure(e.clientX,e.clientY);
+},true);
+let mfMoveTouch=null;
+window.MFMoveControls={
+  active:()=>modoMover,
+  touchStart(x,y){
+    if(!modoMover)return;
+    const wasSelected=!!estruturaMovendo||!!window.MFFences?.isMoveSelected?.();
+    if(!wasSelected){
+      if(!window.MFFences?.selectMoveAt?.(x,y,true))selectStructure(x,y);
+    }
+    mfMoveTouch={x,y,moved:false,wasSelected,hasSelection:!!estruturaMovendo||!!window.MFFences?.isMoveSelected?.()};
+  },
+  touchMove(x,y){
+    if(!mfMoveTouch||!modoMover)return;
+    if(Math.hypot(x-mfMoveTouch.x,y-mfMoveTouch.y)>9)mfMoveTouch.moved=true;
+    if(window.MFFences?.isMoveSelected?.())window.MFFences.hoverMoveAt(x,y);
+    else hoverStructure(x,y);
+  },
+  touchEnd(x,y){
+    const t=mfMoveTouch;mfMoveTouch=null;
+    if(!t||!modoMover||!t.hasSelection)return;
+    if(!t.wasSelected&&!t.moved)return; // primeiro toque só seleciona
+    if(window.MFFences?.isMoveSelected?.())window.MFFences.commitMoveAt(x,y);
+    else dropStructure(x,y);
+  },
+  touchCancel(){mfMoveTouch=null;}
+};
 // Desenhar cursor mover no topo
 const originalDrawCursorOverlay = drawCursorOverlay;
 drawCursorOverlay = function() {
