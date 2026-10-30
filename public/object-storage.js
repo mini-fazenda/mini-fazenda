@@ -34,7 +34,7 @@
  const guardar=document.createElement('button');guardar.id='mf-store-selected';guardar.textContent='Guardar no MiniBaú';guardar.hidden=true;document.body.append(guardar);guardar.onclick=()=>store(estruturaMovendo);
  const cancel=document.createElement('button');cancel.id='mf-placement-cancel';cancel.textContent='Cancelar colocação';cancel.hidden=true;document.body.append(cancel);
  function stop(){placing=null;point=null;cancel.hidden=true;requestRedraw();}cancel.onclick=stop;
- function pointer(e){const r=canvas.getBoundingClientRect();return screenPointToTile((e.clientX-r.left-canvas.width/2-offsetX)/zoom,(e.clientY-r.top-canvas.height/3-offsetY)/zoom);}
+ function pointer(e){const r=canvas.getBoundingClientRect();return screenPointToTile((e.clientX-r.left-MFViewport.width/2-offsetX)/zoom,(e.clientY-r.top-MFViewport.height/3-offsetY)/zoom);}
  function fits(t,p){const w=t.w||1,h=t.h||1;return p&&p.gx>=0&&p.gy>=0&&p.gx+w<=COLS&&p.gy+h<=ROWS&&!terrenos.some(x=>p.gx<x.gx+(x.w||1)&&p.gx+w>x.gx&&p.gy<x.gy+(x.h||1)&&p.gy+h>x.gy);}
  canvas.addEventListener('mousemove',e=>{if(placing){point=pointer(e);canvas.style.cursor='crosshair';requestRedraw();}});
  for(const type of ['mousedown','mouseup','click'])canvas.addEventListener(type,e=>{

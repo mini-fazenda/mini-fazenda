@@ -492,10 +492,10 @@
   const blue = sym => `<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="1.5" y="1.5" width="37" height="37" rx="9" fill="#1d5fa8"/><rect x="3" y="3" width="34" height="32" rx="8" fill="#3d9cf0"/><rect x="6" y="5" width="28" height="7" rx="3.5" fill="#fff" opacity=".3"/>${sym}</svg>`;
   function zoomBy(f) {
     try {
-      const cam = window.MFAdapter?.project?.camera || {}, sx = canvas.width / 2, sy = canvas.height / 2;
-      const wx = (sx - canvas.width / 2 - offsetX) / zoom, wy = (sy - canvas.height / 3 - offsetY) / zoom;
+      const cam = window.MFAdapter?.project?.camera || {}, sx = MFViewport.width / 2, sy = MFViewport.height / 2;
+      const wx = (sx - MFViewport.width / 2 - offsetX) / zoom, wy = (sy - MFViewport.height / 3 - offsetY) / zoom;
       zoom = Math.min(Number(cam.maxZoom) || 1.6, Math.max(Number(cam.minZoom) || 0.25, zoom * f));
-      offsetX = sx - canvas.width / 2 - wx * zoom; offsetY = sy - canvas.height / 3 - wy * zoom;
+      offsetX = sx - MFViewport.width / 2 - wx * zoom; offsetY = sy - MFViewport.height / 3 - wy * zoom;
       window.MFAdapter?.clampCamera?.(); try { updateTruckDomPosition(); } catch (e) { } requestRedraw();
     } catch (e) { }
   }
@@ -714,7 +714,7 @@
   }
   function tileScreen(t) {
     const p = gridToScreen(t.gx + ((t.w || 1) - 1) / 2, t.gy + ((t.h || 1) - 1) / 2), r = canvas.getBoundingClientRect();
-    return { x: r.left + canvas.width / 2 + offsetX + p.x * zoom, y: r.top + canvas.height / 3 + offsetY + p.y * zoom };
+    return { x: r.left + MFViewport.width / 2 + offsetX + p.x * zoom, y: r.top + MFViewport.height / 3 + offsetY + p.y * zoom };
   }
   function boost(t) {
     const c = t.cultura; const total = Number(c.totalTime) || 0; if (!total) return false;
@@ -812,7 +812,7 @@
       const F = FR(), owner = window.MFHost?.visitingUid?.(); if (!F?.fertilize || !owner || fertBusy) return;
       if (!holding) { renderVisitBar(); return; }
       const r = canvas.getBoundingClientRect();
-      const tile = screenPointToTile((x - r.left - canvas.width / 2 - offsetX) / zoom, (y - r.top - canvas.height / 3 - offsetY) / zoom);
+      const tile = screenPointToTile((x - r.left - MFViewport.width / 2 - offsetX) / zoom, (y - r.top - MFViewport.height / 3 - offsetY) / zoom);
       const t = findTerrainAt(tile.gx, tile.gy), host = document.getElementById('mf-visit-cover') || document.body;
       if (!t || !t.cultura) return;
       if (String(t.cultura.tipo) === 'morta') { renderVisitBar('Essa plantação já secou, não dá para fertilizar.'); return; }

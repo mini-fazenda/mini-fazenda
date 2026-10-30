@@ -108,7 +108,7 @@
   function tileTop(t) {
     const r = canvas.getBoundingClientRect(), w = t.w || 1, h = t.h || 1;
     const p = gridToScreen(t.gx + (w - 1) / 2, t.gy + (h - 1) / 2);
-    return { x: r.left + canvas.width / 2 + offsetX + p.x * zoom, y: r.top + canvas.height / 3 + offsetY + (p.y - TILE_H * 1.1) * zoom };
+    return { x: r.left + MFViewport.width / 2 + offsetX + p.x * zoom, y: r.top + MFViewport.height / 3 + offsetY + (p.y - TILE_H * 1.1) * zoom };
   }
   function pointAt(target) {
     if (!target) { arrow.hidden = true; return; }

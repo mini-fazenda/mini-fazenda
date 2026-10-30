@@ -473,8 +473,8 @@
   }
 
   function viewRect() {
-    const l = (-canvas.width / 2 - offsetX) / zoom, t = (-canvas.height / 3 - offsetY) / zoom;
-    return { l: l - 60, t: t - 60, r: l + canvas.width / zoom + 60, b: t + canvas.height / zoom + 200 };
+    const l = (-MFViewport.width / 2 - offsetX) / zoom, t = (-MFViewport.height / 3 - offsetY) / zoom;
+    return { l: l - 60, t: t - 60, r: l + MFViewport.width / zoom + 60, b: t + MFViewport.height / zoom + 200 };
   }
 
 
@@ -499,9 +499,9 @@
     if (now - fxLast < 33) return; // ~30 quadros por segundo
     const dt = Math.min(0.1, (now - (fxLast || now)) / 1000); fxLast = now;
     const L = LAYOUT, g = fxCtx;
-    if (fxCanvas.width !== canvas.width || fxCanvas.height !== canvas.height) { fxCanvas.width = canvas.width; fxCanvas.height = canvas.height; }
+    MFViewport.resize(fxCanvas);
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
-    g.setTransform(zoom, 0, 0, zoom, canvas.width / 2 + offsetX, canvas.height / 3 + offsetY);
+    g.setTransform(zoom*MFViewport.ratio, 0, 0, zoom*MFViewport.ratio, (MFViewport.width / 2 + offsetX)*MFViewport.ratio, (MFViewport.height / 3 + offsetY)*MFViewport.ratio);
     const view = viewRect(), t = now / 1000;
     // rio: espuminhas descendo
     if (!fxParts) fxParts = makeParts(L);
