@@ -39,7 +39,7 @@ function checkpoint(){
 }
 function publicState(state){
   // Saves anteriores podem não conter farmName. O Firebase exige string em publicFarms.
-  const farmName=typeof state.farmName==='string'&&state.farmName.trim()?state.farmName.slice(0,12):'Minha fazenda';
+  const farmName=typeof state.farmName==='string'&&state.farmName.trim()?state.farmName.slice(0,12):'Fazenda';
   return {...state,farmName,inventory:{},moedas:0,truckOrder:null,loot:[],player:{...state.player,path:[]},aradora:{...state.aradora,path:[],fila:[]}};
 }
 function scheduleProjection(state,version,run){
