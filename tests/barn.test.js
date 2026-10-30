@@ -23,3 +23,8 @@ test('base visível encaixa nos limites reais em ambas as orientações e fases'
   for(const p of [[100,200],[500,300],[336,400]]){const projected=g.project(...p),back=g.unproject(projected.x,projected.y);assert.ok(Math.abs(back.x-p[0])<1e-8);assert.ok(Math.abs(back.y-p[1])<1e-8);}
  }
 });
+
+test('celeiro gira junto às bordas sem sair da fazenda nem sobrepor objetos',()=>{
+ for(const [x,y] of [[0,0],[16,0],[0,14],[16,14]]){const t=c.start(x,y,0,0);assert.equal(c.rotate(t,20,20,[t]),true);assert.equal(c.fits(t,20,20,[],t),true);assert.match(t.imgSrc,/celeiro-1.png$/);assert.equal(c.rotate(t,20,20,[t]),true);}
+ const t=c.start(16,14,0,0),before=structuredClone(t);assert.equal(c.rotate(t,20,20,[t,{gx:14,gy:15,w:2,h:2}]),false);assert.deepEqual(t,before);
+});
