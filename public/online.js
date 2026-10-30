@@ -14,6 +14,7 @@ let ready=false,connected=false,sessionActive=false,stopped=false,visiting=false
 let bridge=null,initialState=null,ownState=null,pending=null,saving=null,lastText='',lastKey=null;
 let stopConnection,stopSession,resolveConnection,connectionReady,projectionTimer,retryTimer,reconnectTimer;
 let retryDelay=1000,loginAttempt=false;
+let projectionPending=null;
 let projectionPending=null,projectionSaving=null,stopVisit=null,visitSequence=0,visitData=null,visitRevision=-1;
 let confirmedSaveId=null,inFlightRecord=null,saveBlocked=false,lastSaveError='';
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -51,7 +52,7 @@ function status(text){
 }
 function gate(text){$('farms').close();$('gate').hidden=false;$('message').textContent=text}
 function closeVisit(){stopVisit?.();stopVisit=null;visitSequence++;visitData=null;visitRevision=-1;visitingUid=null;}
-function freeze(){closeVisit();projectionPending=null;ready=false;sessionActive=false;stopped=true;pending=null;clearTimeout(retryTimer);clearTimeout(reconnectTimer);clearTimeout(projectionTimer);$('game-container').replaceChildren();bridge=null;$('toolbar').hidden=true}
+function freeze(){closeVisit();projectionPending=null;ready=false;sessionActive=false;stopped=true;pending=null;clearTimeout(retryTimer);clearTimeout(reconnectTimer);clearTimeout(projectionTimer);projectionTimer=null;projectionPending=null;$('game-container').replaceChildren();bridge=null;$('toolbar').hidden=true}
 function fail(error){
   if(stopped)return;
   console.error(error);freeze();if(error?.message==='release/mismatch'){gate('O navegador carregou arquivos de versões diferentes. Recarregue a página para atualizar sem alterar sua conta.');const button=document.createElement('button');button.textContent='Atualizar jogo';button.onclick=()=>location.reload();$('message').append(document.createElement('br'),button);return;}gate(String(error?.message||'').startsWith('save/incompatible')?error.message:'Não foi possível conectar à fazenda. Recarregue a página para tentar novamente.');
@@ -315,6 +316,7 @@ async function boot(account){
     if(run===epoch&&!stopped&&snap.val()!==null&&snap.val()!==sessionId)void disconnectPrevious();
   },e=>{console.warn('[session listener]',e);status('Verificando sessão…')});
   mount(ownState,false,stateSavedAt);
+  if(ownState)scheduleProjection(ownState,revision,run);
   // A projeção pública deve refletir apenas o save confirmado, não recuperação pendente local.
   if(confirmedForProjection)scheduleProjection({...confirmedForProjection,savedAt:confirmedForProjection.savedAt||remote?.updatedAt},revision,run);
   void startFriends({sdk,db,uid:user.uid,visit:visitFarm,applyFertilize}).then(()=>{if(run===epoch&&ownState)void publishProfile(ownState)}).catch(e=>console.warn('[amigos]',e));
