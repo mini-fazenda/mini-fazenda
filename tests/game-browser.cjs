@@ -68,7 +68,7 @@ const {chromium}=require('playwright');
    const q=midpoint(moved);
    canvas.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,button:0,clientX:q.x,clientY:q.y}));
    if(window.MFFences.isMoveSelected()||!window.MFFences.capture().segments.some(e=>MFFenceCore.key(e)===MFFenceCore.key(moved)))
-     throw Error('Segundo clique não moveu a cerca');
+     throw Error('Segundo clique não moveu a cerca: '+JSON.stringify({selected:window.MFFences.isMoveSelected(),added,moved,segments:window.MFFences.capture().segments}));
    // Uma cerca também pode ser selecionada e deslocada somente com o dedo.
    const movedPoint=midpoint(moved);
    window.MFMoveControls.touchStart(movedPoint.x,movedPoint.y);
