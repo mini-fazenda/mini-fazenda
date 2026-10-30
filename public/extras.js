@@ -494,7 +494,7 @@
     try {
       const cam = window.MFAdapter?.project?.camera || {}, sx = canvas.width / 2, sy = canvas.height / 2;
       const wx = (sx - canvas.width / 2 - offsetX) / zoom, wy = (sy - canvas.height / 3 - offsetY) / zoom;
-      zoom = Math.min(Number(cam.maxZoom) || 1.6, Math.max(Number(cam.minZoom) || 0.6, zoom * f));
+      zoom = Math.min(Number(cam.maxZoom) || 1.6, Math.max(Number(cam.minZoom) || 0.25, zoom * f));
       offsetX = sx - canvas.width / 2 - wx * zoom; offsetY = sy - canvas.height / 3 - wy * zoom;
       window.MFAdapter?.clampCamera?.(); try { updateTruckDomPosition(); } catch (e) { } requestRedraw();
     } catch (e) { }
