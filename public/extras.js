@@ -299,7 +299,7 @@
           card, id, tipo, tab, sub: SUB[tipo] || '',
           name: card.querySelector('span')?.textContent?.trim() || tipo,
           icon: card.querySelector('img')?.src || card.dataset.img || '',
-          pic: tab === 'sementes' ? (card.dataset.img || card.querySelector('img')?.src) : (card.querySelector('img')?.src || card.dataset.img),
+          pic: tab === 'sementes' ? (conf.shopImg || card.dataset.img || card.querySelector('img')?.src) : (card.querySelector('img')?.src || card.dataset.img),
           price, xp, level: Math.max(1, Number(card.dataset.nivel || conf.level) || 1), grow, sell,
           desc: conf.description || DESC[tipo] || (tab === 'animais' ? 'Um novo amigo para a sua fazenda.' : 'Item especial para a sua fazenda.'),
         };
