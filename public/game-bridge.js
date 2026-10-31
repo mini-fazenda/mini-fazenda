@@ -180,7 +180,7 @@
     (data.loot || []).forEach(p=>lootParticles.push({...p,img:preload(LOOT_SPRITES[p.tipo] || window.MFAdapter?.project?.items?.['item-'+p.tipo]?.lootIcon || '')}));
     filaAcoes=(data.actionQueue || []).map(p=>{
       const t=terrenos.find(t=>t.gx===p.gx&&t.gy===p.gy);
-      if(t&&p.job&&['plantar','colher','animal','arar'].includes(p.job.kind))t._job=clone(p.job);
+      if(t&&p.job&&['plantar','colher','animal','arar','tree'].includes(p.job.kind))t._job=clone(p.job);
       return t;
     }).filter(Boolean);
     arando=player.acaoAtual?.state==='ararando';
