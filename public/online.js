@@ -44,7 +44,7 @@ function retryPending(error){
 }
 let clockOffset=0; // diferença entre o relógio do aparelho e o do servidor (anti-troca de data)
 function status(text){
- const el=$('sync'),state=saveBlocked?'error':pending?'pending':/conect|restabelecendo|salvando/i.test(text)?'pending':'saved';
+ const el=$('sync'),state=saveBlocked?'error':pending||projectionPending?'pending':/conect|restabelecendo|salvando|sincronizando/i.test(text)?'pending':'saved';
  el.textContent=state==='error'?'!':state==='saved'?'✓':'';
  el.hidden=false;el.dataset.state=state;el.title=text;
  el.setAttribute('aria-label',text);el.setAttribute('aria-busy',String(state==='pending'));
