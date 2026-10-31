@@ -7,6 +7,7 @@
  const visiting=()=>!!window.MFHost?.isVisiting?.();
  function info(r){const cfg=window.MFAdapter?.project?.items?.['item-'+r.id]||{},card=document.getElementById('item-'+r.id),coin='assets/ffd360086159ad51164a-icone-moedas.png';
   if(r.kind==='coins')return {name:r.qty.toLocaleString('pt-BR')+' moedas',icon:coin,destination:'Para seu saldo'};
+  if(r.kind==='material'){const m=MFMaterialsCore.TYPES[r.id];return {name:r.qty+' × '+m.name,icon:m.icon,destination:'Para a construção do Galinheiro'};}
   if(r.kind==='fence'){const f=MFFenceCore.catalog[r.id];return {name:r.qty+' × '+f.name,icon:f.icon,destination:'Para o MiniBaú'};}
   if(r.kind==='product')return {name:r.qty+' × '+(names[r.id]||r.id),icon:cfg.lootIcon||window.LOOT_SPRITES?.[r.id]||card?.querySelector('img')?.src||cfg.icon||'',destination:'Para o Celeiro'};
   return {name:'1 × '+(cfg.name||card?.querySelector('span')?.textContent?.trim()||r.id),icon:animalIcons[r.id]||cfg.icon||cfg.shopImg||card?.querySelector('img')?.src||cfg.imgSrc||'',destination:'Para o MiniBaú'};
@@ -19,13 +20,14 @@
   return t;
  }
  function grant(r,bonus){
-  const before={coins:moedas,inventory:getInventorySimpleSnapshot(),objects:MFObjects.capture(),fences:MFFences.capture()};
+  const before={coins:moedas,inventory:getInventorySimpleSnapshot(),objects:MFObjects.capture(),fences:MFFences.capture(),materials:window.MFMaterials?.capture()};
   try{
    if(r.kind==='product'){window.addToInventory(r.id,r.qty,info(r).icon);if((getInventorySimpleSnapshot()[r.id]?.count||0)!==(before.inventory[r.id]?.count||0)+r.qty)throw Error('Libere espaço no Celeiro para receber.');}
+   else if(r.kind==='material'){if(!MFMaterials.grant({[r.id]:r.qty},'level-material:'+model.current().level,{silent:true}))throw Error('Este prêmio já foi recebido.');}
    else if(r.kind==='object'){if(!MFObjects.add(object(r)))throw Error('Não foi possível guardar o presente.');}
    else if(r.kind==='fence'){if(!MFFences.grant(r.id,r.qty))throw Error('Não foi possível guardar as cercas.');}
    window.MFValueSource?.actor('player','nivel');moedas+=bonus+(r.kind==='coins'?r.qty:0);if(moedasSpan)moedasSpan.textContent=moedas;
-  }catch(e){moedas=before.coins;restoreInventoryFromSimple(before.inventory);MFObjects.restore(before.objects);MFFences.restore(before.fences);if(moedasSpan)moedasSpan.textContent=moedas;throw e;}
+  }catch(e){moedas=before.coins;restoreInventoryFromSimple(before.inventory);MFObjects.restore(before.objects);MFFences.restore(before.fences);if(before.materials)MFMaterials.restore(before.materials);if(moedasSpan)moedasSpan.textContent=moedas;throw e;}
  }
  const style=document.createElement('style');style.textContent=`
  #mf-level[hidden],#mf-level-badge[hidden]{display:none!important}#mf-level{position:fixed;inset:0;z-index:70000;background:#132716b8;backdrop-filter:blur(3px);display:grid;place-items:center;padding:12px;box-sizing:border-box}

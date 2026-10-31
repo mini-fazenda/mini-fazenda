@@ -23,7 +23,7 @@
     const stage=Number(t.animal.etapa)||0;
     const src=stage>=2?(cfg.adultImg||cfg.stage2):(stage===1?(cfg.animalStage1||cfg.stage1):cfg.imgSrc);
     if(src)t.imgSrc=src;
-   }else if(!t.cultura&&!t.fruitTree&&id!=='item-celeiro'&&cfg.imgSrc)t.imgSrc=cfg.imgSrc;
+   }else if(!t.coop&&!t.cultura&&!t.fruitTree&&id!=='item-celeiro'&&cfg.imgSrc)t.imgSrc=cfg.imgSrc;
   }
   data.runtimeVersion=1;
   return data;

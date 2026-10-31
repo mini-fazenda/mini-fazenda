@@ -21,7 +21,7 @@
  }
  const spriteCache=new Map();
  function drawItem(ctx,item){
-  const e=item.fence,isRail=item.kind==='fenceRail';if((terrenos.some(t=>t.animal)||window.MFPigsty?.canvasFences?.()||terrenos.some(t=>window.MFFruitTrees?.config(t)?.directCoins)||window.MFFruitTrees?.types[String(placingItem?.id).replace('item-arvore-','')]?.directCoins)){if(isRail)rail(ctx,e);else post(ctx,e);return;}const cacheKey=(isRail?'rail:':'post:')+e.type+(isRail?':'+e.axis:'')+':'+TILE_W+':'+TILE_H+':'+e.gx+':'+e.gy+':'+COLS+':'+ROWS;
+  const e=item.fence,isRail=item.kind==='fenceRail';if((terrenos.some(t=>t.coop)||window.MFCoop?.is(placingItem)||window.MFCoop?.is(estruturaMovendo)||terrenos.some(t=>t.animal)||window.MFPigsty?.canvasFences?.()||terrenos.some(t=>window.MFFruitTrees?.config(t)?.directCoins)||window.MFFruitTrees?.types[String(placingItem?.id).replace('item-arvore-','')]?.directCoins)){if(isRail)rail(ctx,e);else post(ctx,e);return;}const cacheKey=(isRail?'rail:':'post:')+e.type+(isRail?':'+e.axis:'')+':'+TILE_W+':'+TILE_H+':'+e.gx+':'+e.gy+':'+COLS+':'+ROWS;
   let sprite=spriteCache.get(cacheKey);
   if(!sprite){const base={...e},pts=isRail?core.ends(base).map(point):[point(base)],x=Math.min(...pts.map(p=>p.x))-14,y=Math.min(...pts.map(p=>p.y))-55;
    const w=Math.ceil(Math.max(...pts.map(p=>p.x))-x+14),h=Math.ceil(Math.max(...pts.map(p=>p.y))-y+7),c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.translate(-x,-y);if(isRail)rail(g,base);else post(g,base);sprite={src:c.toDataURL(),x,y,w,h};spriteCache.set(cacheKey,sprite);

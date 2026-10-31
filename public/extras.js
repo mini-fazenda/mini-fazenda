@@ -317,7 +317,7 @@
         const tab = CAT[card.dataset.category] || 'upgrades';
         const price = Number(card.dataset.preco) || 0, xp = Number(card.dataset.xp) || 0;
         let grow = Number(conf.growTime || card.dataset.growTime) || (typeof CROP_TIME_TABLE !== 'undefined' ? CROP_TIME_TABLE[tipo] : 0) || 0;
-        const production=tab==='animais'?window.MFAnimalProduction?.types?.[tipo]:null;
+        const production=tab==='animais'?(tipo==='galinha'?{name:'Ovo',cycle:1800000,saleCoins:40,amount:1}:window.MFAnimalProduction?.types?.[tipo]):null;
         if(tab==='animais')grow=tipo==='porco'?(window.MFPigstyCore?.CONFIG.growTime||5400000):production?.cycle||0;
         const tree=window.MFFruitTrees?.types?.[tipo.replace(/^arvore-/, '')];
         let sell = tree?.directCoins?tree.saleCoins:tipo==='porco'?(window.MFPigstyCore?.CONFIG.maxSale||5000):production?production.saleCoins*production.amount:null;
@@ -331,7 +331,7 @@
           icon: card.querySelector('img')?.src || card.dataset.img || '',
           pic: tab === 'sementes' ? (conf.shopImg || card.dataset.img || card.querySelector('img')?.src) : (card.querySelector('img')?.src || card.dataset.img),
           tree, production, pigWeight:tipo==='porco', price, xp, level: Math.max(1, Number(card.dataset.nivel || conf.level) || 1), grow, sell,
-          desc: tipo==='porco'?conf.description:tab==='animais'?(production?`Colocação imediata. Primeira coleta de ${production.name.toLowerCase()} pronta ao comprar. Próximas coletas a cada ${fmtTime(production.cycle)}. Venda: ${production.saleCoins} moedas por unidade.`:'Colocação imediata. Este animal ainda não possui produção de itens.') : conf.description || DESC[tipo] || (tab === 'animais' ? 'Um novo amigo para a sua fazenda.' : 'Item especial para a sua fazenda.'),
+          desc: ['porco','galinha'].includes(tipo)?conf.description:tab==='animais'?(production?`Colocação imediata. Primeira coleta de ${production.name.toLowerCase()} pronta ao comprar. Próximas coletas a cada ${fmtTime(production.cycle)}. Venda: ${production.saleCoins} moedas por unidade.`:'Colocação imediata. Este animal ainda não possui produção de itens.') : conf.description || DESC[tipo] || (tab === 'animais' ? 'Um novo amigo para a sua fazenda.' : 'Item especial para a sua fazenda.'),
         };
       });
   }

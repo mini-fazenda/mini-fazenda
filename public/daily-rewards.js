@@ -25,7 +25,7 @@
    const done=i<claimed,today=i===claimed,card=document.createElement('article');card.className='daily-card'+(today?' today':'')+(done?' done':'');
    const title=document.createElement('h3');title.textContent=today?'Hoje · Dia '+(i+1):'Dia '+(i+1);
    const img=document.createElement('img');img.src=icon(r)||'';img.alt=r.name;
-   const name=document.createElement('strong');name.textContent=r.name;
+   const name=document.createElement('strong');name.textContent=r.name;const extra=window.MFMaterials?.daily?.[i];if(extra){const [key,qty]=Object.entries(extra)[0];name.textContent+=' + '+qty+' '+MFMaterialsCore.TYPES[key].name;}
    const button=document.createElement('button');button.type='button';
    button.textContent=done?'✓ Resgatado':r.preview?'Em breve':today&&can?'Resgatar':today?'Volte amanhã':'Próximo dia';
    button.disabled=done||!today||!can||r.preview||!!visiting();
@@ -40,6 +40,7 @@
      const reward=rewards[index];
      if(reward.coins){moedas+=reward.coins;document.getElementById('valor-moedas').textContent=moedas;}
      else window.addToInventory(reward.item,reward.qty,icon(reward));
+     const bundle=window.MFMaterials?.daily?.[index];if(bundle)MFMaterials.grant(bundle,'daily-material:'+new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo'}).format(new Date(now))+':'+index,{silent:true});
     },now);
     if(ok){window.MFHost?.changed?.('daily-reward');requestRedraw();}
     render();

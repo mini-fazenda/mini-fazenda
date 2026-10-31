@@ -2557,6 +2557,7 @@ function getTerrenosSnapshot() {
         };
       }
       if(t.pigsty)base.pigsty=JSON.parse(JSON.stringify(t.pigsty));
+      if(t.coop){window.MFCoopCore?.sync(t);base.coop=JSON.parse(JSON.stringify(t.coop));}
       if(t.animal)base.animal=JSON.parse(JSON.stringify(t.animal));
       if(t.cultura)base.cultura=JSON.parse(JSON.stringify(t.cultura));
       if(t.fruitTree)base.fruitTree={...t.fruitTree};
@@ -2626,6 +2627,7 @@ function restoreTerrenosFromSnapshot(arr) {
         }
       }
       if(it.pigsty)t.pigsty=JSON.parse(JSON.stringify(it.pigsty));
+      if(it.coop){t.coop=JSON.parse(JSON.stringify(it.coop));window.MFCoopCore?.sync(t);}
       if(it.fruitTree)t.fruitTree={...it.fruitTree};
       window.MFFruitTrees?.sync(t);
       window.MFAnimalProduction?.repair(t,window.MFAdapter?.project?.items);
@@ -4689,6 +4691,7 @@ const drawables = [];
 // Terrenos (plantas, animais, construções)
 terrenos.forEach(t => {
   if(t.animal)window.MFAnimalLayout?.normalize(t);
+  if(window.MFCoopCore?.is(t))window.MFCoopCore.normalize(t);
   if(window.MFPigstyCore?.is(t))window.MFPigstyCore.normalize(t);
   const anchor = gridToScreen(
     t.gx + (t.w - 1) / 2,
@@ -4701,7 +4704,7 @@ terrenos.forEach(t => {
   // Para culturas/solo, a regra preexistente permanece intocada.
   const animal = isMFAnimal(t);
   const footY = anchor.y + (animal?ANIMAL_GROUND_Y:TILE_H*0.9); // bottom-center of the rendered animal sprite
-  const depth = window.MFFruitTrees?.config(t)?anchor.y*2:window.MFPigstyCore?.is(t)?window.MFPigstyCore.depth(t,anchor):animal ? footY * 2 : baseDepth + layer * LAYER_STEP;
+  const depth = window.MFCoopCore?.is(t)?(anchor.y+TILE_W*t.w*.2)*2:window.MFFruitTrees?.config(t)?anchor.y*2:window.MFPigstyCore?.is(t)?window.MFPigstyCore.depth(t,anchor):animal ? footY * 2 : baseDepth + layer * LAYER_STEP;
 
   drawables.push({
     kind: 'terreno',
@@ -4895,7 +4898,8 @@ if (img && img.complete && img.naturalWidth > 0) {
         const a=gridToScreen(hover.gx+((hover.w||1)-1)/2,hover.gy+((hover.h||1)-1)/2);
         const treeBox=window.MFFruitTrees?.config(hover)&&window.MFTreeCatalog?.geometry(hover,img,a);
         const pigBox=window.MFPigstyCore?.is(hover)&&window.MFPigstyCore.geometry(hover,a,img.naturalWidth,img.naturalHeight,TILE_W,TILE_H);
-        const box=treeBox||pigBox;
+        const coopBox=window.MFCoopCore?.is(hover)&&window.MFCoopCore.geometry(hover,a,img.naturalWidth,img.naturalHeight,TILE_W);
+        const box=treeBox||pigBox||coopBox;
         if(box)ctx.drawImage(hoverTintMask(img,box.w,box.h),box.x,box.y);
         else ctx.drawImage(hoverTintMask(img,w,h),a.x-w/2,a.y-h+TILE_H*0.9);
       }
@@ -7713,13 +7717,13 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 })();
 </script>
 
-<script src="extras.js?v=friends-collapsed-1"></script>
+<script src="extras.js?v=coop-1-friends-collapsed-1"></script>
 <script src="sales-core.js?v=1"></script>
 <script src="inventory-sales.js?v=estoque-4"></script>
 <script src="daily-state.js?v=2"></script>
-<script src="daily-rewards.js?v=3"></script>
+<script src="daily-rewards.js?v=materials-1-3"></script>
 <script src="truck-ui.js?v=entrega-explicita-1"></script>
-<script src="object-storage.js?v=two-cells-6"></script>
+<script src="object-storage.js?v=coop-7"></script>
 <script src="pointer-menu.js?v=1"></script>
 <script src="barn-ui.js?v=1"></script>
 <script src="animal-tools.js?v=1"></script>
@@ -7731,7 +7735,7 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 <script src="ready-markers-core.js?v=1"></script>
 <script src="animal-indicators.js?v=pink-ready-2"></script>
 <script src="fence-art.js?v=boundary-inset-6"></script>
-<script src="fences.js?v=animal-canvas-8"></script>
+<script src="fences.js?v=coop-canvas-9"></script>
 <script src="barn.js?v=hidpi-1"></script>
 <script>
 // Sair do modo colocar: Esc ou botão direito (sementes e itens continuam em seleção contínua até cancelar).
@@ -7748,19 +7752,23 @@ canvas.addEventListener('contextmenu', e => { if (window.MFCancelPlacing()) e.pr
 <script src="animal-sell.js?v=1"></script>
 <script src="ajustes-celular.js?v=3"></script>
 <script src="tutorial.js?v=hidpi-1"></script>
-<script src="save-runtime.js?v=1"></script>
-<script src="move-controls.js?v=pigsty-5"></script>
-<script src="level-rewards-core.js?v=1"></script>
-<script src="level-rewards.js?v=1"></script>
+<script src="save-runtime.js?v=coop-2"></script>
+<script src="move-controls.js?v=coop-6"></script>
+<script src="materials-core.js?v=1"></script>
+<script src="materials.js?v=1"></script>
+<script src="level-rewards-core.js?v=materials-2"></script>
+<script src="level-rewards.js?v=materials-2"></script>
 <script src="pig-weight.js?v=1"></script>
 <script src="flags-pigs.js?v=flags-aligned-v2"></script>
 <script src="pigsty-core.js?v=whole-ground-7"></script>
 <script src="pigsty.js?v=scale-depth-5"></script>
 <script src="tree-catalog.js?v=identity-repair-4"></script>
+<script src="coop-core.js?v=1"></script>
+<script src="coop.js?v=1"></script>
 <script src="expansion-core.js?v=1"></script>
 <script src="expansion.js?v=1"></script>
 <script src="dev-effects.js?v=1"></script>
 <script src="release-notes-core.js?v=1"></script>
-<script src="release-notes-data.js?v=20261031-1"></script>
-<script src="release-notes.js?v=1"></script>
-<script src="game-bridge.js?v=release-notes-8"></script>
+<script src="release-notes-data.js?v=20261031-2"></script>
+<script src="release-notes.js?v=coop-2"></script>
+<script src="game-bridge.js?v=coop-9"></script>

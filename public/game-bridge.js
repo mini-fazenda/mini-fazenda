@@ -100,6 +100,7 @@
       levelRewards:window.MFLevelRewards?.capture()||null,
       tutorial:window.MFTutorial?.capture() || null,
       releaseNotes:window.MFReleaseNotes?.capture()||{},
+      constructionMaterials:window.MFMaterials?.capture()||{},
       actionQueue:filaAcoes.map(t=>({gx:t.gx,gy:t.gy,...(t._job?{job:clone(t._job)}:{})})),
       loot: lootParticles.map(p=>simple(p))
     });
@@ -119,6 +120,7 @@
   setInterval(()=>{if(host.isVisiting()&&!document.hidden){syncAllGrowth(Date.now());requestRedraw();}},1000);
   function restore(data) {
     window.MFReleaseNotes?.restore(data?.releaseNotes);
+    window.MFMaterials?.restore(data?.constructionMaterials);
     if (!data) return;
     data=window.MFSaveRuntime.refresh(data,window.MFAdapter.project);
     data={...data,terrenos:clone(data.terrenos || []),inventory:data.inventory || {}};
@@ -138,7 +140,7 @@
     // Cancele callbacks de objetos antigos antes de trocar o mapa.
     terrenos.forEach(t=>{(t._timers || []).forEach(clearTimeout);clearInterval(t._milkInterval)});
     window.MFAdapter.applyState(data);
-    terrenos.forEach(t=>{window.MFBarn?.normalize(t);window.MFFruitTrees?.sync(t);window.MFAnimalProduction?.repair(t,window.MFAdapter.project.items);if(t.animal)window.MFAnimalLayout?.normalize(t);});
+    terrenos.forEach(t=>{window.MFBarn?.normalize(t);window.MFFruitTrees?.sync(t);window.MFAnimalProduction?.repair(t,window.MFAdapter.project.items);if(t.animal)window.MFAnimalLayout?.normalize(t);if(t.coop)window.MFCoopCore?.sync(t);});
     terrenos.forEach((t,i)=>{
       const saved=data.terrenos?.[i];
       if(saved?.cultura){

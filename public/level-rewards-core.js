@@ -4,6 +4,7 @@
  ['cenoura',20,1800],['trigo',20,1400],['milho',10,1000],['espinafre',5,850],['morango',5,600],['cana',1,100],['feijao',1,50],['abacaxi',3,250],['melancia',3,200],['girassol',1,200],['beterraba',3,150],['cafe',2,150],['soja',1,30],['cebola',1,20],['arroz',1,20],['limao',5,100],['maca',4,80],['laranja',3,60],['acerola',2,40],['leite',5,150],['la',3,120]
  ];
  const pool=rows.map(([id,qty,weight])=>({id,kind:'product',qty,weight}));
+ for(const [id,qty,weight]of [['madeira',2,250],['telha',1,180],['feno',2,180]])pool.push({id,kind:'material',qty,weight});
  for(const [qty,weight]of [[500,350],[1000,150],[2000,50]])pool.push({id:'coins-'+qty,kind:'coins',qty,weight});
  for(const [id,weight]of [['arvore-limao',35],['arvore-maca',25],['arvore-laranja',15],['arvore-acerola',10],['vaca',45],['ovelha',55],['porco',30],['cavalo',20],['bodejunino',10],['celeiro',40]])pool.push({id,kind:'object',qty:1,weight});
  for(const [id,weight]of [['flowers',120],['wire',90],['white',50]])pool.push({id,kind:'fence',qty:5,weight});
