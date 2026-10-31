@@ -8,7 +8,7 @@
   if(t<19400)return [20,21,22,23,24,25,24,23,22,21][Math.floor((t-13600)/180)%10];
   return Math.max(0,20-Math.floor((t-19400)/600*21));
  }
- function normalize(t){if(t?.animal?.tipo!=='ovelha')return;t.w=1;t.h=1;t.visualScale=.9;if(t.animal.etapa===2)t.imgSrc=IDLE;}
+ function normalize(t){if(t?.animal?.tipo!=='ovelha')return;t.w=2;t.h=1;t.visualScale=.45;if(t.animal.etapa===2)t.imgSrc=IDLE;}
  root.MFSheepAnimation={frameIndex,normalize,src(t,now){
   if(t?.animal?.tipo!=='ovelha'||t.animal.etapa!==2||!frames.length)return t?.imgSrc;
   const seed=((Number(t.gx)||0)*7+(Number(t.gy)||0)*11)%13*449;return frames[frameIndex(now??performance.now(),seed)];

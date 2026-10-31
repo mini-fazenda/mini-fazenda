@@ -29,3 +29,12 @@ test('pés da vaca e ovelha ficam entre as cercas traseiras e frontais da área 
   assert.ok(animal.depth>back);assert.ok(animal.depth<front,`animal ${size} à frente da cerca: ${animal.depth} >= ${front}`);
  }
 });
+test('desenho e prévias preservam a posição anterior dos animais sem alterar coordenadas',()=>{
+ const source=fs.readFileSync(new URL('../public/game.html',import.meta.url),'utf8');
+ const lines=source.split('\n').filter(line=>line.includes('const drawY = anchor.y - drawH +'));
+ assert.equal(lines.length,3);
+ for(const line of lines){
+  const animal={animal:{tipo:'ovelha'}},env={anchor:{y:100},drawH:80,TILE_H:48,t:animal,estruturaMovendo:animal,placingItem:animal,window:{},isMFAnimal:()=>true,ANIMAL_GROUND_Y:4.8};
+  const y=vm.runInNewContext(line+';drawY',env);assert.ok(Math.abs(y-63.2)<1e-9);
+ }
+});

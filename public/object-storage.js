@@ -3,7 +3,7 @@
  const clone=x=>JSON.parse(JSON.stringify(x));
  const visiting=()=>!!window.MFHost?.isVisiting?.();
  const canStore=t=>!!t&&!t.cultura&&!t.animal&&!/terra-seca|terra-arada|arando-a-terra/.test(String(t.imgSrc))&&!!t.imgSrc;
- function snapshot(t){window.MFFruitTrees?.sync(t);window.MFAnimalProduction?.repair(t,window.MFAdapter?.project?.items);const data=Object.fromEntries(Object.entries(t).filter(([k,v])=>!k.startsWith('_')&&!['gx','gy'].includes(k)&&['string','number','boolean'].includes(typeof v)));if(t.fruitTree)data.fruitTree=clone(t.fruitTree);if(t.animal)data.animal=clone(t.animal);if(t.pigsty)data.pigsty=clone(t.pigsty);return data;}
+ function snapshot(t){window.MFFruitTrees?.sync(t);window.MFAnimalProduction?.repair(t,window.MFAdapter?.project?.items);window.MFAnimalLayout?.normalize(t);const data=Object.fromEntries(Object.entries(t).filter(([k,v])=>!k.startsWith('_')&&!['gx','gy'].includes(k)&&['string','number','boolean'].includes(typeof v)));if(t.fruitTree)data.fruitTree=clone(t.fruitTree);if(t.animal)data.animal=clone(t.animal);if(t.pigsty)data.pigsty=clone(t.pigsty);return data;}
  function changed(){window.MFHost?.changed?.('object-storage');requestRedraw();}
  function store(t){
   if(visiting()||!canStore(t)||!terrenos.includes(t))return false;
@@ -26,7 +26,7 @@
  modal.querySelector('.close').onclick=()=>modal.hidden=true;
  function render(){
   const grid=modal.querySelector('.object-grid');grid.replaceChildren();modal.querySelector('.object-empty').hidden=stored.length>0||Object.values(window.MFFences?.stock()||{}).some(n=>n>0);
-  stored.forEach((t,index)=>{window.MFFruitTrees?.sync(t);window.MFAnimalProduction?.repair(t,window.MFAdapter?.project?.items);const card=document.createElement('article'),img=document.createElement('img'),label=document.createElement('strong'),button=document.createElement('button');
+  stored.forEach((t,index)=>{window.MFFruitTrees?.sync(t);window.MFAnimalProduction?.repair(t,window.MFAdapter?.project?.items);window.MFAnimalLayout?.normalize(t);const card=document.createElement('article'),img=document.createElement('img'),label=document.createElement('strong'),button=document.createElement('button');
    img.src=t.imgSrc;img.alt=t.name||'Objeto guardado';label.textContent=t.name||'Decoração';button.textContent='Colocar';button.onclick=()=>{if(visiting())return;placing=stored[index];point=null;setFarmMoveMode(false);modal.hidden=true;cancel.hidden=false;};card.append(img,label,button);grid.append(card);
   });
   window.MFFences?.renderStored(grid);
@@ -54,7 +54,7 @@
  window.MFObjects={store,canStore,placing:()=>!!placing,capture:()=>clone(stored),restore:s=>{stored=Array.isArray(s)?clone(s):[];stop();render();},add:t=>{if(!canStore(t)&&!t?.animal)return false;stored.push(snapshot(t));changed();return true;},draw:g=>{
   if(!placing||!point)return;const w=placing.w||1,h=placing.h||1;
   for(let y=0;y<h;y++)for(let x=0;x<w;x++)drawTile(point.gx+x,point.gy+y,fits(placing,point)?'rgba(90,220,60,.3)':'rgba(230,70,45,.3)');
-  const img=preload(placing.imgSrc);if(!img?.naturalWidth)return;const a=gridToScreen(point.gx+(w-1)/2,point.gy+(h-1)/2),width=TILE_W*w*(placing.visualScale||1),height=width*img.naturalHeight/img.naturalWidth;g.save();g.globalAlpha=.65;if(!window.MFBarn?.drawSprite(g,placing,a,img)&&!window.MFCropSprites?.drawSprite(g,placing,a,img))g.drawImage(img,a.x-width/2,a.y-height+TILE_H*(placing.animal?.1:.9),width,height);g.restore();
+  const img=preload(placing.imgSrc);if(!img?.naturalWidth)return;const a=gridToScreen(point.gx+(w-1)/2,point.gy+(h-1)/2),width=TILE_W*w*(placing.visualScale||1),height=width*img.naturalHeight/img.naturalWidth;g.save();g.globalAlpha=.65;if(!window.MFBarn?.drawSprite(g,placing,a,img)&&!window.MFCropSprites?.drawSprite(g,placing,a,img))g.drawImage(img,a.x-width/2,a.y-height+TILE_H*.9,width,height);g.restore();
  }};
  // Abre a recompensa disponível ao entrar, após a escolha do personagem.
  let shown=false;

@@ -21,9 +21,9 @@ test('arroz planta com sementes na água, muda aos 50%, amadurece em 24h e dá 1
  vm.runInContext(html.slice(html.indexOf('function tryHarvestAtTile('),html.indexOf('// ---------------------------\n// Ações: Arar')),env);
  assert.equal(env.tryHarvestAtTile(restored),true);assert.equal(stars,100);assert.equal(drops,1);assert.equal(env.tryHarvestAtTile(restored),false);assert.equal(stars,100);
 });
-test('ovelha existente passa a um quadrado sem perder produção ou idade',()=>{
- const t={gx:5,gy:6,w:2,h:2,visualScale:.7,imgSrc:'antiga.png',animal:{tipo:'ovelha',etapa:2,startTime:123,totalTime:300000,production:{readyAt:999}}};const saved=JSON.stringify(t.animal);MFSheepAnimation.normalize(t);assert.equal(t.w,1);assert.equal(t.h,1);assert.equal(t.visualScale,.9);assert.equal(JSON.stringify(t.animal),saved);assert.equal(t.gx,5);assert.equal(t.gy,6);
- assert.equal(cfg.items['item-ovelha'].w,1);assert.equal(cfg.items['item-ovelha'].h,1);assert.ok(96*.9<96*2*.7);
+test('ovelha existente passa a dois quadrados sem perder produção ou idade',()=>{
+ const t={gx:5,gy:6,w:2,h:2,visualScale:.7,imgSrc:'antiga.png',animal:{tipo:'ovelha',etapa:2,startTime:123,totalTime:300000,production:{readyAt:999}}};const saved=JSON.stringify(t.animal);MFSheepAnimation.normalize(t);assert.equal(t.w,2);assert.equal(t.h,1);assert.equal(t.visualScale,.45);assert.equal(JSON.stringify(t.animal),saved);assert.equal(t.gx,5);assert.equal(t.gy,6);
+ assert.equal(cfg.items['item-ovelha'].w,2);assert.equal(cfg.items['item-ovelha'].h,1);assert.ok(96*.9<96*2*.7);
 });
 test('ovelha descansa, pasta e volta à posição inicial em ciclos de 20 segundos',()=>{
  assert.equal(MFSheepAnimation.frameIndex(12999),0);assert.equal(MFSheepAnimation.frameIndex(13000),0);assert.equal(MFSheepAnimation.frameIndex(13300),10);assert.ok(MFSheepAnimation.frameIndex(16000)>=20);assert.equal(MFSheepAnimation.frameIndex(19999),0);assert.equal(MFSheepAnimation.frameIndex(20000),0);
