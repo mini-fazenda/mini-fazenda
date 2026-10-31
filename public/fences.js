@@ -2,11 +2,12 @@
 (()=>{
  const core=window.MFFenceCore,board=core.create();let mode=null,hover=null,down=false,axis='auto',original=null,lastPaint=null;
  const visiting=()=>!!window.MFHost?.isVisiting?.();
- const point=p=>gridToScreen(p.gx-.5,p.gy-.5);
+ // Keep post thickness inside the farm; logical edges and saves stay unchanged.
+ const point=p=>core.visualPoint(p,COLS,ROWS,TILE_W,TILE_H);
  let invalidate=()=>{};
  const changed=()=>{invalidate();window.MFHost?.changed?.('fences');requestRedraw();};
  function line(ctx,a,b,color,width){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';ctx.stroke();}
- function rail(ctx,e){if(window.MFFenceArt?.rail(ctx,e,point(e)))return;const [a,b]=core.ends(e).map(point),white=e.type==='white';ctx.save();
+ function rail(ctx,e){if(window.MFFenceArt?.rail(ctx,e,point(e),point(core.ends(e)[1])))return;const [a,b]=core.ends(e).map(point),white=e.type==='white';ctx.save();
   line(ctx,{x:a.x,y:a.y+2},{x:b.x,y:b.y+2},'#244b2828',5);
   for(const h of (e.type==='wire'?[14,25,36]:[17,35])){
    const p={x:a.x,y:a.y-h},q={x:b.x,y:b.y-h};line(ctx,p,q,e.type==='wire'?'#454333':white?'#9ba99b':'#55351f',e.type==='wire'?2:8);
@@ -20,12 +21,12 @@
  }
  const spriteCache=new Map();
  function drawItem(ctx,item){
-  const e=item.fence,isRail=item.kind==='fenceRail';if((window.MFPigsty?.canvasFences?.()||terrenos.some(t=>window.MFFruitTrees?.config(t)?.directCoins)||window.MFFruitTrees?.types[String(placingItem?.id).replace('item-arvore-','')]?.directCoins)){if(isRail)rail(ctx,e);else post(ctx,e);return;}const cacheKey=(isRail?'rail:':'post:')+e.type+(isRail?':'+e.axis:'')+':'+TILE_W+':'+TILE_H;
+  const e=item.fence,isRail=item.kind==='fenceRail';if((window.MFPigsty?.canvasFences?.()||terrenos.some(t=>window.MFFruitTrees?.config(t)?.directCoins)||window.MFFruitTrees?.types[String(placingItem?.id).replace('item-arvore-','')]?.directCoins)){if(isRail)rail(ctx,e);else post(ctx,e);return;}const cacheKey=(isRail?'rail:':'post:')+e.type+(isRail?':'+e.axis:'')+':'+TILE_W+':'+TILE_H+':'+e.gx+':'+e.gy+':'+COLS+':'+ROWS;
   let sprite=spriteCache.get(cacheKey);
-  if(!sprite){const base={type:e.type,gx:0,gy:0,axis:e.axis},pts=isRail?core.ends(base).map(point):[point(base)],x=Math.min(...pts.map(p=>p.x))-14,y=Math.min(...pts.map(p=>p.y))-55;
+  if(!sprite){const base={...e},pts=isRail?core.ends(base).map(point):[point(base)],x=Math.min(...pts.map(p=>p.x))-14,y=Math.min(...pts.map(p=>p.y))-55;
    const w=Math.ceil(Math.max(...pts.map(p=>p.x))-x+14),h=Math.ceil(Math.max(...pts.map(p=>p.y))-y+7),c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.translate(-x,-y);if(isRail)rail(g,base);else post(g,base);sprite={src:c.toDataURL(),x,y,w,h};spriteCache.set(cacheKey,sprite);
   }
-  const base=point({gx:0,gy:0}),at=point(e),x=sprite.x+at.x-base.x,y=sprite.y+at.y-base.y;
+  const x=sprite.x,y=sprite.y;
   const key='fence-'+(isRail?'rail-'+core.key(e):'post-'+e.gx+':'+e.gy);
   if(!window.MFAdapter?.spritePlace(key,sprite.src,x+sprite.w/2,y+sprite.h,sprite.w,sprite.h,1,item.footY)){if(isRail)rail(ctx,e);else post(ctx,e);}
  }

@@ -934,7 +934,7 @@ pollTimer=setInterval(()=>{if(unlocked&&document.visibilityState!=='hidden')choo
 <script src="planting-core.js?v=identity-1"></script>
 <script src="fertilizer-core.js?v=clock-fix-5"></script>
 <script src="animal-production.js?v=instant-all-3"></script>
-<script src="fences-core.js?v=atlas-1"></script>
+<script src="fences-core.js?v=boundary-inset-6"></script>
 </head>
 <body>
 <canvas id="game" style="position:fixed;inset:0;z-index:0"></canvas>
@@ -4915,7 +4915,11 @@ if (img && img.complete && img.naturalWidth > 0) {
         const vs=window.MFAdapter?.scaleForStructure?.(hover,Number(hover.visualScale)||1) ?? (Number(hover.visualScale)||1);
         const w=TILE_W*(hover.w||1)*vs, h=w*img.naturalHeight/img.naturalWidth;
         const a=gridToScreen(hover.gx+((hover.w||1)-1)/2,hover.gy+((hover.h||1)-1)/2);
-        ctx.drawImage(hoverTintMask(img,w,h),a.x-w/2,a.y-h+TILE_H*0.9);
+        const treeBox=window.MFFruitTrees?.config(hover)&&window.MFTreeCatalog?.geometry(hover,img,a);
+        const pigBox=window.MFPigstyCore?.is(hover)&&window.MFPigstyCore.geometry(hover,a,img.naturalWidth,img.naturalHeight,TILE_W,TILE_H);
+        const box=treeBox||pigBox;
+        if(box)ctx.drawImage(hoverTintMask(img,box.w,box.h),box.x,box.y);
+        else ctx.drawImage(hoverTintMask(img,w,h),a.x-w/2,a.y-h+TILE_H*0.9);
       }
     }
     if (marks.length) requestRedraw();
@@ -7746,8 +7750,8 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 <script src="sheep-animation.js?v=suave-2"></script>
 <script src="ready-markers-core.js?v=1"></script>
 <script src="animal-indicators.js?v=pink-ready-2"></script>
-<script src="fence-art.js?v=1"></script>
-<script src="fences.js?v=trees-depth-7"></script>
+<script src="fence-art.js?v=boundary-inset-6"></script>
+<script src="fences.js?v=boundary-inset-6"></script>
 <script src="barn.js?v=hidpi-1"></script>
 <script>
 // Sair do modo colocar: Esc ou botão direito (sementes e itens continuam em seleção contínua até cancelar).
@@ -7770,7 +7774,7 @@ canvas.addEventListener('contextmenu', e => { if (window.MFCancelPlacing()) e.pr
 <script src="level-rewards.js?v=1"></script>
 <script src="pig-weight.js?v=1"></script>
 <script src="flags-pigs.js?v=flags-aligned-v2"></script>
-<script src="pigsty-core.js?v=scale-depth-5"></script>
+<script src="pigsty-core.js?v=footprint-inset-6"></script>
 <script src="pigsty.js?v=scale-depth-5"></script>
 <script src="tree-catalog.js?v=balance-20261031"></script>
 <script src="expansion-core.js?v=1"></script>

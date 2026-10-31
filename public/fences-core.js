@@ -4,6 +4,8 @@
  const key=e=>`${e.axis}:${e.gx}:${e.gy}`;
  const valid=e=>!!e&&!!catalog[e.type]&&['x','y'].includes(e.axis)&&Number.isSafeInteger(e.gx)&&Number.isSafeInteger(e.gy)&&e.gx>=0&&e.gy>=0&&e.gx<=100&&e.gy<=100;
  const ends=e=>[{gx:e.gx,gy:e.gy},{gx:e.gx+(e.axis==='x'?1:0),gy:e.gy+(e.axis==='y'?1:0)}];
+ // Inset only the drawing; stored segments and path blocking retain their grid edges.
+ function visualPoint(p,cols,rows,tw=96,th=48){const inset=.25,x=Math.max(inset,Math.min(cols-inset,p.gx))-.5,y=Math.max(inset,Math.min(rows-inset,p.gy))-.5;return {x:(x-y)*tw/2,y:(x+y)*th/2};}
  const fits=(e,cols,rows)=>valid(e)&&ends(e).every(p=>p.gx<=cols&&p.gy<=rows);
  function create(){const edges=new Map(),stock={flowers:0,wire:0,white:0};return {
  list:()=>[...edges.values()].map(e=>({...e})),stock:()=>({...stock}),
@@ -20,5 +22,5 @@
  capture(){return {segments:this.list(),stock:{...stock}};},
  restore(data){edges.clear();for(const e of (Array.isArray(data?.segments)?data.segments:[]))if(fits(e,100,100))edges.set(key(e),{type:e.type,axis:e.axis,gx:e.gx,gy:e.gy});for(const t of Object.keys(stock))stock[t]=Number.isSafeInteger(data?.stock?.[t])?Math.max(0,data.stock[t]):0;}
  };}
- root.MFFenceCore={catalog,key,ends,fits,create};
+ root.MFFenceCore={catalog,key,ends,fits,visualPoint,create};
 })(globalThis);

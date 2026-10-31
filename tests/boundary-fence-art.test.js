@@ -18,3 +18,13 @@ test('arte separa trilhos por orientação e compartilha um único poste em cada
  assert.equal(board.posts().length,4);
  for(const item of Object.values(MFFenceCore.catalog))assert.ok(fs.existsSync(new URL('../public/'+item.icon,import.meta.url)));
 });
+
+test('postes nas quatro bordas ficam dentro do terreno sem mudar arestas salvas',()=>{
+ for(const [cols,rows] of [[20,20],[32,32],[25,23]])for(const gx of [0,cols])for(const gy of [0,rows]){
+  const p=MFFenceCore.visualPoint({gx,gy},cols,rows),x=(p.x/48+p.y/24)/2+.5,y=(p.y/24-p.x/48)/2+.5;
+  assert.equal(x,gx===0?.25:cols-.25);assert.equal(y,gy===0?.25:rows-.25);
+ }
+ assert.deepEqual(MFFenceCore.visualPoint({gx:5,gy:6},20,20),{x:-48,y:240});
+ const board=MFFenceCore.create();board.place({gx:20,gy:5,axis:'y',type:'white'},20,20,1000);
+ assert.deepEqual(board.list(),[{gx:20,gy:5,axis:'y',type:'white'}]);
+});
