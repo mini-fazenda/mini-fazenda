@@ -63,7 +63,30 @@ const {chromium,webkit}=require('playwright');
     if(MFAdapter.cache.groundGridPath()!==first)throw Error('Reconstruiu toda a malha do chão em cada movimento');}
    COLS=42;
    if(MFAdapter.cache.groundGridPath()===first)throw Error('Expandir a fazenda não invalidou a malha');
-   return {drag:samples.at(-1),mouseZoom:z0,afterZoom:z1,pinchZoom:zoom,gridCached:true};
+   // Arrastar vários quadros não deve redesenhar grama, montanhas, rio ou a borda.
+   // A camada estática é reposicionada com uma margem de segurança.
+   const cache=MFAdapter.cache;
+   cache.sig='';draw();
+   const staticBuilds=cache.rebuilds,blitsBefore=cache.blits;
+   for(let i=0;i<12;i++){offsetX+=4;offsetY+=2;draw();}
+   if(cache.rebuilds!==staticBuilds)
+    throw Error('Cenário fixo foi rasterizado durante todo o arrasto: '+(cache.rebuilds-staticBuilds));
+   if(cache.blits<blitsBefore+12)throw Error('Cache não foi reutilizado');
+   const beforeZoomRebuild=cache.rebuilds;
+   zoom*=1.04;draw();
+   if(cache.rebuilds!==beforeZoomRebuild)
+    throw Error('Zoom pequeno reconstruiu cenário estático indevidamente');
+   cache.lastMovedAt-=1000;
+   draw();
+   if(cache.rebuilds!==beforeZoomRebuild+1)
+    throw Error('Cenário não refinou depois que a câmera ficou parada');
+   if(cache.canvas.width!==canvas.width||cache.canvas.height!==canvas.height)
+    throw Error('Cache perdeu resolução High-DPI compatível com o canvas');
+   cache.sig='';draw();
+   if(cache.rebuilds!==beforeZoomRebuild+2)
+    throw Error('Atualização do cenário não invalidou o cache estático');
+   return {drag:samples.at(-1),mouseZoom:z0,afterZoom:z1,pinchZoom:zoom,
+    gridCached:true,staticBuildsDuringPan:0,framesReused:cache.blits-blitsBefore};
   });
   if(errors.length)throw Error(errors.join('\n'));
   console.log('PASS: mouse e pinça têm foco estável, arrasto não duplica, malha do chão é reutilizada',camera);
