@@ -436,6 +436,32 @@ $('login').onclick=async()=>{
 // Aviso logo na tela de entrada para quem abriu de dentro de outro app
 if(inAppBrowser)setTimeout(()=>{const m=$('message');if(m&&!$('gate').hidden&&!/Safari|navegador/.test(m.textContent))m.textContent+=' Dica: o login funciona melhor abrindo o jogo no Safari ou no Chrome.'},1500);
 setInterval(checkpoint,1000);
+// Versão nova publicada no GitHub Pages: quem deixa o jogo aberto (comum no celular) continuava
+// rodando o código antigo por dias. Esse código antigo salvava a fazenda, mas a versão para visitas
+// ficava parada (regras novas do Firebase recusam a publicação antiga) — os amigos viam a fazenda velha.
+// Aqui o jogo confere release.json, salva o que estiver pendente e recarrega na versão nova.
+let releaseUpdating=false;
+async function checkRelease(){
+  const current=window.MF_BUILD_VERSION;
+  if(!current||releaseUpdating||document.hidden)return;
+  let latest='';
+  try{
+    const r=await fetch(new URL('release.json',location.href).href+'?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok)return;latest=String((await r.json())?.version||'');
+  }catch(e){return}
+  if(!latest||latest===current)return;
+  // Evita laço caso a CDN ainda entregue a página antiga logo após publicar.
+  const key='mf-release-reload:'+latest;
+  try{const last=Number(sessionStorage.getItem(key))||0;if(Date.now()-last<5*60000)return;sessionStorage.setItem(key,String(Date.now()));}catch(e){}
+  releaseUpdating=true;
+  gate('Nova versão do jogo disponível. Salvando e atualizando…');
+  try{if(!visiting)checkpoint();await Promise.race([flush(),new Promise(res=>setTimeout(res,8000))]);}catch(e){console.warn('[atualização]',e)}
+  const url=new URL(location.href);url.searchParams.set('v',latest);location.replace(url.href);
+}
+window.MFCheckRelease=checkRelease;
+setInterval(()=>void checkRelease(),120000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)void checkRelease()});
+
 // Sem beforeunload/preventDefault: fechar ou recarregar nunca abre confirmação.
 window.addEventListener('pagehide',()=>{checkpoint();void flush().catch(()=>{})});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){checkpoint();void flush().catch(()=>{})}});
