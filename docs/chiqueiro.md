@@ -4,9 +4,9 @@ Configuração principal: `public/pigsty-core.js`, objeto `CONFIG`.
 
 | Nível | Nível do jogador | Vagas | Custo | Área lógica |
 |---|---|---|---|---|
-| 1 | 1 | 3 | 2.000 | 6 × 6 |
-| 2 | 12 | 6 | 5.000 | 8 × 8 |
-| 3 | 25 | 10 | 12.000 | 10 × 10 |
+| 1 | 1 | 3 | 2.000 | 4 × 4 |
+| 2 | 12 | 6 | 5.000 | 6 × 6 |
+| 3 | 25 | 10 | 12.000 | 8 × 8 |
 
 Um por fazenda. As melhorias exigem área livre; a orientação B é espelhada.
 
