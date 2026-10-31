@@ -32,7 +32,14 @@ function stopMusic(type){const slot=tracks[type];if(!slot)return;tracks[type]=nu
 function music(type){
  if(!unlocked)return;
  const c=srcConfig(),clip=c.tracks?.[type];if(!clip?.src||clip.enabled===false){stopMusic(type);return}
- if(tracks[type]&&tracks[type].clip.src===clip.src){fade(tracks[type].audio,fullVolume(clip,'music'),.14);return}
+ if(tracks[type]&&tracks[type].clip.src===clip.src){
+  const audio=tracks[type].audio;
+  // A mesma faixa deve continuar de onde parou, sem reconstruir Audio.
+  if(audio.paused&&document.visibilityState!=='hidden'){
+    const resume=audio.play();if(resume?.catch)resume.catch(()=>{});
+  }
+  fade(audio,fullVolume(clip,'music'),.14);return;
+ }
  stopMusic(type);
  const audio=new Audio();audio.preload='metadata';audio.loop=clip.loop!==false;audio.volume=0;
  audio.src=soundUrl(clip);if(!audio.src)return;const slot={audio,clip};tracks[type]=slot;
@@ -89,7 +96,10 @@ window.MFGameAudio={event,play,unlock,music,stopMusic,sync,setMuted,setPlayerVol
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{addUI();chooseTrack()},{once:true});else{addUI();chooseTrack()}
 // Low-frequency state check for login/loading to in-game transition, no per-frame polling.
 pollTimer=setInterval(()=>{if(unlocked&&document.visibilityState!=='hidden')chooseTrack()},1200);
-document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const key of Object.keys(tracks))stopMusic(key);for(const entry of Array.from(active))entry.audio.pause()}else if(unlocked)chooseTrack()});
+// Ocultar a página não encerra a música nem os SFX: o navegador decide se pode reproduzir.
+ // Se o sistema suspender o áudio, a mesma faixa será retomada no tempo preservado.
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&unlocked)chooseTrack()});
+ window.addEventListener('pageshow',()=>{if(unlocked)chooseTrack()});
 })();
 </script>
 <style>
