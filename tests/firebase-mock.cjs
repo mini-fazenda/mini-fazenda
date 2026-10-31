@@ -12,7 +12,8 @@ export class GoogleAuthProvider{}
 export const signInWithPopup=async()=>{localStorage.setItem('test-user','yes');callbacks.forEach(cb=>cb({uid:'rodrigo'}))};
 export const signOut=async()=>{localStorage.removeItem('test-user');callbacks.forEach(cb=>cb(null))};
 export const ref=(db,p='')=>({p});
-export const get=async r=>snap(cloud[r.p]);
+export const get=async r=>{if(Object.hasOwn(cloud,r.p))return snap(cloud[r.p]);const parts=r.p.split('/');for(let i=parts.length-1;i>0;i--){let value=cloud[parts.slice(0,i).join('/')];if(value===undefined)continue;for(const key of parts.slice(i))value=value?.[key];return snap(value);}return snap(null)};
+export const remove=async r=>{delete cloud[r.p];const parts=r.p.split('/');for(let i=parts.length-1;i>0;i--){let value=cloud[parts.slice(0,i).join('/')];for(const key of parts.slice(i,-1))value=value?.[key];if(value)delete value[parts.at(-1)];}persist();notify(r.p);};
 export const set=async(r,v)=>{cloud[r.p]=structuredClone(v);persist();notify(r.p)};
 export const update=async(r,v)=>{
  const path=Object.keys(v).find(p=>p.startsWith('farms/'));
@@ -30,6 +31,7 @@ export const serverTimestamp=()=>Date.now();
 window.testSaveWaiters=[];window.testReleaseSave=()=>window.testSaveWaiters.shift()?.();
 export const runTransaction=async(r,fn)=>{if(r.p.startsWith('publicFarms/')&&window.testFailProjection){window.testFailProjection--;throw Error('projection unavailable');}if(r.p.startsWith('farms/')){if(window.testHoldSaves)await new Promise(resolve=>window.testSaveWaiters.push(resolve));if(window.testDenySave){const e=Error('Permission denied');e.code='PERMISSION_DENIED';throw e;}}if(r.p.startsWith('farms/')&&window.testFailMaxretry){window.testFailMaxretry--;const e=Error('maxretry');e.code='database/maxretry';throw e;}const result=fn(cloud[r.p]||null);if(result===undefined)return {committed:false,snapshot:snap(cloud[r.p])};if(r.p.startsWith('publicFarms/'))(window.testProjectionLog||=[]).push(structuredClone(result));cloud[r.p]=structuredClone(result);persist();notify(r.p);return {committed:true,snapshot:snap(result)}};
 export const onValue=(r,cb)=>{const s={p:r.p,cb};subs.push(s);queueMicrotask(()=>cb(snap(r.p==='.info/connected'?window.testConnected:cloud[r.p])));return ()=>subs.splice(subs.indexOf(s),1)};
+export const onChildAdded=(r,cb)=>{const seen=new Set();return onValue(r,s=>{for(const [key,value] of Object.entries(s.val()||{})){if(seen.has(key))continue;seen.add(key);cb({...snap(value),key});}})};
 window.testReplaceSession=()=>{cloud['sessions/rodrigo']='other-device';persist();notify('sessions/rodrigo')};
 window.testDisconnect=()=>{window.testConnected=false;subs.filter(s=>s.p==='.info/connected').forEach(s=>s.cb(snap(false)))};
 window.testReconnect=()=>{window.testConnected=true;subs.filter(s=>s.p==='.info/connected').forEach(s=>s.cb(snap(true)))};

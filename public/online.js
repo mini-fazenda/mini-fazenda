@@ -5,6 +5,7 @@ import {normalizeSave,documentRevision,progressText} from './save-compat.js?v=le
 import {nextDocument,clearLegacySaves,recoverPendingState} from './persistence.js?v=legacy-1';
 import {redeemTestCredit} from './test-credit.js?v=2';
 import {startFriends,stopFriends,publishProfile,api as friendsApi} from './friends.js?v=block-12h';
+import {startInbox,stopInbox,startConsole,stopConsole,isDevUser} from './dev-tools.js?v=1';
 // A versão do módulo publicado também identifica o HTML do jogo no cache.
 const releaseVersion=window.MF_BUILD_VERSION||new URL(import.meta.url).searchParams.get('v')||'artes-melancia-v3';
 const $=id=>document.getElementById(id);
@@ -51,7 +52,7 @@ function status(text){
 }
 function gate(text){$('farms').close();$('gate').hidden=false;$('message').textContent=text}
 function closeVisit(){stopVisit?.();stopVisit=null;visitSequence++;visitData=null;visitRevision=-1;visitingUid=null;}
-function freeze(){closeVisit();projectionPending=null;ready=false;sessionActive=false;stopped=true;pending=null;clearTimeout(retryTimer);clearTimeout(reconnectTimer);clearTimeout(projectionTimer);projectionTimer=null;projectionPending=null;$('game-container').replaceChildren();bridge=null;$('toolbar').hidden=true}
+function freeze(){stopInbox();stopConsole();closeVisit();projectionPending=null;ready=false;sessionActive=false;stopped=true;pending=null;clearTimeout(retryTimer);clearTimeout(reconnectTimer);clearTimeout(projectionTimer);projectionTimer=null;projectionPending=null;$('game-container').replaceChildren();bridge=null;$('toolbar').hidden=true}
 function fail(error){
   if(stopped)return;
   console.error(error);freeze();if(error?.message==='release/mismatch'){gate('O navegador carregou arquivos de versões diferentes. Recarregue a página para atualizar sem alterar sua conta.');const button=document.createElement('button');button.textContent='Atualizar jogo';button.onclick=()=>location.reload();$('message').append(document.createElement('br'),button);return;}gate(String(error?.message||'').startsWith('save/incompatible')?error.message:'Não foi possível conectar à fazenda. Recarregue a página para tentar novamente.');
@@ -268,7 +269,7 @@ async function reconnect(run){
 }
 async function boot(account){
   const run=++epoch;closeVisit();projectionPending=null;projectionSaving=null;
-  stopConnection?.();stopSession?.();clearTimeout(projectionTimer);clearTimeout(retryTimer);clearTimeout(reconnectTimer);retryDelay=1000;
+  stopConnection?.();stopSession?.();clearTimeout(projectionTimer);clearTimeout(retryTimer);clearTimeout(reconnectTimer);retryDelay=1000;stopInbox();stopConsole();
   ready=false;sessionActive=false;connected=false;stopped=false;bridge=null;pending=null;saving=null;
   user=account;ownState=null;lastText='';saveBlocked=false;lastSaveError='';confirmedSaveId=null;inFlightRecord=null;$('game-container').replaceChildren();$('toolbar').hidden=true;
   if(!user){stopFriends();$('login').hidden=false;gate('Entre com sua conta Google para continuar.');return}
@@ -331,6 +332,9 @@ async function boot(account){
   // Publicação SOMENTE da versão confirmada no Firebase. Se uma recuperação
   // local está aguardando salvar, o save atômico publicará essa versão depois.
   if(confirmedForProjection)scheduleProjection({...confirmedForProjection,savedAt:confirmedForProjection.savedAt||remote?.updatedAt},revision,run,confirmedSaveId);
+  // Fazendeiro Mod: todo jogador recebe presentes/comandos; só a conta de dev ganha o console.
+  startInbox({sdk,db,uid:user.uid,gameReady:devGameReady,applyGrant:applyDevGrant});
+  if(isDevUser(user))startConsole({sdk,db,uid:user.uid,user,farmName:()=>ownState?.farmName,visit:visitFarm});
   void startFriends({sdk,db,uid:user.uid,visit:visitFarm,applyFertilize}).then(()=>{if(run===epoch&&ownState)void publishProfile(ownState)}).catch(e=>console.warn('[amigos]',e));
 }
 async function drain(){
@@ -366,6 +370,21 @@ function applyFertilize(list){
   const game=$('game-container').querySelector('iframe')?.contentWindow;
   if(!game?.MFFertilize)return false;
   try{game.MFFertilize.apply(list);queueMicrotask(checkpoint);return true}catch(e){console.warn('[fertilizar]',e);return true}
+}
+// Fazendeiro Mod: entrega de comandos do dev (moedas, XP, fertilizante...) para o jogo aberto.
+function devGame(){return $('game-container').querySelector('iframe')?.contentWindow||null}
+function devGameReady(){return playing()&&!!bridge&&!!devGame()?.MFDev}
+async function applyDevGrant(grant,id){
+  if(!devGameReady())return false;
+  const run=epoch,game=devGame();
+  if(!game.MFDev.apply(grant,id))return false;
+  checkpoint();await flush();
+  if(run!==epoch||stopped||!sessionActive||game!==devGame()||pending)return false;
+  // Leitura autoritativa: uma tentativa com resultado incerto jamais apaga a entrega.
+  const receipt=(await sdk.get(sdk.ref(db,`farms/${user.uid}/state/devTools/receipts/${id}`))).val();
+  if(receipt!==true)return false;
+  game.MFDev.notifyGrant(grant,id);
+  return true;
 }
 // Abre a fazenda de outra pessoa em modo visita (somente olhar).
 async function visitFarm(uid){
