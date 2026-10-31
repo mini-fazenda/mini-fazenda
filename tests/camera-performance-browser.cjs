@@ -58,6 +58,21 @@ const {chromium,webkit}=require('playwright');
    touch('touchend',[]);
    if(zoom<=z1||Math.hypot(beforeTouch.x-afterTouch.x,beforeTouch.y-afterTouch.y)>0.1)
     throw Error('Pinça deslocou o ponto entre os dedos: '+JSON.stringify({beforeTouch,afterTouch,z1,zoom}));
+   // A inércia é padrão para saves antigos sem a opção no JSON.
+   delete MFAdapter.project.camera.inertiaEnabled;
+   MFAdapter.cancelGlide();
+   offsetX=0;offsetY=0;zoom=.6;
+   c.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true,button:0,clientX:260,clientY:150}));
+   window.dispatchEvent(new MouseEvent('mousemove',{bubbles:true,clientX:300,clientY:150}));
+   window.dispatchEvent(new MouseEvent('mouseup',{bubbles:true,clientX:300,clientY:150}));
+   const afterRelease=offsetX;
+   MFAdapter.cancelGlide();
+   // A opção explícita de desativar inércia continua respeitada.
+   MFAdapter.project.camera.inertiaEnabled=false;
+   MFAdapter.inertia(15,0);
+   const noGlide=offsetX;
+   if(afterRelease<39||noGlide!==afterRelease)throw Error('Arrasto de teste não atualizou câmera');
+   MFAdapter.project.camera.inertiaEnabled=true;
    const first=MFAdapter.cache.groundGridPath();
    for(let i=0;i<8;i++){offsetX+=3;offsetY+=2;draw();
     if(MFAdapter.cache.groundGridPath()!==first)throw Error('Reconstruiu toda a malha do chão em cada movimento');}
