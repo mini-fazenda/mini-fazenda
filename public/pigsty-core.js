@@ -15,5 +15,6 @@
  function rotate(t){normalize(t);if(!is(t))return false;t.pigsty.orientation=t.pigsty.orientation?0:1;return true;}
  function geometry(t,anchor,width,height,tileW=96,tileH=48){const w=tileW*((t.w||6)+(t.h||6))/2,h=w*height/width,front={x:anchor.x+((t.w||6)-(t.h||6))*tileW/4,y:anchor.y+((t.w||6)+(t.h||6))*tileH/4};return {x:front.x-w/2,y:front.y-h,w,h,front};}
  const depth=(t,anchor)=>2*(anchor.y+((t.w||4)+(t.h||4))*12);
- root.MFPigstyCore={CONFIG,is,normalize,info,art,start,stats,buy,sell,fits,upgrade,rotate,geometry,depth};
+ const visualScale=stage=>({20:.7,40:.9,70:1.15,100:1.35,120:1.5})[stage]||.7;
+ root.MFPigstyCore={CONFIG,is,normalize,info,art,start,stats,buy,sell,fits,upgrade,rotate,geometry,depth,visualScale};
 })(globalThis);
