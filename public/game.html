@@ -4751,6 +4751,23 @@ function expandMap(side) {
   requestRedraw();
 }
 
+// O brilho da cultura selecionada é idêntico entre quadros; reaproveite
+// a máscara em vez de criar um canvas e repintar o PNG a cada movimento.
+const hoverMaskCache=new WeakMap();
+function hoverTintMask(img,w,h){
+ let sizeCache=hoverMaskCache.get(img);
+ if(!sizeCache){sizeCache=new Map();hoverMaskCache.set(img,sizeCache)}
+ const key=Math.ceil(w)+'x'+Math.ceil(h);
+ if(sizeCache.has(key))return sizeCache.get(key);
+ const mask=document.createElement('canvas');
+ mask.width=Math.max(1,Math.ceil(w));mask.height=Math.max(1,Math.ceil(h));
+ const g=mask.getContext('2d');g.drawImage(img,0,0,w,h);
+ g.globalCompositeOperation='source-in';g.fillStyle='rgba(255,255,210,0.16)';
+ g.fillRect(0,0,w,h);
+ if(sizeCache.size>=6)sizeCache.clear();
+ sizeCache.set(key,mask);
+ return mask;
+}
 function draw() {
   MFViewport.resize(canvas);
   ctx.clearRect(0, 0, MFViewport.width, MFViewport.height);
@@ -4992,10 +5009,7 @@ if (img && img.complete && img.naturalWidth > 0) {
         const vs=window.MFAdapter?.scaleForStructure?.(hover,Number(hover.visualScale)||1) ?? (Number(hover.visualScale)||1);
         const w=TILE_W*(hover.w||1)*vs, h=w*img.naturalHeight/img.naturalWidth;
         const a=gridToScreen(hover.gx+((hover.w||1)-1)/2,hover.gy+((hover.h||1)-1)/2);
-        const mask=document.createElement('canvas');mask.width=Math.ceil(w);mask.height=Math.ceil(h);
-        const g=mask.getContext('2d');g.drawImage(img,0,0,w,h);g.globalCompositeOperation='source-in';
-        g.fillStyle='rgba(255,255,210,0.16)';g.fillRect(0,0,w,h);
-        ctx.drawImage(mask,a.x-w/2,a.y-h+TILE_H*0.9);
+        ctx.drawImage(hoverTintMask(img,w,h),a.x-w/2,a.y-h+TILE_H*0.9);
       }
     }
     if (marks.length) requestRedraw();
