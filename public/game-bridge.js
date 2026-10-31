@@ -23,28 +23,62 @@
     return {...simple(a),alvo:{gx:a.alvo.gx,gy:a.alvo.gy},...(a.seed?{seed:clone(a.seed)}:{}),elapsed:a.startTime?Math.max(0,performance.now()-a.startTime):0};
   }
   let activeSeconds=0,background=null;
+  function backgroundSnapshot(at=Date.now(),npcAt=at){
+    const action=player.acaoAtual,npcAction=aradora.acaoAtual;
+    return {at,action,elapsed:action?.startTime?
+      Math.max(0,performance.now()-action.startTime):Math.max(0,Number(action?.elapsed)||0),
+      npcAt,npcAction,npcElapsed:npcAction?.startTime?
+      Math.max(0,performance.now()-npcAction.startTime):Math.max(0,Number(npcAction?.elapsed)||0)};
+  }
   function pauseBackground(){
     if(background||host.isVisiting())return;
-    const action=player.acaoAtual;
-    background={at:Date.now(),action,elapsed:action?.startTime?Math.max(0,performance.now()-action.startTime):Number(action?.elapsed)||0};
+    // Referência de tempo absoluto para que uma aba suspensa não paralise as tarefas.
+    background=backgroundSnapshot();
   }
-  function resumeBackground(){
-    if(!background||document.hidden||!host.playing())return;
-    const paused=background;background=null;
+  function resumeBackground(notify=true){
+    if(!background||host.isVisiting()||!host.playing())return;
+    const paused=background,now=Date.now();
+    if(now<=Math.min(paused.at,paused.npcAt??paused.at)||
+       (document.hidden&&now-Math.min(paused.at,paused.npcAt??paused.at)<5000))return;
+    background=null;
+    // Plantações precisam amadurecer ANTES de resolver as colheitas enfileiradas.
+    syncAllGrowth(now);
+    let cursor=now;
     if(paused.action&&player.acaoAtual===paused.action){
       player.acaoAtual.elapsed=paused.elapsed;
-      resumeOfflinePlanting({savedAt:paused.at});
-      delete player.acaoAtual?.elapsed;
+      cursor=resumeOfflinePlanting({savedAt:paused.at});
+      if(player.acaoAtual)delete player.acaoAtual.elapsed;
     }
-    syncAllGrowth(Date.now());requestRedraw();host.changed();
+    // O browser pode executar alguns timers ou suspender o JavaScript completamente.
+    // Nunca dependa da quantidade de ticks recebidos; avance pelo relógio real.
+    for(const t of terrenos){
+      if(t.animal)window.MFAnimalProduction?.sync(t.animal);
+      if(t.fruitTree)window.MFFruitTrees?.sync(t);
+    }
+    let npcCursor=now;
+    if(aradora.spawned&&(paused.npcAction===aradora.acaoAtual||!paused.npcAction)){
+      if(aradora.acaoAtual)aradora.acaoAtual.elapsed=paused.npcElapsed||0;
+      npcCursor=resumeOfflineAradora({savedAt:paused.npcAt??paused.at});
+      if(aradora.acaoAtual)delete aradora.acaoAtual.elapsed;
+    }
+    if(document.hidden)background=backgroundSnapshot(cursor,npcCursor);
+    else requestRedraw();
+    if(notify)host.changed('background-progress');
   }
-  document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseBackground();else resumeBackground();});
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden)pauseBackground();else resumeBackground();
+  });
   window.addEventListener('pagehide',pauseBackground);
   window.addEventListener('pageshow',resumeBackground);
-  setInterval(resumeBackground,1000);
+  // Em navegadores que permitem JS em segundo plano, sincroniza periodicamente.
+  // Em iOS/Android suspensos, pageshow/visibilitychange e o próximo save recuperam tudo.
+  setInterval(()=>resumeBackground(),1000);
   setInterval(()=>{if(host.playing())activeSeconds++},1000); // XP só vem das ações do jogador
   function capture() {
     if(document.hidden)pauseBackground();
+    // Uma captura feita em segundo plano também reflete o progresso já decorrido.
+    // Os documentos Firebase nunca dependem de animações executadas fora da aba.
+    if(background)resumeBackground(false);
     const data = window.MFAdapter.captureState();
     data.terrenos.forEach((t,i)=>{
       if(terrenos[i]?.animal)t.animal=clone(terrenos[i].animal);
@@ -53,7 +87,8 @@
     Object.assign(data, { version: 2, savedAt:background?.at||Date.now(), offsetX, offsetY, zoom,activeSeconds,character:window.__mfCharacter||null,
       player: {...window.MFSaveRuntime.actorProgress(data.player), gx:player.gx,gy:player.gy,x:player.x,y:player.y,facing:player.facing,path:clone(player.path),action:actionState(player)},
       aradora: {...window.MFSaveRuntime.actorProgress(data.aradora),x:aradora.x,y:aradora.y,facing:aradora.facing,
-        path:clone(aradora.path || []),action:actionState(aradora),fila:clone((aradora.fila || []).map(t=>({gx:t.gx,gy:t.gy})))},
+        path:clone(aradora.path || []),action:actionState(aradora),fila:clone((aradora.fila || []).map(t=>({gx:t.gx,gy:t.gy}))),
+        ...(background?{offlineAt:background.npcAt}: {})},
       runtimeVersion:1,
       truck: simple(caminhaoVendas),nextTruckAt:window.__mfTruckDue || 0,
       aradoraWelcomeShown:!!window.__aradoraWelcomeShown,
@@ -155,12 +190,13 @@
     (data.loot || []).forEach(p=>lootParticles.push({...p,img:preload(LOOT_SPRITES[p.tipo] || window.MFAdapter?.project?.items?.['item-'+p.tipo]?.lootIcon || '')}));
     filaAcoes=(data.actionQueue || []).map(p=>{
       const t=terrenos.find(t=>t.gx===p.gx&&t.gy===p.gy);
-      if(t&&p.job&&['plantar','colher','animal','arar'].includes(p.job.kind))t._job=clone(p.job);
+      if(t&&p.job&&['plantar','colher','animal','arar','tree'].includes(p.job.kind))t._job=clone(p.job);
       return t;
     }).filter(Boolean);
     arando=player.acaoAtual?.state==='ararando';
     if(arando)player.currentSprite=spriteArando;
     resumeOfflinePlanting(data);
+    resumeOfflineAradora({savedAt:data.aradora?.offlineAt||data.savedAt});
     atualizarBloqueioTerrasPorNivel();
     requestRedraw();
   }
@@ -168,12 +204,13 @@
   function resumeOfflinePlanting(data){
     if(host.isVisiting())return;
     const now=Date.now(),savedAt=Number(data.savedAt);
-    if(!Number.isFinite(savedAt)||savedAt<1e11||savedAt>=now)return;
+    if(!Number.isFinite(savedAt)||savedAt<1e11||savedAt>=now)return now;
     let cursor=savedAt;
     const limit=filaAcoes.length+1;
     for(let i=0;i<limit&&player.acaoAtual;i++){
       const a=player.acaoAtual,t=a.alvo;
-      if(!['plantar','arar'].includes(a.job||'arar'))break;
+      // Colher, animais e árvores também devem continuar durante a ausência.
+      if(!['plantar','arar','colher','animal','tree'].includes(a.job||'arar'))break;
       const work=Math.max(1,Number(a.duration)||JOB_TIME[a.job]||3000);
       let travel=0;
       if(a.state==='indo'&&!a.remoto){
@@ -188,8 +225,11 @@
         if(now-cursor>=travel){
           player.path=[];if(!a.remoto){player.gx=t.gx;player.gy=t.gy;Object.assign(player,gridToScreen(t.gx,t.gy));}
           a.state='ararando';a.startTime=performance.now()-(elapsed+now-cursor-travel);arando=true;
+          cursor=now;
         }
-        break;
+        // Se ainda está caminhando, preserve o começo do deslocamento pendente.
+        // Assim os próximos ticks em segundo plano não perdem tempo já transcorrido.
+        return cursor;
       }
       if(jobValid(t,{kind:a.job||'arar'}))finishJob(t,a,completeAt);
       delete t._job;player.path=[];if(!a.remoto){player.gx=t.gx;player.gy=t.gy;Object.assign(player,gridToScreen(t.gx,t.gy));}
@@ -197,6 +237,58 @@
       cursor=completeAt;
       if(filaAcoes.length)iniciarArar(filaAcoes.shift());
     }
+    return now;
+  }
+  // Aradora automática também avança pelo tempo real e só processa terras secas válidas.
+  // O número de passos é limitado aos terrenos existentes: nada é gerado em segundo plano.
+  function resumeOfflineAradora({savedAt}){
+    const now=Date.now(),start=Number(savedAt);
+    if(host.isVisiting()||!aradora.spawned||!Number.isFinite(start)||start<1e11||start>=now)return now;
+    let cursor=start;
+    for(let i=0;i<=terrenos.length+1&&cursor<now;i++){
+      if(!aradora.acaoAtual){
+        processAradora();
+        if(!aradora.acaoAtual)break;
+      }
+      const a=aradora.acaoAtual,t=a.alvo;
+      const conflicting=player.acaoAtual?.alvo===t||filaAcoes.includes(t)||
+        (t?._ocupant&&t._ocupant!=='aradora');
+      if(!t||!terrenos.includes(t)||t.cultura||!String(t.imgSrc||'').includes('terra-seca')||conflicting){
+        if(t?._ocupant==='aradora')t._ocupant=null;
+        aradora.acaoAtual=null;aradora.path=[];aradora.arando=false;
+        continue;
+      }
+      let travel=0;
+      if(a.state==='indo'){
+        let from={x:aradora.x,y:aradora.y};
+        for(const step of aradora.path||[]){
+          const to=gridToScreen(step.x,step.y);
+          travel+=Math.hypot(to.x-from.x,to.y-from.y);from=to;
+        }
+        travel=1000*travel/180;
+      }
+      const elapsed=a.state==='ararando'?Math.max(0,Number(a.elapsed)||0):0;
+      const duration=Math.max(1,Number(a.duration)||1500);
+      const completeAt=cursor+travel+Math.max(0,duration-elapsed);
+      if(completeAt>now){
+        if(now-cursor>=travel){
+          aradora.path=[];aradora.gx=t.gx;aradora.gy=t.gy;
+          Object.assign(aradora,gridToScreen(t.gx,t.gy));
+          a.state='ararando';a.startTime=performance.now()-(elapsed+now-cursor-travel);
+          a.progress=Math.min(1,(elapsed+now-cursor-travel)/duration);
+          aradora.arando=true;cursor=now;
+        }
+        return cursor;
+      }
+      t.imgSrc=TERRA_ARADA_SRC;t.cultura=null;
+      if(t._ocupant==='aradora')t._ocupant=null;
+      aradora.gx=t.gx;aradora.gy=t.gy;
+      Object.assign(aradora,gridToScreen(t.gx,t.gy));
+      aradora.path=[];aradora.acaoAtual=null;aradora.arando=false;
+      aradora.currentSprite=aradora.previousSprite||aradora.spriteFront;
+      addXP(1);cursor=completeAt;
+    }
+    return now;
   }
   // Início de jogo (só para conta nova, sem save): 3 plantações prontas,
   // 1 plantação morta e 2 crescendo, perto do personagem.
@@ -238,7 +330,7 @@
   Promise.resolve(window.MFProjectReady).then(() => {
     try {
       restore(host.bootState());
-      if(document.hidden){background=null;pauseBackground();}
+      if(document.hidden)pauseBackground();
       if(!host.bootState() && !host.isVisiting()) { seedStarterFarm(); window.MFTutorial?.start(); }
       setTimeout(()=>window.MFCharacter?.init?.(),0);
       document.documentElement.style.visibility='visible';
