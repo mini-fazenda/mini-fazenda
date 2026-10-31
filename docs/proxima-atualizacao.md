@@ -12,7 +12,17 @@ As notas da próxima versão estão preparadas em `public/release-notes-data.js`
 
 ## Álbum de conquistas e coleções
 
-- Oito conquistas, incluindo quatro etapas de colheitas e troféu Beta Tester exclusivo.
+- Dez conquistas, incluindo quatro etapas de colheitas e troféu Beta Tester exclusivo.
 - Resgates únicos, descobertas permanentes e rotação/armazenamento do troféu.
 - Preparação do lançamento: congelar `BETA_CUTOFF` uma única vez. Regras e validação em [conquistas.md](conquistas.md).
 - Contadores de colheitas e vendas passam a registrar novas ações; dados históricos inexistentes não são estimados.
+
+## Galinheiro: variedades e ovos raros
+
+- Cinco cores, visíveis no mapa e na tela interna, com até 35 galinhas.
+- Ovos tradicionais (97%, 40 moedas), ouro (2%, 400) e diamante (1%, 1.000), inclusive offline.
+- Três estoques com arte própria; vender tudo ou apenas tipos/quantidades selecionados.
+- Conquistas de produção de ouro e diamante, cada uma com metas 1/10/50 e prêmios 50/200/1.000 moedas.
+- Mudanças acumuladas nesta branch, sem publicação em produção.
+
+- Preço progressivo das galinhas: 300 moedas na primeira e +100 por nova galinha (mantém +5 XP).

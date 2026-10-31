@@ -3,7 +3,7 @@ globalThis.MFReleaseNotesData={
  id:'2026-10-31-2',
  features:[
   'Galinheiro com construção em três etapas.',
-  'Galinhas e ovos acumulados, inclusive offline.',
+  'Galinhas coloridas e ovos de ouro e diamante.',
   'Materiais por presentes, níveis e prêmios diários.',
   'Conquistas, coleções e troféu de Beta Tester.'
  ],

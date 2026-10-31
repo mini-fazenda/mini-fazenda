@@ -10,6 +10,8 @@ O botão 🏆 Conquistas abre o álbum, com seis cartões por página e duas aba
 | II | 1.000 plantações colhidas | 200 |
 | III | 3.000 plantações colhidas | 500 |
 | IV | 5.000 plantações colhidas | 1.000 |
+| Ovos de Ouro I / II / III | Produzir 1 / 10 / 50 ovos de ouro | 50 / 200 / 1.000 |
+| Ovos de Diamante I / II / III | Produzir 1 / 10 / 50 ovos de diamante | 50 / 200 / 1.000 |
 | Criador de Galinhas | Ter 10 galinhas | 200 |
 | Colheita Generosa | Colher 50 unidades de trigo | 300 |
 | Comerciante | Vender 20 unidades de produtos | 250 |
@@ -36,3 +38,5 @@ A moldura utiliza a referência fornecida, com cartões HTML opacos cobrindo os 
 Prompt: “Keep the TWO supplied golden BETA TESTER trophies exactly as they are; preserve the two distinct isometric directions, do not mirror the letters. Remove dark backdrop and glowing halos; genuine transparent alpha; left trophy in left half and right trophy in right half; transparent margins; no extra objects.”
 
 Testes automatizados cobrem as quatro recompensas, restauração, duplicidade, reentrada, falhas, corte beta, elegibilidade tardia, estoque, rotação, visitas e reconhecimento dos bens existentes. A validação visual interativa em navegador continua pendente no ambiente atual.
+
+As conquistas de ovos raros observam os contadores vitalícios do Galinheiro, não o estoque nem a quantidade vendida. Vender, guardar e recolocar não apaga nem multiplica o progresso.
