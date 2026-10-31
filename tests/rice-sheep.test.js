@@ -5,9 +5,9 @@ test('sementes ficam em ordem de tempo mesmo quando o nível é diferente',()=>{
  const extras=fs.readFileSync(new URL('../public/extras.js',import.meta.url),'utf8'),expression=extras.match(/\.sort\((\(a, b\) => state\.tab === 'sementes'.*?)\);/)[1];
  const sort=vm.runInNewContext(expression,{state:{tab:'sementes'}});const list=[{grow:18*3600000,level:1,price:10},{grow:2*3600000,level:10,price:100},{grow:300000,level:2,price:20}].sort(sort);assert.deepEqual(list.map(i=>i.grow),[300000,7200000,64800000]);
 });
-test('arroz cobra 7000 e rende 10500 por colheita, com lucro de 50%',()=>{
- assert.equal(rice.growTime,86400000);assert.equal(rice.harvestXP,100);assert.equal(rice.plantXP,0);assert.equal(rice.price,7000);assert.equal(rice.saleCoins*rice.yieldCount,10500);
- const result=MFSalesCore.sell({arroz:{count:1,slotIndex:0,imgSrc:rice.lootIcon}},{arroz:1},()=>({coins:rice.saleCoins,xp:0}));assert.equal((result.total-rice.price)/rice.price,.5);
+test('arroz cobra 7000 e rende 13700 por colheita, com lucro de 6700',()=>{
+ assert.equal(rice.growTime,86400000);assert.equal(rice.harvestXP,100);assert.equal(rice.plantXP,0);assert.equal(rice.price,7000);assert.equal(rice.saleCoins*rice.yieldCount,13700);
+ const result=MFSalesCore.sell({arroz:{count:1,slotIndex:0,imgSrc:rice.lootIcon}},{arroz:1},()=>({coins:rice.saleCoins,xp:0}));assert.equal(result.total-rice.price,6700);
  for(const path of ['stage0','stage1','stage2','icon','lootIcon'])assert.ok(fs.existsSync(new URL('../public/'+rice[path],import.meta.url)));
 });
 test('arroz planta com sementes na água, muda aos 50%, amadurece em 24h e dá 100 estrelas uma vez',()=>{
