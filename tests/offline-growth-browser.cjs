@@ -76,5 +76,24 @@ const {chromium,webkit,devices}=require('playwright');
  await f.evaluate(()=>{window.testHidden=false;document.dispatchEvent(new Event('visibilitychange'));parent.testPlaying=false;delete document.hidden;});
  console.log('PASS: colheita e aração em fila concluem em segundo plano sem duplicar execução');
 
+ // A NPC Aradora é automática. Mesmo com a página oculta, seus canteiros secos
+ // devem ser arados uma única vez, sem executar trabalho no modo visita.
+ await page.evaluate(()=>testOffset=0);
+ await f.evaluate(()=>{
+  terrenos.forEach(t=>(t._timers||[]).forEach(clearTimeout));
+  terrenos=[];filaAcoes=[];player.acaoAtual=null;player.path=[];playerXP=0;moedas=10000;
+  terrenos=[{gx:4,gy:4,w:2,h:2,imgSrc:TERRA_SECA_SRC},{gx:6,gy:4,w:2,h:2,imgSrc:TERRA_SECA_SRC}];
+  aradora.spawned=true;aradora.fila=[];aradora.path=[];aradora.acaoAtual=null;aradora.gx=2;aradora.gy=2;Object.assign(aradora,gridToScreen(2,2));
+  parent.testPlaying=true;window.testHidden=true;Object.defineProperty(document,'hidden',{configurable:true,get:()=>window.testHidden});document.dispatchEvent(new Event('visibilitychange'));
+ });
+ await page.evaluate(()=>testOffset+=3600000);
+ const npcDone=await page.evaluate(()=>testAPI.capture());
+ if(npcDone.terrenos.some(t=>!t.imgSrc.includes('terra-arada'))||npcDone.aradora.action||npcDone.playerXP!==2)throw Error('NPC não avançou no segundo plano: '+JSON.stringify({xp:npcDone.playerXP,crops:npcDone.terrenos.map(t=>t.imgSrc),action:npcDone.aradora.action}));
+ const npcTwice=await page.evaluate(()=>testAPI.capture());
+ if(npcTwice.playerXP!==2)throw Error('Aradora concedeu XP duas vezes');
+ await f.evaluate(()=>{window.testHidden=false;document.dispatchEvent(new Event('visibilitychange'));parent.testPlaying=false;aradora.spawned=false;delete document.hidden;});
+ console.log('PASS: Aradora automática conclui terrenos em segundo plano e não duplica XP');
+
+
  if(errors.length)throw Error(errors.join('\n'));await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
