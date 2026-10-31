@@ -19,3 +19,19 @@ test('save da versão 2 mantém cycleMs e só atualiza ao coletar',()=>{
  assert.equal(core.state(t,now).remaining,1800000);assert.equal(core.migrate(t,now),false);
  core.collect(t,now+1800000);assert.equal(t.fruitTree.cycleMs,7200000);
 });
+test('recupera árvores sem identidade no mapa e no MiniBaú sem reiniciar após guardar',()=>{
+ const now=100000000;
+ for(const type of Object.keys(table))for(const stage of [0,1,2]){
+  const broken={gx:8,gy:9,w:2,h:2,imgSrc:core.types[type].stages[stage],visualScale:1};
+  assert.equal(core.repair(broken,now),true);assert.equal(broken.itemId,'item-arvore-'+type);assert.equal(broken.name,core.types[type].treeName);
+  assert.deepEqual([broken.gx,broken.gy,broken.w,broken.h],[8,9,2,2]);assert.equal(core.state(broken,now).stage,stage);
+  const stored=JSON.parse(JSON.stringify(broken)),clock=stored.fruitTree.startTime;
+  assert.equal(core.repair(stored,now+1000),false);assert.equal(stored.fruitTree.startTime,clock);
+  assert.equal(core.collect(stored,now+core.types[type].cycle).saleCoins,core.types[type].saleCoins);
+  assert.equal(core.collect(stored,now+core.types[type].cycle),null);
+ }
+});
+test('recuperação não transforma decorações comuns nem reinicia árvores existentes',()=>{
+ for(const imgSrc of ['assets/natureza/vegetacao.png','assets/decoracoes/sakura-1.png','assets/arvores-chao/falsa-1.png']){const t={imgSrc};assert.equal(core.repair(t),false);assert.equal(t.fruitTree,undefined);}
+ const t={itemId:'item-arvore-sakura',w:2,h:2};core.start(t,1000);const timer=JSON.stringify(t.fruitTree);assert.equal(core.repair(t,5000),false);assert.equal(JSON.stringify(t.fruitTree),timer);
+});

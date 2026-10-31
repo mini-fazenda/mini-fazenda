@@ -14,7 +14,7 @@
   const fits=gx>=0&&gy>=0&&gx+2<=COLS&&gy+2<=ROWS&&!terrenos.some(t=>gx<t.gx+t.w&&gx+2>t.gx&&gy<t.gy+t.h&&gy+2>t.gy);
   if(!fits){notice('Precisa de um espaço livre de 2x2 para plantar esta árvore.');return false;}return spawn(gx,gy,...rest);
  };
- setInterval(()=>{if(window.MFHost?.isVisiting?.())return;for(const t of terrenos){const s=core.state(t);if(!s?.directCoins||!s.ready||t.fruitTree.readyNotified)continue;t.fruitTree.readyNotified=true;notice('Sua '+s.treeName+' está pronta para colher!');window.MFHost?.changed?.('tree-ready');}},1000);
+ setInterval(()=>{if(window.MFHost?.isVisiting?.())return;for(const t of terrenos){if(window.MFAnimalProduction?.repair(t,window.MFAdapter?.project?.items))window.MFHost?.changed?.('animal-identity-repair');const s=core.state(t);if(!s?.directCoins||!s.ready||t.fruitTree.readyNotified)continue;t.fruitTree.readyNotified=true;notice('Sua '+s.treeName+' está pronta para colher!');window.MFHost?.changed?.('tree-ready');}},1000);
  const cropDraw=MFCropSprites.drawSprite,cropHit=MFCropSprites.hit;
  function geometry(t,img,a){const w=TILE_W*2,h=w*img.naturalHeight/img.naturalWidth;return {x:a.x-w/2,y:a.y-h*(300/320),w,h,root:{x:a.x,y:a.y}};}
  MFCropSprites.drawSprite=function(ctx,t,a,img){if(!core.config(t))return cropDraw(ctx,t,a,img);const b=geometry(t,img,a);ctx.drawImage(img,b.x,b.y,b.w,b.h);return true;};

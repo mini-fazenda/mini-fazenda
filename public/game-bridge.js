@@ -136,7 +136,7 @@
     // Cancele callbacks de objetos antigos antes de trocar o mapa.
     terrenos.forEach(t=>{(t._timers || []).forEach(clearTimeout);clearInterval(t._milkInterval)});
     window.MFAdapter.applyState(data);
-    terrenos.forEach(t=>{window.MFBarn?.normalize(t);if(t.fruitTree)window.MFFruitTrees?.sync(t);});
+    terrenos.forEach(t=>{window.MFBarn?.normalize(t);window.MFFruitTrees?.sync(t);window.MFAnimalProduction?.repair(t,window.MFAdapter.project.items);});
     terrenos.forEach((t,i)=>{
       const saved=data.terrenos?.[i];
       if(saved?.cultura){

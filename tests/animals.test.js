@@ -55,3 +55,11 @@ test('compra de vaca/ovelha já tem primeira coleta e intervalo começa depois d
   assert.equal(MFAnimalProduction.sync(saved,now+cfg.cycle-1).ready,false);assert.equal(MFAnimalProduction.sync(saved,now+cfg.cycle).ready,true);
  }
 });
+test('recupera vaca e ovelha que viraram decoração sem reiniciar produção após guardar',()=>{
+ const now=100000000,core=MFAnimalProduction;
+ for(const [type,imgSrc]of [['vaca','assets/ef4967dfd1fd9f0b3cca-vaca-parada.gif'],['ovelha','assets/animais/ovelha-parada.png']]){
+  const t={gx:8,gy:9,imgSrc,w:2,h:2};assert.equal(core.repair(t,{},now),true);assert.equal(t.itemId,'item-'+type);assert.equal(t.name,type==='vaca'?'Vaca':'Ovelha');assert.equal(core.collect(t.animal,now).product,type==='vaca'?'leite':'la');
+  const clock=JSON.stringify(t.animal),stored=JSON.parse(JSON.stringify(t));assert.equal(core.repair(stored,{},now+1000),false);assert.equal(JSON.stringify(stored.animal),clock);assert.equal(core.collect(stored.animal,now+1000),null);assert.ok(core.collect(stored.animal,now+core.types[type].cycle));assert.equal(stored.gx,8);
+ }
+ const normal={imgSrc:'assets/decoracoes/vaca-estatua.png'};assert.equal(core.repair(normal,{},now),false);assert.equal(normal.animal,undefined);
+});
