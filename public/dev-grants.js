@@ -4,7 +4,7 @@
 // IMPORTANTE: a segurança real está em database.rules.json (adminInbox / adminLog).
 // A checagem de e-mail aqui só decide se o console aparece na tela.
 
-export const DEV_EMAILS = ['bielz09.lulu@gmail.com'];
+export const DEV_EMAILS = ['bielz09.lulu@gmail.com', 'fortekmarquez@gmail.com'];
 
 export const LIMITS = { moedas: 1_000_000_000, xp: 10_000_000 };
 export const TYPES = ['moedas', 'xp', 'fertilizar', 'fertilizar_infinito', 'fertilizar_infinito_off', 'crescer'];
