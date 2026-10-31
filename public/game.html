@@ -7468,7 +7468,15 @@ window.MFAdapter={version:"5.3",defaults:def,get project(){return project},set p
 let justPanned=0;
 let glideVX=0,glideVY=0,gliding=false;
 function cancelGlide(){glideVX=glideVY=0;gliding=false}
-function inertia(vx,vy){if(!project.camera?.inertiaEnabled)return;glideVX=Number(vx)||0;glideVY=Number(vy)||0;gliding=true}
+function inertia(vx,vy){
+ // Projetos antigos não têm inertiaEnabled: ausência significa habilitado.
+ // Apenas a opção explicitamente desativada no editor bloqueia o deslize.
+ if(project.camera?.inertiaEnabled===false)return;
+ const speed=Math.hypot(Number(vx)||0,Number(vy)||0);
+ if(speed<.4)return;
+ const limit=34,scale=Math.min(1,limit/speed);
+ glideVX=vx*scale;glideVY=vy*scale;gliding=true;
+}
 function tickGlide(){requestAnimationFrame(tickGlide);if(!gliding||mfGesture||document.hidden)return;const friction=Math.max(.7,Math.min(.97,Number(project.camera?.friction)||.88));
  offsetX+=glideVX;offsetY+=glideVY;const bx=offsetX,by=offsetY;clampNewCamera();if(Math.abs(offsetX-bx)>1)glideVX=0;if(Math.abs(offsetY-by)>1)glideVY=0;
  glideVX*=friction;glideVY*=friction;if(Math.hypot(glideVX,glideVY)<.15)cancelGlide();requestRedraw();}
@@ -7488,14 +7496,19 @@ canvas.addEventListener('mousedown',e=>{if(window.__MF_EDITOR_EDITING||modoColoc
  const forced=e.button===1||e.button===2||mfSpace;if(e.button!==0&&!forced)return;
  const tile=mfTileAtClient(e.clientX,e.clientY);const t=tile&&findTerrainAt(tile.gx,tile.gy);
  const harvest= !forced&&!!(t&&(t.cultura||t.animal||t.fruitTree));
- mfGesture={mode:harvest?'harvest':'pan',x:e.clientX,y:e.clientY,ox:offsetX,oy:offsetY,lastX:e.clientX,lastY:e.clientY,vx:0,vy:0, moved:false};
+ mfGesture={mode:harvest?'harvest':'pan',x:e.clientX,y:e.clientY,ox:offsetX,oy:offsetY,lastX:e.clientX,lastY:e.clientY,vx:0,vy:0,lastMoveAt:performance.now(), moved:false};
  window.__MF_INPUT_MODE=mfGesture.mode;cancelGlide();
  if(forced){e.preventDefault();e.stopImmediatePropagation();}
 },true);
 window.addEventListener('mousemove',e=>{const g=mfGesture;if(!g||window.__MF_EDITOR_EDITING)return;
  const dx=e.clientX-g.x,dy=e.clientY-g.y;if(Math.hypot(dx,dy)>5)g.moved=true;
  if(g.mode==='pan'){if(!g.moved)return;
-  g.vx=e.clientX-g.lastX;g.vy=e.clientY-g.lastY;
+  const now=performance.now(),elapsed=Math.max(8,now-g.lastMoveAt);
+  // Velocidade em pixels por quadro de 60 Hz; independente da frequência do mouse.
+  const instantX=(e.clientX-g.lastX)*Math.min(2,16.67/elapsed);
+  const instantY=(e.clientY-g.lastY)*Math.min(2,16.67/elapsed);
+  g.vx=g.vx*.35+instantX*.65;g.vy=g.vy*.35+instantY*.65;
+  g.lastMoveAt=now;
   const requestedX=g.ox+dx,requestedY=g.oy+dy;
   offsetX=requestedX;offsetY=requestedY;clampNewCamera();
   // Quando atinge o limite, rebaseia o gesto para evitar câmera "grudada"
@@ -7507,7 +7520,11 @@ window.addEventListener('mousemove',e=>{const g=mfGesture;if(!g||window.__MF_EDI
  g.lastX=e.clientX;g.lastY=e.clientY;
 },true);
 window.addEventListener('mouseup',e=>{const g=mfGesture;if(!g)return;
- if(g.mode==='pan'&&g.moved){justPanned=performance.now();inertia(g.vx,g.vy)}
+ if(g.mode==='pan'&&g.moved){
+  justPanned=performance.now();
+  // Soltar após uma pausa não deve fazer a câmera disparar sozinha.
+  if(performance.now()-g.lastMoveAt<110)inertia(g.vx,g.vy);
+ }
  if(g.mode==='harvest'&&g.moved){justPanned=performance.now()}
  mfGesture=null;window.__MF_INPUT_MODE=null;
 },true);
