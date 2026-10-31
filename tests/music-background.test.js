@@ -5,7 +5,7 @@ import vm from 'node:vm';
 
 test('música mantém o Audio e currentTime ao sair e voltar da aba',async()=>{
  const html=readFileSync(new URL('../public/game.html',import.meta.url),'utf8');
- const script=html.match(/<script id="mf-game-audio-runtime">([\\s\\S]*?)<\\/script>/)?.[1];
+ const script=html.match(/<script id="mf-game-audio-runtime">([\s\S]*?)<\/script>/)?.[1];
  assert.ok(script,'Runtime de música não encontrado no game.html');
  const handlers=new Map(),audios=[];
  let hidden=false;
