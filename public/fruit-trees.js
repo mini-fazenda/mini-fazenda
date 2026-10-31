@@ -8,9 +8,9 @@
   laranja:{name:'Laranja',treeName:'Laranjeira',price:5000,minutes:75,saleCoins:520,plantXP:220,stars:80,level:1,previousMinutes:50},
   sakura:{name:'Flor de Sakura',treeName:'Sakura',price:5500,minutes:90,saleCoins:690,plantXP:280,stars:120,level:10,previousMinutes:90}
  };
- for(const [type,c]of Object.entries(types)){c.cycle=c.minutes*60000;c.directCoins=true;c.stages=[1,2,3].map(n=>`assets/arvores-permanentes/arvore_${type}_${n}.png`);c.icon=c.stages[2];}
+ for(const [type,c]of Object.entries(types)){c.cycle=c.minutes*60000;c.directCoins=true;c.stages=[1,2,3].map(n=>`assets/arvores-chao/${type}-${n}.png`);c.icon=c.stages[2];}
  // Compatibilidade das Aceroleiras e frutas já existentes; sem excluir patrimônio.
- types.acerola={name:'Acerola',treeName:'Aceroleira',price:6000,minutes:60,cycle:3600000,stars:250,saleCoins:600,icon:'assets/arvores/acerola-fruta.png',stages:[0,1,2].map(n=>`assets/arvores/acerola-${n}.png`)};
+ types.acerola={name:'Acerola',treeName:'Aceroleira',price:6000,minutes:60,cycle:3600000,stars:250,saleCoins:600,icon:'assets/arvores/acerola-fruta.png',stages:[1,2,3].map(n=>`assets/arvores-chao/acerola-${n}.png`)};
  function config(t){return types[t?.fruitTree?.tipo||String(t?.itemId||t?.id||'').replace('item-arvore-','')];}
  function migrate(t,now=Date.now()){
   const c=config(t),f=t?.fruitTree;if(!c?.directCoins||!f)return false;

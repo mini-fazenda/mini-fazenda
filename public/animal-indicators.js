@@ -29,7 +29,7 @@
    const w=TILE_W*(t.w||1)*vs,h=w*img.naturalHeight/img.naturalWidth;
    const a=gridToScreen(t.gx+((t.w||1)-1)/2,t.gy+((t.h||1)-1)/2);
    const sx=rect.left+(MFViewport.width/2+offsetX+a.x*zoom)*rect.width/MFViewport.width;
-   const sy=rect.top+(MFViewport.height/3+offsetY+(a.y+TILE_H*.9-h+h*visibleTop(t.imgSrc,img))*zoom)*rect.height/MFViewport.height-7;
+   const treeBox=fruit&&window.MFTreeCatalog?.geometry(t,img,a);const top=treeBox?treeBox.y+treeBox.h*visibleTop(t.imgSrc,img):a.y+TILE_H*.9-h+h*visibleTop(t.imgSrc,img);const sy=rect.top+(MFViewport.height/3+offsetY+top*zoom)*rect.height/MFViewport.height-7;
    if(sx<rect.left-30||sx>rect.right+30||sy<rect.top||sy>rect.bottom+50)continue;
    shown.add(t);let el=markers.get(t);
    if(!el){el=document.createElement('div');el.className='mf-animal-ready';el.setAttribute('role','img');el.setAttribute('aria-label',state.name+' pronto para coletar');const bubble=document.createElement('span'),picture=document.createElement('img');picture.src=icon(state.tool);picture.alt='';bubble.append(picture);el.append(bubble);layer.append(el);markers.set(t,el);}

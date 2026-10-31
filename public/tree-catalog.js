@@ -16,8 +16,8 @@
  };
  setInterval(()=>{if(window.MFHost?.isVisiting?.())return;for(const t of terrenos){const s=core.state(t);if(!s?.directCoins||!s.ready||t.fruitTree.readyNotified)continue;t.fruitTree.readyNotified=true;notice('Sua '+s.treeName+' está pronta para colher!');window.MFHost?.changed?.('tree-ready');}},1000);
  const cropDraw=MFCropSprites.drawSprite,cropHit=MFCropSprites.hit;
- function geometry(t,img,a){const w=TILE_W*2,h=w*img.naturalHeight/img.naturalWidth;return {x:a.x-w/2,y:a.y+TILE_H-h,w,h};}
- MFCropSprites.drawSprite=function(ctx,t,a,img){if(!core.config(t)?.directCoins)return cropDraw(ctx,t,a,img);const b=geometry(t,img,a);ctx.drawImage(img,b.x,b.y,b.w,b.h);return true;};
- MFCropSprites.hit=function(t,img,x,y,a){if(!core.config(t)?.directCoins)return cropHit(t,img,x,y,a);const b=geometry(t,img,a);if(x<b.x||x>=b.x+b.w||y<b.y||y>=b.y+b.h)return false;try{const c=document.createElement('canvas');c.width=c.height=1;const g=c.getContext('2d');g.drawImage(img,(x-b.x)/b.w*img.naturalWidth,(y-b.y)/b.h*img.naturalHeight,1,1,0,0,1,1);return g.getImageData(0,0,1,1).data[3]>40;}catch(_){return true;}};
- window.MFTreeCatalog={notice,geometry};
+ function geometry(t,img,a){const w=TILE_W*2,h=w*img.naturalHeight/img.naturalWidth;return {x:a.x-w/2,y:a.y-h*(300/320),w,h,root:{x:a.x,y:a.y}};}
+ MFCropSprites.drawSprite=function(ctx,t,a,img){if(!core.config(t))return cropDraw(ctx,t,a,img);const b=geometry(t,img,a);ctx.drawImage(img,b.x,b.y,b.w,b.h);return true;};
+ MFCropSprites.hit=function(t,img,x,y,a){if(!core.config(t))return cropHit(t,img,x,y,a);const b=geometry(t,img,a);if(x<b.x||x>=b.x+b.w||y<b.y||y>=b.y+b.h)return false;try{const c=document.createElement('canvas');c.width=c.height=1;const g=c.getContext('2d');g.drawImage(img,(x-b.x)/b.w*img.naturalWidth,(y-b.y)/b.h*img.naturalHeight,1,1,0,0,1,1);return g.getImageData(0,0,1,1).data[3]>40;}catch(_){return true;}};
+ const legacy=core.types.acerola,acerolaCard=document.getElementById('item-arvore-acerola');if(acerolaCard){acerolaCard.dataset.img=legacy.stages[0];acerolaCard.querySelector('img').src=legacy.stages[2];Object.assign(MFAdapter.project.items['item-arvore-acerola'],{imgSrc:legacy.stages[0],icon:legacy.stages[2]});}window.MFTreeCatalog={notice,geometry};
 })();
