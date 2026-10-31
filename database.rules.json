@@ -40,7 +40,7 @@
       "$uid": {
         ".read": "auth != null",
         ".write": "auth != null && auth.uid === $uid && newData.exists()",
-        ".validate": "newData.hasChildren(['state','updatedAt']) && newData.child('state/farmName').isString() && newData.child('state/farmName').val().length <= 12"
+        ".validate": "newData.hasChildren(['state','updatedAt','revision']) && newData.child('state/farmName').isString() && newData.child('state/farmName').val().length <= 12 && newData.parent().parent().child('farms').child($uid).child('state').exists() && newData.child('revision').isNumber() && ((newData.child('revision').val() === newData.parent().parent().child('farms').child($uid).child('revision').val()) || (!newData.parent().parent().child('farms').child($uid).child('revision').exists() && newData.child('revision').val() === 0)) && (!newData.parent().parent().child('farms').child($uid).child('saveId').exists() || newData.child('saveId').val() === newData.parent().parent().child('farms').child($uid).child('saveId').val())"
       }
     },
     "directory": {
