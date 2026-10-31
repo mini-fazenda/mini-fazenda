@@ -89,6 +89,7 @@
       aradora: {...window.MFSaveRuntime.actorProgress(data.aradora),x:aradora.x,y:aradora.y,facing:aradora.facing,
         path:clone(aradora.path || []),action:actionState(aradora),fila:clone((aradora.fila || []).map(t=>({gx:t.gx,gy:t.gy}))),
         ...(background?{offlineAt:background.npcAt}: {})},
+      devTools:window.MFDev?.capture()||null,
       runtimeVersion:1,expansions:window.MFExpansion?.capture(),
       truck: simple(caminhaoVendas),nextTruckAt:window.__mfTruckDue || 0,
       aradoraWelcomeShown:!!window.__aradoraWelcomeShown,
@@ -125,6 +126,7 @@
     }
     window.MFNatureAssets?.normalizeState(data);
     activeSeconds=data.activeSeconds || 0;
+    window.MFDev?.restore(data.devTools);
     window.MFMissions.restore(data.missions || {});
     window.MFDaily?.restore(data.dailyRewards || {});
     window.MFLevelRewards?.restore(data.levelRewards,data.playerLevel||1);

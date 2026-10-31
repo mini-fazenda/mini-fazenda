@@ -89,6 +89,31 @@ const fs=require('fs');const assert=require('node:assert/strict');
  assert.equal(outcomes.filter(r=>r.status==='fulfilled').length,1);
  console.log('PASS: dois amigos simultâneos: apenas um adubo aceito no mesmo plantio');
  console.log('PASS: amigos fertilizam cinco vezes com quota atômica; sexta e envio sem quota negados; dono recebe e confirma.');
+ // Fazendeiro Mod: só o dev (e-mail verificado) cria comandos; o alvo só apaga o que recebeu.
+ const dev=env.authenticatedContext('devuid',{email:'bielz09.lulu@gmail.com',email_verified:true}).database();
+ const fakeDev=env.authenticatedContext('fake',{email:'bielz09.lulu@gmail.com',email_verified:false}).database();
+ const stranger=env.authenticatedContext('stranger',{email:'outra@gmail.com',email_verified:true}).database();
+ await env.withSecurityRulesDisabled(async c=>{await set(ref(c.database(),'farms/devuid/state/farmName'),'Recanto');});
+ const gift={type:'moedas',amount:5000,from:'Recanto',by:'devuid',at:serverTimestamp()};
+ await assertSucceeds(set(ref(dev,'adminInbox/owner/c1'),gift));
+ await assertSucceeds(set(ref(dev,'adminInbox/owner/c2'),{type:'fertilizar_infinito',from:'Recanto',by:'devuid',at:serverTimestamp()}));
+ for(const extra of [{amount:2000000000},{amount:1.5},{amount:null},{type:'apagar'},{by:'outro'},{from:'Falsa'},{extra:true}])await assertFails(set(ref(dev,'adminInbox/owner/invalid'),{...gift,...extra}));
+ await assertFails(set(ref(dev,'adminInbox/owner/c1'),{...gift,amount:9}));
+ await assertFails(set(ref(fakeDev,'adminInbox/owner/d1'),gift));
+ await assertFails(set(ref(stranger,'adminInbox/owner/d2'),gift));
+ await assertFails(set(ref(own,'adminInbox/owner/d3'),gift));
+ await assertFails(get(ref(stranger,'adminInbox/owner')));
+ await assertSucceeds(get(ref(own,'adminInbox/owner')));
+ await assertFails(set(ref(stranger,'adminInbox/owner/c1'),null));
+ await assertFails(set(ref(own,'adminInbox/owner/c1'),null)); // sem recibo: nunca apagar
+ await env.withSecurityRulesDisabled(async c=>{await set(ref(c.database(),'farms/owner/state/devTools/receipts/c1'),true);});
+ await assertSucceeds(set(ref(own,'adminInbox/owner/c1'),null));
+ await assertFails(set(ref(dev,'adminLog/l1'),{to:'owner',by:'outro',type:'moedas',at:serverTimestamp()}));
+ await assertSucceeds(set(ref(dev,'adminLog/l1'),{to:'owner',toName:'Recanto',by:'devuid',type:'moedas',amount:5000,at:serverTimestamp()}));
+ await assertSucceeds(get(ref(dev,'adminLog')));
+ await assertFails(get(ref(own,'adminLog')));
+ await assertFails(set(ref(stranger,'adminLog/l2'),{to:'owner',by:'stranger',type:'moedas',at:serverTimestamp()}));
+ console.log('PASS: Fazendeiro Mod: só o dev verificado cria comandos; alvo só apaga; log só do dev.');
  console.log('PASS: 21 verificações de regras, isolamento de contas, visita, paginação, sessão e transação.');
  }finally{await env.cleanup()}
 })().catch(e=>{console.error(e);process.exitCode=1});
