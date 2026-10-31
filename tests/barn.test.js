@@ -8,7 +8,7 @@ test('celeiro ocupa 2x3 plantações, gira mantendo centro e tamanho visual e n�
 });
 test('obra dura cinco minutos, completa offline e concede cinco estrelas uma única vez',()=>{
  const t=c.start(2,2,0,1000);assert.equal(t.barnReadyAt-t.barnStartedAt,300000);assert.equal(c.sync(t,300999).stars,0);assert.equal(c.stage(t,50000),0);assert.equal(c.stage(t,120000),1);assert.equal(c.stage(t,250000),2);
- const restored=JSON.parse(JSON.stringify(t));assert.equal(c.sync(restored,301000).stars,5);assert.equal(c.sync(restored,401000).stars,0);assert.equal(c.stage(restored,301000),3);assert.match(restored.imgSrc,/celeiro-0.png$/);
+ const restored=JSON.parse(JSON.stringify(t));assert.equal(c.sync(restored,301000).stars,5);assert.equal(c.sync(restored,401000).stars,0);assert.equal(c.stage(restored,301000),3);assert.match(restored.imgSrc,/celeiro-0-chao-v2.png$/);
 });
 test('visitar não concede estrelas; mover/guardar preservam recibo e prazo da obra',()=>{
  const t=c.start(3,3,1,1000);assert.equal(c.sync(t,301000,false).stars,0);assert.equal(t.barnXPGranted,false);const stored=JSON.parse(JSON.stringify(t));assert.equal(c.sync(stored,400000,true).stars,5);assert.equal(c.sync(JSON.parse(JSON.stringify(stored)),500000,true).stars,0);
@@ -25,6 +25,6 @@ test('base visível encaixa nos limites reais em ambas as orientações e fases'
 });
 
 test('celeiro gira junto às bordas sem sair da fazenda nem sobrepor objetos',()=>{
- for(const [x,y] of [[0,0],[16,0],[0,14],[16,14]]){const t=c.start(x,y,0,0);assert.equal(c.rotate(t,20,20,[t]),true);assert.equal(c.fits(t,20,20,[],t),true);assert.match(t.imgSrc,/celeiro-1.png$/);assert.equal(c.rotate(t,20,20,[t]),true);}
+ for(const [x,y] of [[0,0],[16,0],[0,14],[16,14]]){const t=c.start(x,y,0,0);assert.equal(c.rotate(t,20,20,[t]),true);assert.equal(c.fits(t,20,20,[],t),true);assert.match(t.imgSrc,/celeiro-1-chao-v2.png$/);assert.equal(c.rotate(t,20,20,[t]),true);}
  const t=c.start(16,14,0,0),before=structuredClone(t);assert.equal(c.rotate(t,20,20,[t,{gx:14,gy:15,w:2,h:2}]),false);assert.deepEqual(t,before);
 });

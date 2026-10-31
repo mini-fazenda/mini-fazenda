@@ -1,11 +1,11 @@
 /* Configuração e regras do Chiqueiro; todo crescimento usa data absoluta. */
 (function(root){
  const CONFIG={levels:[{level:1,capacity:3,cost:2000,size:4},{level:12,capacity:6,cost:5000,size:6},{level:25,capacity:10,cost:12000,size:8}],pigPrice:2000,growTime:90*60000,minWeight:20,maxWeight:120,maxSale:5000,saleXP:0};
- const imageLevel=t=>Number(String(t?.imgSrc||'').match(/(?:^|\/)chiqueiro\/nivel([123])(?:-solo-v\d+)?\.webp(?:[?#]|$)/i)?.[1])||0;
+ const imageLevel=t=>Number(String(t?.imgSrc||'').match(/(?:^|\/)chiqueiro\/nivel([123])(?:-(?:solo|chao)-v\d+)?\.webp(?:[?#]|$)/i)?.[1])||0;
  const is=t=>t?.itemId==='item-chiqueiro'||t?.id==='item-chiqueiro'||t?.catalogId==='item-chiqueiro'||!!t?.pigsty||imageLevel(t)>0;
  const info=t=>CONFIG.levels[Math.max(0,Math.min(2,(t?.pigsty?.level||1)-1))];
  function normalize(t){if(!is(t))return t;t.pigsty||={level:imageLevel(t)||1};t.itemId='item-chiqueiro';t.name='Chiqueiro';const s=t.pigsty;s.level=Math.max(1,Math.min(3,Math.floor(Number(s.level)||1)));s.orientation=s.orientation?1:0;s.pigs=(Array.isArray(s.pigs)?s.pigs:Object.values(s.pigs||{})).filter(p=>p&&typeof p.id==='string'&&Number.isFinite(p.bornAt));s.notices||={};const size=CONFIG.levels[s.level-1].size;if(Number.isFinite(t.gx)&&Number.isFinite(t.gy)&&t.w>=size&&t.h>=size&&(t.w!==size||t.h!==size)){t.gx+=(t.w-size)/2;t.gy+=(t.h-size)/2;t.w=t.h=size;}return t;}
- const art=t=>'assets/chiqueiro/nivel'+(t.pigsty?.level||1)+'-solo-v2.webp';
+ const art=t=>'assets/chiqueiro/nivel'+(t.pigsty?.level||1)+'-chao-v3.webp';
  function start(gx,gy){const t={gx,gy,w:CONFIG.levels[0].size,h:CONFIG.levels[0].size,itemId:'item-chiqueiro',name:'Chiqueiro',visualScale:1,pigsty:{level:1,orientation:0,pigs:[],notices:{}}};t.imgSrc=art(t);return t;}
  function stats(p,now=Date.now()){const ratio=Math.max(0,Math.min(1,(now-p.bornAt)/CONFIG.growTime)),weight=CONFIG.minWeight+(CONFIG.maxWeight-CONFIG.minWeight)*ratio,stage=weight>=120?120:weight>=100?100:weight>=70?70:weight>=40?40:20;return {ratio,weight,stage,remaining:CONFIG.growTime*(1-ratio),coins:Math.min(CONFIG.maxSale,Math.floor(weight*CONFIG.maxSale/CONFIG.maxWeight))};}
  function buy(t,balance,now=Date.now(),id){normalize(t);if(!is(t)||t.pigsty.pigs.length>=info(t).capacity)return {error:'full'};if(balance<CONFIG.pigPrice)return {error:'coins'};const p={id:id||('pig-'+now+'-'+Math.random().toString(36).slice(2)),bornAt:now};t.pigsty.pigs.push(p);return {pig:p,cost:CONFIG.pigPrice};}

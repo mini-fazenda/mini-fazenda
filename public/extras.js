@@ -751,19 +751,18 @@
     if(owner&&FR()?.watchFertilized)stopFertilized=FR().watchFertilized(owner,list=>window.MFFertilize.apply(list));
   };
   window.addEventListener('pagehide',()=>stopFertilized?.(),{once:true});
-  const stars=new Map();
-  function syncStars(){for(const [t,el]of stars){const q=tileScreen(t);el.style.width=(72*zoom)+'px';el.style.left=q.x+'px';el.style.top=q.y+'px';}}
-  window.MFFertilize.syncStars=syncStars;
-  setInterval(()=>{
-    const active=new Set();
-    for(const t of terrenos){if(window.MFFertilizerCore.bind(t))startGrowthTimer(t);if(!window.MFFertilizerCore.active(t))continue;active.add(t);
-      let el=stars.get(t);if(!el){el=document.createElement('div');el.className='mf-fertilized-stars';const art=document.createElement('img');art.src='assets/fertilizante/estrelas-v2.webp';art.alt='';art.draggable=false;el.appendChild(art);el.title='Plantação adubada';el.style.cssText='position:fixed;pointer-events:none;z-index:6;transform:translate(-50%,-85%)';stars.set(t,el);}
-      const host=document.getElementById('mf-visit-cover')||document.body;if(el.parentNode!==host)host.appendChild(el);
-
-    }
-    for(const [t,el]of stars)if(!active.has(t)){el.remove();stars.delete(t);}
-    syncStars();
-  },150);
+  const starArt=preload('assets/fertilizante/estrelas-v2.webp'),starMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)');
+  function starFrame(t,now=performance.now()){
+    if(!window.MFPlotGround?.isPlot(t)||!window.MFFertilizerCore.active(t))return null;
+    const anchor=gridToScreen(t.gx+((t.w||1)-1)/2,t.gy+((t.h||1)-1)/2),pulse=starMotion?.matches?0:Math.sin(now*Math.PI*2/2600+(t.gx+t.gy)*.7),scale=1+.07*pulse,w=72*scale,h=w*293/512;
+    return {x:anchor.x-w/2,y:anchor.y-h*.85+pulse*1.5,w,h,alpha:.9+.1*pulse};
+  }
+  function drawStars(g,t,anchor,now=performance.now()){
+    const frame=starFrame(t,now);if(!frame||!starArt.complete||!starArt.naturalWidth)return false;
+    g.save();g.globalAlpha*=frame.alpha;g.shadowColor='#ffe65a77';g.shadowBlur=3;g.drawImage(starArt,frame.x,frame.y,frame.w,frame.h);g.restore();return true;
+  }
+  window.MFFertilize.syncStars=()=>{};window.MFFertilize.drawStars=drawStars;window.MFFertilize.starFrame=starFrame;
+  setInterval(()=>{for(const t of terrenos)if(window.MFFertilizerCore.bind(t))startGrowthTimer(t);},150);
   // Visitante: barra com 5 fertilizantes POR AMIGO (voltam 24h depois do primeiro uso nessa fazenda).
   const FERT_IMG = 'assets/fertilizante/saco.png', FERT_POUR = 'assets/fertilizante/despejar.webp', FERT_FRAMES = 29, FERT_MAX = 5;
   let visitBar = null, fertLeft = null, fertBusy = false, fertResetAt = 0, fertTimer = 0, holding = true, cursorEl = null;
