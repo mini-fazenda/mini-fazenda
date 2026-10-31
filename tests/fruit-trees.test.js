@@ -1,26 +1,10 @@
 import test from 'node:test';import assert from 'node:assert/strict';import '../public/fruit-trees.js';
 const core=globalThis.MFFruitTrees;
-test('quatro árvores: retorno em dez colheitas e tempos/estrelas crescentes',()=>{
- const values=Object.values(core.types).filter(c=>!c.directCoins);assert.equal(values.length,4);
- for(const c of values)assert.equal(c.saleCoins*10,c.price);
- assert.deepEqual(values.map(c=>c.minutes),[30,40,50,60]);assert.equal(values[0].stars,150);assert.equal(values[3].stars,250);
-});
-for(const [type,c]of Object.entries(core.types).filter(([,c])=>!c.directCoins))test(type+': três estágios, offline e coleta sem destruir ou duplicar',()=>{
- const t={itemId:'item-arvore-'+type,gx:3,gy:4,w:2,h:2};assert.equal(core.start(t,1000),true);assert.equal(core.state(t,1000).ready,true);assert.equal(core.collect(t,1000).amount,1);assert.equal(core.collect(t,1000),null);
- assert.equal(core.sync(t,1000+c.cycle*.49).stage,0);assert.equal(core.sync(t,1000+c.cycle*.5).stage,1);
- assert.equal(core.collect(t,1000+c.cycle-1),null);
- const saved=JSON.parse(JSON.stringify(t)),now=1000+c.cycle*40;assert.equal(core.sync(saved,now).stage,2);
- assert.equal(core.collect(saved,now).saleCoins,c.price/10);assert.equal(core.collect(saved,now),null);assert.equal(saved.imgSrc,c.stages[0]);assert.equal(saved.gx,3);assert.equal(saved.fruitTree.startTime,now);
- assert.equal(core.collect(saved,now+c.cycle).amount,1);
-});
-
-for(const type of ['cereja','banana','sakura'])test(type+': espera primeiro ciclo, lucro direto, XP e novo ciclo offline',()=>{
- const c=core.types[type],t={itemId:'item-arvore-'+type,gx:2,gy:3,w:2,h:2};core.start(t,1000);
- assert.equal(core.state(t,1000).ready,false);assert.equal(core.collect(t,1000),null);
- assert.equal(core.sync(t,1000+c.cycle*.49).stage,0);assert.equal(core.sync(t,1000+c.cycle*.5).stage,1);
- const saved=JSON.parse(JSON.stringify(t));saved.gx=7;saved.gy=8;
- const result=core.collect(saved,1000+c.cycle);assert.equal(result.directCoins,true);assert.equal(result.saleCoins,c.saleCoins);assert.equal(result.stars,c.stars);
- assert.equal(core.collect(saved,1000+c.cycle),null);assert.equal(core.sync(saved,1000+c.cycle*1.5).stage,1);
- assert.equal(core.sync(saved,1000+c.cycle*20).stage,2);assert.equal(saved.gx,7);assert.equal(saved.gy,8);
-});
-test('novas árvores: tabela exata',()=>{assert.deepEqual(['cereja','banana','sakura'].map(k=>{const c=core.types[k];return [c.price,c.minutes,c.saleCoins,c.plantXP,c.stars,c.level];}),[[3500,45,400,180,50,3],[4500,60,600,220,80,6],[5500,90,900,280,120,10]]);});
+const table={limao:[3000,35,150,140,20],cereja:[3500,45,220,180,50],maca:[4000,50,290,180,40],banana:[4500,60,380,220,80],laranja:[5000,75,520,220,80],sakura:[5500,90,690,280,120]};
+test('tabela exata de compra, tempo, lucro e XP',()=>{for(const [k,v]of Object.entries(table)){const c=core.types[k];assert.deepEqual([c.price,c.minutes,c.saleCoins,c.plantXP,c.stars],v);}});
+for(const type of Object.keys(table)){
+ test(type+': estágios, offline, colheita direta sem duplicação e novo ciclo',()=>{const c=core.types[type],t={itemId:'item-arvore-'+type,gx:3,gy:4,w:2,h:2};core.start(t,1000);assert.equal(core.collect(t,1000),null);assert.equal(core.sync(t,1000+c.cycle*.49).stage,0);assert.equal(core.sync(t,1000+c.cycle*.5).stage,1);const saved=JSON.parse(JSON.stringify(t));saved.gx=8;const now=1000+c.cycle*20;const result=core.collect(saved,now);assert.equal(result.saleCoins,c.saleCoins);assert.equal(result.directCoins,true);assert.equal(result.stars,c.stars);assert.equal(core.collect(saved,now),null);assert.equal(saved.imgSrc,c.stages[0]);assert.equal(saved.gx,8);assert.equal(core.sync(saved,now+c.cycle).ready,true);});
+ test(type+': migração conserva porcentagem, posição, footprint e não repete',()=>{const c=core.types[type],now=100000000,old=c.previousMinutes*60000;const t={gx:7,gy:8,w:1,h:1,imgSrc:'antiga.png',fruitTree:{tipo:type,startTime:now-old*.6}};const s=core.sync(t,now);assert.ok(Math.abs(s.remaining-c.cycle*.4)<1);assert.equal(s.stage,1);assert.deepEqual([t.gx,t.gy,t.w,t.h],[7,8,1,1]);const start=t.fruitTree.startTime;assert.equal(core.migrate(t,now+1000),false);assert.equal(t.fruitTree.startTime,start);assert.equal(core.state(JSON.parse(JSON.stringify(t)),now+1000).remaining,s.remaining-1000);assert.equal(t.imgSrc,c.stages[1]);});
+ test(type+': pronta antes da atualização continua pronta',()=>{const c=core.types[type],now=90000000,t={fruitTree:{tipo:type,startTime:now-c.previousMinutes*60000*3}};assert.equal(core.sync(t,now).ready,true);assert.equal(core.collect(t,now).saleCoins,c.saleCoins);assert.equal(core.collect(t,now),null);});
+}
+test('Aceroleiras e frutas legadas continuam compatíveis',()=>{const t={itemId:'item-arvore-acerola'};core.start(t,1000);assert.equal(core.collect(t,1000).amount,1);assert.equal(core.state(t,1000).ready,false);});

@@ -1,11 +1,18 @@
-# Novas árvores permanentes
+# Árvores permanentes — balanceamento 2
 
-| Árvore | Libera | Compra | Ciclo | Moedas/coleta | XP plantio | XP coleta |
-|---|---:|---:|---:|---:|---:|---:|
-| Cerejeira | 3 | 3500 | 45 min | 400 | 180 | 50 |
-| Bananeira | 6 | 4500 | 60 min | 600 | 220 | 80 |
-| Sakura | 10 | 5500 | 90 min | 900 | 280 | 120 |
+| Árvore | Compra | Ciclo | Moedas/coleta | XP plantio | XP coleta |
+|---|---:|---:|---:|---:|---:|
+| Limoeiro | 3000 | 35 min | 150 | 140 | 20 |
+| Cerejeira | 3500 | 45 min | 220 | 180 | 50 |
+| Macieira | 4000 | 50 min | 290 | 180 | 40 |
+| Bananeira | 4500 | 60 min | 380 | 220 | 80 |
+| Laranjeira | 5000 | 75 min | 520 | 220 | 80 |
+| Sakura | 5500 | 90 min | 690 | 280 | 120 |
 
-Ocupam 2×2, sem limite por tipo. Primeira produção espera o ciclo completo. Estágios 0–49%, 50–99% e 100%. Colheita paga diretamente moedas e XP, preserva a árvore e reinicia o relógio. Não acumula colheitas automaticamente enquanto pronta. Movimento, salvamento e MiniBaú preservam o timestamp. Crescimento offline calcula tempo absoluto. As quatro árvores anteriores mantêm suas regras e saves.
+Loja ordenada por preço. Novas árvores ocupam 2×2 e aguardam o primeiro ciclo completo; pagamento de moedas e XP é direto na coleta. Três estágios (0–49%, 50–99%, 100%). Coleta reinicia o relógio e mantém a árvore. Não acumula várias colheitas enquanto pronta. Crescimento continua offline por timestamp.
 
-Arte: nove sprites extraídos das três imagens enviadas, com fundo transparente e plataformas alinhadas; sem geração de arte nova.
+## Migração
+
+fruitTree.balanceVersion=2 e cycleMs identificam o novo relógio. Migração aplica uma vez a fração já produzida do ciclo anterior (Limoeiro30min, Macieira40min, Laranjeira50min), inclusive tempo offline. Árvores prontas continuam prontas. Não modifica moedas, XP, posição ou dimensão ocupada. O novo lucro entra na próxima coleta. Árvores antigas menores que2×2 mantêm sua posição; mover exige uma área livre2×2 e só altera a dimensão após concluir com sucesso. Movimento cancelado/inválido preserva a área anterior. MiniBaú e saves preservam progresso.
+
+As Aceroleiras fora desta tabela e frutas já guardadas continuam compatíveis. Nove sprites antigos de Limoeiro/Macieira/Laranjeira substituídos por nove PNGs transparentes extraídos das imagens fornecidas e alinhados à mesma plataforma das outras árvores.

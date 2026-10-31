@@ -351,7 +351,7 @@
       ${lock ? `<div class="mfs-lock">🔒 Libera no nível ${it.level}</div>` : ''}
       <h4>${esc(it.name)}</h4>
       <div class="mfs-img"><img alt="" src="${esc(it.icon)}"></div>
-      <div class="mfs-info"><span><img alt="" src="${esc(starSrc())}"> ★ ${it.xp}</span>${it.grow ? `<span>⏱ ${it.production?'Coleta: ':''}${fmtTime(it.grow)}</span>` : ''}</div>
+      <div class="mfs-info"><span><img alt="" src="${esc(starSrc())}"> ★ ${it.xp}</span>${it.grow ? `<span>⏱ ${it.production?'Coleta: ':''}${it.tree?.directCoins?fmtTime(it.grow).replaceAll(' h','h').replaceAll(' min','min'):fmtTime(it.grow)}</span>` : ''}</div>
       ${it.tree?.directCoins?`<div class="mfs-sell">Coleta: +${it.tree.stars} XP</div>`:''}
       ${it.sell != null ? `<div class="mfs-sell">${it.pigWeight?'Venda máxima:':it.production?`Vender ${esc(it.production.name)}:`:'Colher por:'} <img alt="" style="width:14px;height:14px;vertical-align:-3px" src="${esc(coinSrc())}"> ${it.sell}</div>` : ''}
       <div class="mfs-price"><img alt="" src="${esc(coinSrc())}">${it.price}${it.tab==='animais'?' <small>Comprar</small>':''}</div>
@@ -361,8 +361,8 @@
     if (!it) return '<div class="mfs-preview"><div class="t">Prévia</div><p style="border:0">Toque em um item para ver os detalhes.</p></div>';
     return `<div class="mfs-preview"><div class="t">Prévia</div><h3>${esc(it.name)}</h3>
       <div class="pic"><img alt="" src="${esc(it.pic)}"></div>
-      <div class="mfs-info"><span><img alt="" src="${esc(starSrc())}"> Estrelas: ${it.xp}</span>${it.grow ? `<span>⏱ ${fmtTime(it.grow)}</span>` : ''}</div>
-      ${it.tree?.directCoins?`<div class="mfs-sell">XP: +${it.tree.plantXP} ao plantar · +${it.tree.stars} na coleta</div>`:''}
+      <div class="mfs-info"><span><img alt="" src="${esc(starSrc())}"> Estrelas: ${it.xp}</span>${it.grow ? `<span>⏱ ${it.tree?.directCoins?fmtTime(it.grow).replaceAll(' h','h').replaceAll(' min','min'):fmtTime(it.grow)}</span>` : ''}</div>
+      
       ${it.sell != null ? `<div class="mfs-sell">${it.pigWeight?'Venda máxima:':it.production?`Vender ${esc(it.production.name)}:`:'Colher e vender:'} <img alt="" style="width:15px;height:15px;vertical-align:-3px" src="${esc(coinSrc())}"> ${it.sell}</div>` : ''}
       <div class="mfs-price"><img alt="" src="${esc(coinSrc())}">${it.price}</div>
       ${it.level > 1 ? `<div class="mfs-sell">Disponível no nível ${it.level}</div>` : ''}
@@ -379,7 +379,7 @@
       const b = document.createElement('button'); b.type = 'button'; b.className = 'mfs-sub' + (state.sub === k ? ' on' : ''); b.textContent = l;
       b.addEventListener('click', () => { state.sub = k; state.page = 0; state.sel = null; render(); }); subs.appendChild(b);
     }
-    let list = readItems().filter(i => i.tab === state.tab).sort((a, b) => state.tab === 'sementes' ? (a.grow - b.grow) || (a.level - b.level) || (a.price - b.price) : (a.level - b.level) || (a.grow - b.grow) || (a.price - b.price));
+    let list = readItems().filter(i => i.tab === state.tab).sort((a, b) => state.tab === 'sementes' ? (a.grow - b.grow) || (a.level - b.level) || (a.price - b.price) : state.tab==='arvores'?(a.price-b.price):(a.level - b.level) || (a.grow - b.grow) || (a.price - b.price));
     if (tab.subs && state.sub !== 'todos') list = list.filter(i => i.sub === state.sub);
     if (!list.length) {
       body.innerHTML = `<div class="mfs-empty"><div class="big">🚧</div><div class="t1">Em construção</div><div class="t2">Esta parte da loja chega em breve. Aguarde as novidades!</div></div>`;

@@ -3,7 +3,7 @@
  function describe(t,now=Date.now(),items=root.MFAdapter?.project?.items||{}){
   if(!t)return null;
   let name,start,total,remaining,progress;
-  if(t.fruitTree){const cfg=root.MFFruitTrees?.config(t);if(!cfg)return null;name=cfg.treeName;start=t.fruitTree.startTime;total=cfg.cycle;}
+  if(t.fruitTree){const cfg=root.MFFruitTrees?.config(t);if(!cfg)return null;root.MFFruitTrees.migrate(t,now);name=cfg.treeName;start=t.fruitTree.startTime;total=cfg.cycle;}
   else if(t.cultura&&t.cultura.tipo!=='morta'){const c=t.cultura,entry=items['item-'+c.tipo]||{};name=entry.name||c.tipo;start=c.startTime;total=entry.growTime||c.totalTime;if(root.MFFertilizerCore){root.MFFertilizerCore.bind(t);progress=Math.min(1,root.MFFertilizerCore.elapsed(c,now)/total);remaining=root.MFFertilizerCore.delay(c,total,now);}}
   else if(t.animal){const a=t.animal,cfg=root.MFAnimalProduction?.types[a.tipo],entry=items['item-'+a.tipo]||{},matureAt=Number(a.startTime)+Number(a.totalTime);
    if(now<matureAt){name=(entry.name||({vaca:'Vaca',ovelha:'Ovelha'}[a.tipo])||a.tipo)+' · crescimento';start=a.startTime;total=a.totalTime;}
