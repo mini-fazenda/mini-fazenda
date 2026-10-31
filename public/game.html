@@ -1707,6 +1707,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   let pinchStartDist = 0;
   let pinchStartZoom = 1;
+  let touchCanvasRect = null;
 
   const TAP_MAX_MOVEMENT = 10;     // px
   const TAP_MAX_DURATION = 250;    // ms
@@ -1746,6 +1747,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (e.touches.length === 1) {
       const t = e.touches[0];
       touchMode = 'tap'; touchVX=touchVY=0;touchLastT=performance.now();window.MFAdapter?.cancelGlide();
+      touchCanvasRect=canvas.getBoundingClientRect();
       touchStartX = lastTouchX = t.clientX;
       touchStartY = lastTouchY = t.clientY;
       touchStartTime = (performance && performance.now) ? performance.now() : Date.now();
@@ -1755,6 +1757,7 @@ document.addEventListener("DOMContentLoaded", function() {
       if(touchMode==='move')window.MFMoveControls?.touchCancel();
       const [t1, t2] = e.touches;
       touchMode = 'pinch';
+      touchCanvasRect=canvas.getBoundingClientRect();
       pinchStartDist = getTouchesDistance(t1, t2);
       pinchStartZoom = typeof zoom === 'number' ? zoom : 1;
     }
@@ -1782,10 +1785,18 @@ document.addEventListener("DOMContentLoaded", function() {
       let newZoom = pinchStartZoom * scale;
       newZoom=Math.max(window.MFAdapter?.project?.camera?.minZoom??MIN_ZOOM,newZoom);
       newZoom=Math.min(window.MFAdapter?.project?.camera?.maxZoom??MAX_ZOOM,newZoom);
+      // Mantém o ponto entre os dedos fixo no mapa, em vez de dar zoom
+      // no centro da tela e causar a sensação de câmera tremendo.
+      const rect=touchCanvasRect||canvas.getBoundingClientRect();
+      const sx=(t1.clientX+t2.clientX)/2-rect.left;
+      const sy=(t1.clientY+t2.clientY)/2-rect.top;
+      const wx=(sx-MFViewport.width/2-offsetX)/zoom;
+      const wy=(sy-MFViewport.height/3-offsetY)/zoom;
       zoom = newZoom;
-
+      offsetX=sx-MFViewport.width/2-wx*zoom;
+      offsetY=sy-MFViewport.height/3-wy*zoom;
       if (typeof clampCamera === 'function') clampCamera();
-      if (typeof needRedraw !== 'undefined') needRedraw = true;
+      if (typeof requestRedraw === 'function') requestRedraw();
       return;
     }
 
