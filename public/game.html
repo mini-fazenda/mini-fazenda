@@ -7285,7 +7285,7 @@ function groundGridPath(){
  gridGeometry={cols:COLS,rows:ROWS,tw:TILE_W,th:TILE_H,path};
  return path;
 }
-const cache={canvas:document.createElement('canvas'),sig:'',draw(){const a=this.canvas,b=a.getContext('2d');let sig=[MFViewport.width,MFViewport.height,MFViewport.ratio,offsetX.toFixed(2),offsetY.toFixed(2),zoom.toFixed(3),COLS,ROWS,project.world.ground,project.world.opacity,project.world.diamondImage,project.world.diamondImageOpacity,diamondImg.complete&&diamondImg.naturalWidth,backgroundScale,backgroundOffsetX,backgroundOffsetY,backgroundImg.src,backgroundImg.complete&&backgroundImg.naturalWidth,window.MFAmbient?.signature?.()].join('|');if(sig===this.sig)return;this.sig=sig;
+const cache={canvas:document.createElement('canvas'),sig:'',groundGridPath,draw(){const a=this.canvas,b=a.getContext('2d');let sig=[MFViewport.width,MFViewport.height,MFViewport.ratio,offsetX.toFixed(2),offsetY.toFixed(2),zoom.toFixed(3),COLS,ROWS,project.world.ground,project.world.opacity,project.world.diamondImage,project.world.diamondImageOpacity,diamondImg.complete&&diamondImg.naturalWidth,backgroundScale,backgroundOffsetX,backgroundOffsetY,backgroundImg.src,backgroundImg.complete&&backgroundImg.naturalWidth,window.MFAmbient?.signature?.()].join('|');if(sig===this.sig)return;this.sig=sig;
  MFViewport.resize(a);b.save();b.translate(MFViewport.width/2+offsetX,MFViewport.height/3+offsetY);b.scale(zoom,zoom);
  if(backgroundImg.complete&&backgroundImg.naturalWidth){let w=backgroundImg.naturalWidth*backgroundScale,h=backgroundImg.naturalHeight*backgroundScale;b.drawImage(backgroundImg,-w/2+backgroundOffsetX,-h/2+backgroundOffsetY,w,h)}
  try{window.MFAmbient?.draw?.(b)}catch(e){console.warn('[MF] ambientação',e)}
