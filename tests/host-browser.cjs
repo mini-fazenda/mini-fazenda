@@ -98,7 +98,9 @@ const mock=require('./firebase-mock.cjs');
  });
  f=page.frames().find(f=>f.url().includes('game.html'));
  await f.evaluate(()=>{const d=document.getElementById('mf-daily');if(d){d.classList.remove('on');d.hidden=true;d.style.display='none'}});
- await f.locator('#mf-amigos .mfa-visit').first().click();
+ // A barra inicia recolhida na versão nova; expanda para acessar os botões.
+ await f.locator('#mf-amigos .mfa-more').click();
+ await f.locator('#mf-amigos .mfa-visit[data-uid="neighbor"]').click();
  await page.waitForFunction(()=>document.querySelector('#gate').hidden&&document.querySelector('#farm-title').textContent.includes('Vizinha'));
  const ownCoins=await page.evaluate(()=>testCloud['farms/rodrigo'].state.moedas);
  await page.locator('#home').click();await page.waitForFunction(()=>document.querySelector('#gate').hidden);
