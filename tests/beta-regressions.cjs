@@ -81,26 +81,29 @@ const {chromium,webkit,devices}=require('playwright');
  await f.waitForFunction(()=>document.getElementById('overlay-bau').style.display==='flex');
  await reload();f=frame();await f.evaluate(()=>{const xp=playerXP;parent.testPlaying=true;MFBarn.tick();parent.testPlaying=false;if(playerXP!==xp)throw Error('Estrelas da obra repetiram após reload');});
  await f.evaluate(()=>{
-  terrenos=[];filaAcoes=[];player.acaoAtual=null;player.path=[];moedas=30000;clearInventoryFromSave();modoMover=false;modoColocar=false;spawnedTiles.clear();
-  const initial=playerXP;let i=0;
-  for(const [type,c]of Object.entries(MFFruitTrees.types)){
+  terrenos=[];filaAcoes=[];player.acaoAtual=null;player.path=[];moedas=30000;playerLevel=12;clearInventoryFromSave();modoMover=false;modoColocar=false;spawnedTiles.clear();
+  // Regras de 31/10: árvores por nível, primeira fruta NÃO vem pronta e a coleta paga moedas direto.
+  window.testTrees=Object.entries(MFFruitTrees.types).filter(([type])=>document.getElementById('item-arvore-'+type)).slice(0,4);
+  if(testTrees.length!==4)throw Error('Loja sem árvores suficientes');
+  let i=0,spent=0;
+  for(const [type,c]of testTrees){
    const card=document.getElementById('item-arvore-'+type);if(card?.dataset.category!=='arvores')throw Error('Árvore fora da loja');
-   card.click();if(!trySpawnProprioAt(4+i*3,4))throw Error('Não comprou árvore '+type);const t=terrenos.at(-1);i++;
-   if(!t.fruitTree||playerXP!==initial)throw Error('Ciclo ausente ou estrelas cobradas ao comprar');if(!MFFruitTrees.state(t).ready)throw Error('Primeira fruta não veio pronta');
+   card.click();if(!trySpawnProprioAt(4+i*3,4))throw Error('Não comprou árvore '+type);const t=terrenos.at(-1);i++;spent+=c.price;
+   if(!t.fruitTree)throw Error('Ciclo ausente');if(MFFruitTrees.state(t).ready)throw Error('Primeira fruta veio pronta');
    t.fruitTree.startTime=Date.now()-c.cycle*.6;MFFruitTrees.sync(t);if(t.imgSrc!==c.stages[1])throw Error('Arte de 50% incorreta');
   }
-  if(moedas!==12000)throw Error('Compra das árvores incorreta');window.MFCancelPlacing();
+  if(moedas!==30000-spent)throw Error('Compra das árvores incorreta');window.MFCancelPlacing();
  });
  await reload();f=frame();await f.evaluate(()=>{
-  const award=addXP;let awarded=0;addXP=n=>{awarded+=n;award(n);};let stars=0;
+  const award=addXP;let awarded=0;addXP=n=>{awarded+=n;award(n);};let stars=0;window.testCoinsBeforeHarvest=moedas;
   for(const t of terrenos){const c=MFFruitTrees.config(t);if(!t.fruitTree||MFFruitTrees.state(t).stage!==1)throw Error('Árvore não persistiu');t.fruitTree.startTime-=c.cycle;MFFruitTrees.sync(t);if(farmPointerAction(t)!=='harvest')throw Error('Cursor não virou foice');if(!MFJobs.queue(t,'tree'))throw Error('Não enfileirou coleta');stars+=c.stars;}
   for(let i=0;i<4;i++){const a=player.acaoAtual;if(!a)throw Error('Fila perdida');player.gx=a.alvo.gx;player.gy=a.alvo.gy;player.path=[];a.state='ararando';a.startTime=performance.now()-a.duration-10;processArar();}
   addXP=award;if(awarded!==stars)throw Error('Estrelas de coleta incorretas: '+awarded+'/'+stars);
-  for(const t of terrenos){const c=MFFruitTrees.config(t);if(t.imgSrc!==c.stages[0]||collectTreeFruit(t))throw Error('Árvore morreu ou coleta duplicou');if(__gameInventory.map[t.fruitTree.tipo]?.count!==1)throw Error('Fruta não entrou no celeiro');}
-  const coins=moedas;document.querySelector('#mf-sales-actions button:nth-child(2)').click();if(moedas!==coins+1800)throw Error('Frutas devem vender por 300+400+500+600');
+  for(const t of terrenos){const c=MFFruitTrees.config(t);if(t.imgSrc!==c.stages[0]||collectTreeFruit(t))throw Error('Árvore morreu ou coleta duplicou');if(__gameInventory.map[t.fruitTree.tipo])throw Error('Fruta foi para o celeiro em vez de virar moedas');}
+  const paid=terrenos.reduce((n,t)=>n+MFFruitTrees.config(t).saleCoins,0);if(moedas!==window.testCoinsBeforeHarvest+paid)throw Error('Coleta deveria pagar '+paid+' moedas direto: '+(moedas-window.testCoinsBeforeHarvest));
  });
  await reload();f=frame();await f.evaluate(()=>{if(terrenos.length!==4||terrenos.some(t=>!t.fruitTree||MFFruitTrees.state(t).stage!==0)||Object.keys(__gameInventory.map).length)throw Error('Ciclo ou venda não persistiu');});
- console.log('PASS: quatro árvores na loja, compra, 50%, save, foice, fila, estrelas, venda e reinício sem duplicação');
+ console.log('PASS: quatro árvores na loja (por nível), compra, 50%, save, foice, fila, estrelas, moedas direto e reinício sem duplicação');
  await f.evaluate(()=>{
   window.MFCancelPlacing();setFarmMoveMode(false);document.querySelectorAll('#overlay-bau,#overlay-loja').forEach(el=>el.style.display='none');document.getElementById('mf-sale-summary').hidden=true;
   document.querySelectorAll('#mf-char,#mf-daily').forEach(el=>{el.classList.remove('on');el.hidden=true;el.style.display='none';});MFTutorial.restore({step:5,done:true},false);
@@ -149,7 +152,7 @@ const {chromium,webkit,devices}=require('playwright');
    window.MFCancelPlacing();setFarmMoveMode(false);filaAcoes=[];player.acaoAtual=null;player.path=[];terrenos=[];offsetX=0;offsetY=-35;zoom=.6;
    const t={gx:5,gy:5,w:2,h:2,imgSrc:TERRA_ARADA_SRC};terrenos.push(t);
    if(type==='cenoura'){t.cultura={tipo:'cenoura',startTime:Date.now()-300000,totalTime:600000,etapa:0};reapplyGrowthFromTime(t);}
-   else if(type==='arvore'){t.itemId='item-arvore-limao';MFFruitTrees.start(t,Date.now()-900000);MFFruitTrees.collect(t,Date.now()-900000);MFFruitTrees.sync(t);}
+   else if(type==='arvore'){t.itemId='item-arvore-limao';const half=MFFruitTrees.types.limao.cycle/2;MFFruitTrees.start(t,Date.now()-half);MFFruitTrees.collect(t,Date.now()-half);MFFruitTrees.sync(t);}
    else{const cfg=MFAnimalProduction.types[type];t.animal={tipo:type,startTime:Date.now()-300000-cfg.cycle/2,totalTime:300000,etapa:2};t.imgSrc=ANIMAL_ADULT[type].adultImg;MFAnimalProduction.sync(t.animal);}
   },type);
   await f.waitForFunction(()=>preload(terrenos[0].imgSrc)?.naturalWidth>0);
@@ -182,12 +185,12 @@ const {chromium,webkit,devices}=require('playwright');
  });
  await reload();f=frame();await f.evaluate(()=>{
   const t=terrenos[0];if(t.cultura.etapa!==1)throw Error('Crescimento do girassol perdeu ao sair');const before=playerXP;t.cultura.startTime-=10800001;reapplyGrowthFromTime(t);
-  if(!tryHarvestAtTile(t)||playerXP!==before+50||__gameInventory.map.girassol?.count!==1||tryHarvestAtTile(t))throw Error('Colheita do girassol não deu lote único e 50 estrelas');
-  document.querySelector('#mf-sales-actions button:nth-child(2)').click();if(moedas!==2400)throw Error('Girassol deveria vender por 1400, com lucro de 400');
+  const xp=MFFarmEconomy.crops.girassol.xp;if(!tryHarvestAtTile(t)||playerXP!==before+xp||__gameInventory.map.girassol?.count!==1||tryHarvestAtTile(t))throw Error('Colheita do girassol não deu lote único e '+xp+' estrelas');
+  document.querySelector('#mf-sales-actions button:nth-child(2)').click();const g=MFFarmEconomy.crops.girassol,sale=g.saleCoins*g.yieldCount;if(moedas!==1000+sale)throw Error('Girassol deveria vender por '+sale+', com lucro de '+(sale-g.price));
   MFShop.open();const flowers=[...document.querySelectorAll('#mf-shop .mfs-sub')].find(el=>el.textContent==='Flores');flowers.click();
-  const card=document.querySelector('#mf-shop .mfs-card[data-id="item-girassol"]');if(!card||!card.textContent.includes('1400')||!card.textContent.includes('1000'))throw Error('Girassol ausente ou preço incorreto na categoria Flores');
+  const card=document.querySelector('#mf-shop .mfs-card[data-id="item-girassol"]');const gs=MFFarmEconomy.crops.girassol;if(!card||!card.textContent.includes(String(gs.saleCoins*gs.yieldCount))||!card.textContent.includes(String(gs.price)))throw Error('Girassol ausente ou preço incorreto na categoria Flores');
  });
- console.log('PASS: girassol em Flores, 6h, 50%, save, 50 estrelas na colheita, venda 1400 e lucro 400');
+ console.log('PASS: girassol em Flores, 6h, 50%, save, estrelas na colheita e venda/lucro conforme a tabela de economia');
 
  await f.evaluate(()=>{
   window.MFCancelPlacing();document.getElementById('overlay-loja').style.display='none';clearInventoryFromSave();terrenos=[];filaAcoes=[];player.acaoAtual=null;player.path=[];moedas=2000;
@@ -233,12 +236,12 @@ const {chromium,webkit,devices}=require('playwright');
   for(const type of ['arvore-limao','arvore-maca','arvore-laranja','arvore-acerola','vaca','ovelha']){
    document.getElementById('item-'+type).click();if(!trySpawnProprioAt(3+(i%3)*5,3+Math.floor(i/3)*6))throw Error('Compra falhou: '+type);i++;
    const t=terrenos.at(-1),now=Date.now(),saved=getTerrenosSnapshot();restoreTerrenosFromSnapshot(saved);const restored=terrenos.at(-1);
-   if(restored.fruitTree){if(!MFFruitTrees.state(restored).ready||!collectTreeFruit(restored)||collectTreeFruit(restored))throw Error('Primeira fruta ou duplicação: '+type);const c=MFFruitTrees.config(restored);if(MFFruitTrees.state(restored,now+c.cycle-100).ready||!MFFruitTrees.state(restored,Date.now()+c.cycle).ready)throw Error('Intervalo da árvore incorreto');}
+   if(restored.fruitTree){const c=MFFruitTrees.config(restored);if(MFFruitTrees.state(restored).ready)throw Error('Primeira fruta veio pronta: '+type);restored.fruitTree.startTime-=c.cycle;MFFruitTrees.sync(restored);const at=Date.now();if(!MFFruitTrees.state(restored).ready||!collectTreeFruit(restored)||collectTreeFruit(restored))throw Error('Primeira fruta ou duplicação: '+type);if(MFFruitTrees.state(restored,at+c.cycle-100).ready||!MFFruitTrees.state(restored,Date.now()+c.cycle).ready)throw Error('Intervalo da árvore incorreto');}
    else{if(!MFAnimalProduction.sync(restored.animal).ready||!collectAnimalProduct(restored)||collectAnimalProduct(restored))throw Error('Primeira produção animal ou duplicação');const c=MFAnimalProduction.types[type];if(MFAnimalProduction.sync(restored.animal,now+c.cycle-100).ready||!MFAnimalProduction.sync(restored.animal,Date.now()+c.cycle).ready)throw Error('Intervalo animal incorreto');}
   }
   window.MFCancelPlacing();
  });
- console.log('PASS: quatro árvores, vaca e ovelha compradas com coleta pronta; save não perde lote, segunda coleta bloqueada até o próximo ciclo');
+ console.log('PASS: quatro árvores, vaca e ovelha compradas; primeira fruta só depois do ciclo; save não perde lote, segunda coleta bloqueada até o próximo ciclo');
  await f.evaluate(()=>{MFShop.open();document.querySelector('.mfs-tab[data-k="animais"]').click();const sheep=document.querySelector('.mfs-card[data-id="item-ovelha"]').textContent,cow=document.querySelector('.mfs-card[data-id="item-vaca"]').textContent;if(!sheep.includes('30 min')||!sheep.includes('100')||sheep.includes('⏱ 5 min'))throw Error('Loja não mostra ciclo e venda da lã');if(!cow.includes('15 min')||!cow.includes('60')||cow.includes('⏱ 5 min'))throw Error('Loja não mostra ciclo e venda do leite');for(const tipo of ['porco','cavalo','bodejunino']){const a={tipo,etapa:0,startTime:Date.now(),totalTime:21600000};MFAnimalProduction.start(a);if(a.etapa!==2)throw Error('Animal novo não ficou adulto');}MFShop.close();});console.log('PASS: loja mostra ciclos e preços de leite/lã; animais novos colocados adultos');
  if(errors.length)throw Error(errors.join('\n'));console.log('PASS: celeiro 200 moedas, obra autônoma 5min, giro, save, 5 estrelas únicas e toque abre vendas ('+(ios?'WebKit/iOS':'Chromium/toque')+')');
  await browser.close();
