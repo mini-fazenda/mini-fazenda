@@ -7,10 +7,19 @@ test('rotação espelhada mantém posição, nível e animais',()=>{const t=c.st
 
 test('Firebase pode omitir listas vazias e retornar objetos numéricos',()=>{const t={itemId:'item-chiqueiro',pigsty:{level:1}};c.normalize(t);assert.deepEqual(t.pigsty.pigs,[]);assert.equal(c.buy(t,2000,1000,'p').cost,2000);t.pigsty.pigs={'0':t.pigsty.pigs[0]};c.normalize(t);assert.equal(t.pigsty.pigs[0].bornAt,1000);});
 
-test('base do Chiqueiro deixa margem dentro do terreno nos três níveis',()=>{for(const size of [4,6,8])for(const orientation of [0,1]){const t=c.start(5,5);t.w=t.h=size;t.pigsty.orientation=orientation;const anchor={x:72,y:200},g=c.geometry(t,anchor,495,475);assert.ok(Math.abs(g.y+g.h-(anchor.y+(size+size)*12-size*96*.06))<1e-9);assert.ok(g.w<size*96);assert.equal(g.x+g.w/2,anchor.x);const preview=c.geometry(t,{x:anchor.x+96,y:anchor.y+48},495,475);assert.ok(Math.abs(preview.y-g.y-48)<1e-9);assert.equal(preview.x-g.x,96);}});
+test('base do Chiqueiro deixa margem dentro do terreno nos três níveis',()=>{for(const size of [4,6,8])for(const orientation of [0,1]){const t=c.start(5,5);t.w=t.h=size;t.pigsty.orientation=orientation;const anchor={x:72,y:200},g=c.geometry(t,anchor,495,475);assert.ok(g.y+g.h<anchor.y+size*24);assert.ok(g.w<size*96);assert.equal(g.x+g.w/2,anchor.x);const preview=c.geometry(t,{x:anchor.x+96,y:anchor.y+48},495,475);assert.ok(Math.abs(preview.y-g.y-48)<1e-9);assert.equal(preview.x-g.x,96);}});
 
 test('reconhece Chiqueiro antigo pela arte sem cobrar reconstrução nem alterar posição',()=>{for(const level of [1,2,3]){const t={gx:7,gy:8,w:6,h:6,imgSrc:'assets/chiqueiro/nivel'+level+'.webp'};assert.equal(c.is(t),true);c.normalize(t);assert.equal(t.itemId,'item-chiqueiro');assert.equal(t.pigsty.level,level);assert.deepEqual(t.pigsty.pigs,[]);assert.equal(t.gx+(t.w-1)/2,9.5);assert.equal(t.gy+(t.h-1)/2,10.5);assert.equal(c.rotate(t),true);}assert.equal(c.is({imgSrc:'assets/construcoes/celeiro-0.png'}),false);});
 
 test('Chiqueiro antigo encolhe mantendo centro e porcos; cercas usam profundidade do chão',()=>{const t={gx:5,gy:5,w:6,h:6,itemId:'item-chiqueiro',pigsty:{level:1,pigs:[{id:'p',bornAt:1000}]}};c.normalize(t);assert.equal(t.w,4);assert.equal(t.h,4);assert.equal(t.gx,6);assert.equal(t.gy,6);assert.equal(t.pigsty.pigs[0].bornAt,1000);const a={x:0,y:300},d=c.depth(t,a),front=c.geometry(t,a,495,475).front.y;assert.equal(d,front*2);assert.ok((front-48)*2<d);assert.ok((front+48)*2>d);});
 
 test('as cinco fases têm dimensões visuais crescentes, independentemente do sprite normalizado',()=>{const scales=[20,40,70,100,120].map(MFPigstyCore.visualScale);for(let i=1;i<scales.length;i++)assert.ok(scales[i]>scales[i-1]);assert.ok(scales[2]>scales[0]*1.5);assert.ok(scales[4]>scales[0]*2);});
+
+test('base inteira do chiqueiro, incluindo a construção ao fundo, cabe no losango',()=>{
+ const grounds=[{width:495,height:475,points:[[.03,.72],[.52,.99],[.97,.71],[.90,.51],[.28,.55]]},{width:512,height:477,points:[[.03,.72],[.52,.99],[.97,.73],[.92,.58],[.25,.55]]},{width:512,height:468,points:[[.03,.75],[.51,.99],[.97,.76],[.94,.63],[.23,.58]]}];
+ for(const [i,art]of grounds.entries())for(const orientation of [0,1]){
+  const t=c.start(0,0);t.w=t.h=c.CONFIG.levels[i].size;t.pigsty.orientation=orientation;
+  const g=c.geometry(t,{x:0,y:0},art.width,art.height);
+  for(const [x,y]of art.points){const px=(g.x+x*g.w)*(orientation?-1:1),py=g.y+y*g.h;assert.ok(Math.abs(px)/(t.w*48)+Math.abs(py)/(t.h*24)<1,`level ${i+1}: ${x},${y}`);}
+ }
+});

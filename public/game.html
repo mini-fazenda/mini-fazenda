@@ -2299,6 +2299,7 @@ const ctx = canvas.getContext('2d');
 MFViewport.resize(canvas);
 
 const TILE_W = 96, TILE_H = 48;
+const ANIMAL_GROUND_Y=TILE_H*.1; // Pés no centro da área lógica, dentro do cercado.
 let COLS = 20, ROWS = 20;
 let offsetX = 0, offsetY = -200;
 let zoom = 1.0;
@@ -4724,7 +4725,7 @@ terrenos.forEach(t => {
   // Animais: profundidade pela base visível do sprite, não por bônus de altura.
   // Para culturas/solo, a regra preexistente permanece intocada.
   const animal = isMFAnimal(t);
-  const footY = anchor.y + TILE_H * 0.9; // bottom-center of the rendered animal sprite
+  const footY = anchor.y + (animal?ANIMAL_GROUND_Y:TILE_H*0.9); // bottom-center of the rendered animal sprite
   const depth = window.MFFruitTrees?.config(t)?anchor.y*2:window.MFPigstyCore?.is(t)?window.MFPigstyCore.depth(t,anchor):animal ? footY * 2 : baseDepth + layer * LAYER_STEP;
 
   drawables.push({
@@ -4831,17 +4832,19 @@ if (img && img.complete && img.naturalWidth > 0) {
   const drawW = img.naturalWidth * scale * vs;
   const drawH = img.naturalHeight * scale * vs;
   const drawX = anchor.x - drawW / 2;
-  const drawY = anchor.y - drawH + TILE_H * (window.MFFlags?.is(t)?0.5:window.MFFruitTrees?.config(t)?.directCoins?1:0.9);
+  const drawY = anchor.y - drawH + (isMFAnimal(t)?ANIMAL_GROUND_Y:TILE_H * (window.MFFlags?.is(t)?0.5:window.MFFruitTrees?.config(t)?.directCoins?1:0.9));
   const key='obj-'+(t._mfGifId||(t._mfGifId=++window.__mfGifSequence));
   const liveSheep=t.animal?.tipo==='ovelha'&&t.animal.etapa===2;
-  if (!(window.MFAdapter && (liveSheep?window.MFAdapter.spritePlace(key,animalFrame,anchor.x,drawY+drawH,drawW,drawH,t.animal?.flipped?-1:1):window.MFAdapter.gifPlace(key,t.imgSrc,anchor.x,drawY+drawH,drawW,drawH,t.animal?.flipped?-1:1)))) {
+  const canvasAnimal=item.animal&&window.MFFences?.count()>0;
+  const canvasCow=canvasAnimal&&window.MFCowAnimation?.draw(ctx,t,{x:drawX,y:drawY,w:drawW,h:drawH});
+  if (!canvasCow && !( !canvasAnimal && window.MFAdapter && (liveSheep?window.MFAdapter.spritePlace(key,animalFrame,anchor.x,drawY+drawH,drawW,drawH,t.animal?.flipped?-1:1):window.MFAdapter.gifPlace(key,t.imgSrc,anchor.x,drawY+drawH,drawW,drawH,t.animal?.flipped?-1:1)))) {
     if(t.animal?.flipped){ctx.save();ctx.translate(anchor.x,0);ctx.scale(-1,1);ctx.drawImage(img,-drawW/2,drawY,drawW,drawH);ctx.restore();}else ctx.drawImage(img, drawX, drawY, drawW, drawH);
   }
   // O PNG do animal já foi desenhado no canvas. Só quando ele
   // realmente cruza a área visual de um humanoide à frente do canvas
   // desenhamos uma cópia na camada HTML na profundidade do próprio animal.
   // Isso elimina o recobrimento prematuro de animais distantes.
-  if (item.animal && !liveSheep && window.MFAdapter?.frontAnimalPlace && !window.MFAdapter.isGif(t.imgSrc)) {
+  if (item.animal && !canvasAnimal && !liveSheep && window.MFAdapter?.frontAnimalPlace && !window.MFAdapter.isGif(t.imgSrc)) {
     for (const actor of [player, aradora]) {
       if (!actor || (actor===aradora && !actor.spawned))continue;
       const sp=actor.currentSprite;
@@ -4919,7 +4922,7 @@ if (img && img.complete && img.naturalWidth > 0) {
         const pigBox=window.MFPigstyCore?.is(hover)&&window.MFPigstyCore.geometry(hover,a,img.naturalWidth,img.naturalHeight,TILE_W,TILE_H);
         const box=treeBox||pigBox;
         if(box)ctx.drawImage(hoverTintMask(img,box.w,box.h),box.x,box.y);
-        else ctx.drawImage(hoverTintMask(img,w,h),a.x-w/2,a.y-h+TILE_H*0.9);
+        else ctx.drawImage(hoverTintMask(img,w,h),a.x-w/2,a.y-h+(isMFAnimal(hover)?ANIMAL_GROUND_Y:TILE_H*0.9));
       }
     }
     if (marks.length) requestRedraw();
@@ -4968,7 +4971,7 @@ const anchor = gridToScreen(
   clampY + (movingH - 1) / 2
 );
 const drawX = anchor.x - drawW / 2;
-const drawY = anchor.y - drawH + TILE_H * (window.MFFlags?.is(estruturaMovendo)?0.5:window.MFFruitTrees?.config(estruturaMovendo)?.directCoins?1:0.9);
+const drawY = anchor.y - drawH + (isMFAnimal(estruturaMovendo)?ANIMAL_GROUND_Y:TILE_H * (window.MFFlags?.is(estruturaMovendo)?0.5:window.MFFruitTrees?.config(estruturaMovendo)?.directCoins?1:0.9));
 if(!window.MFPlotGround?.drawSprite(ctx,estruturaMovendo,anchor,img)&&!window.MFBarn?.drawSprite(ctx,estruturaMovendo,anchor,img)&&!window.MFCropSprites?.drawSprite(ctx,estruturaMovendo,anchor,img)){if(estruturaMovendo.animal?.flipped){ctx.save();ctx.translate(anchor.x,0);ctx.scale(-1,1);ctx.drawImage(img,-drawW/2,drawY,drawW,drawH);ctx.restore();}else ctx.drawImage(img, drawX, drawY, drawW, drawH);}
   }
 
@@ -5003,7 +5006,7 @@ const drawW = img.naturalWidth * scale * vs;
 const drawH = img.naturalHeight * scale * vs;
 const anchor = gridToScreen(clampX + (placingItem.w - 1) / 2, clampY + (placingItem.h - 1) / 2);
 const drawX = anchor.x - drawW / 2;
-const drawY = anchor.y - drawH + TILE_H * (window.MFFlags?.is(placingItem)?0.5:window.MFFruitTrees?.types[String(placingItem.id).replace('item-arvore-','')]?.directCoins?1:0.9);
+const drawY = anchor.y - drawH + (isMFAnimal(placingItem)?ANIMAL_GROUND_Y:TILE_H * (window.MFFlags?.is(placingItem)?0.5:window.MFFruitTrees?.types[String(placingItem.id).replace('item-arvore-','')]?.directCoins?1:0.9));
 if(!window.MFPlotGround?.drawSprite(ctx,placingItem,anchor,img)&&!window.MFBarn?.drawSprite(ctx,placingItem,anchor,img)&&!window.MFCropSprites?.drawSprite(ctx,placingItem,anchor,img))ctx.drawImage(img, drawX, drawY, drawW, drawH);
       }
     }
@@ -7748,10 +7751,11 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 <script src="job-feedback.js?v=compact-1-hidpi-1"></script>
 <script src="growth-info.js?v=compact-2"></script>
 <script src="sheep-animation.js?v=suave-2"></script>
+<script src="cow-animation.js?v=fence-depth-1"></script>
 <script src="ready-markers-core.js?v=1"></script>
 <script src="animal-indicators.js?v=pink-ready-2"></script>
 <script src="fence-art.js?v=boundary-inset-6"></script>
-<script src="fences.js?v=boundary-inset-6"></script>
+<script src="fences.js?v=animal-canvas-8"></script>
 <script src="barn.js?v=hidpi-1"></script>
 <script>
 // Sair do modo colocar: Esc ou botão direito (sementes e itens continuam em seleção contínua até cancelar).
@@ -7774,7 +7778,7 @@ canvas.addEventListener('contextmenu', e => { if (window.MFCancelPlacing()) e.pr
 <script src="level-rewards.js?v=1"></script>
 <script src="pig-weight.js?v=1"></script>
 <script src="flags-pigs.js?v=flags-aligned-v2"></script>
-<script src="pigsty-core.js?v=footprint-inset-6"></script>
+<script src="pigsty-core.js?v=whole-ground-7"></script>
 <script src="pigsty.js?v=scale-depth-5"></script>
 <script src="tree-catalog.js?v=balance-20261031"></script>
 <script src="expansion-core.js?v=1"></script>

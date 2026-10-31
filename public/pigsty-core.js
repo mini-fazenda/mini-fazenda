@@ -13,7 +13,9 @@
  function fits(t,cols,rows,objects,ignore=t){return t.gx>=0&&t.gy>=0&&t.gx+t.w<=cols&&t.gy+t.h<=rows&&!objects.some(x=>x!==ignore&&t.gx<x.gx+(x.w||1)&&t.gx+t.w>x.gx&&t.gy<x.gy+(x.h||1)&&t.gy+t.h>x.gy);}
  function upgrade(t,playerLevel,balance,cols,rows,objects){normalize(t);const n=CONFIG.levels[t.pigsty.level];if(!n)return {error:'max'};if(playerLevel<n.level)return {error:'level',required:n.level};if(balance<n.cost)return {error:'coins'};const next={...t,w:n.size,h:n.size};next.gx=Math.max(0,Math.min(cols-next.w,t.gx+(t.w-next.w)/2));next.gy=Math.max(0,Math.min(rows-next.h,t.gy+(t.h-next.h)/2));if(!fits(next,cols,rows,objects,t))return {error:'space'};Object.assign(t,{gx:next.gx,gy:next.gy,w:next.w,h:next.h});t.pigsty.level++;t.imgSrc=art(t);return {cost:n.cost};}
  function rotate(t){normalize(t);if(!is(t))return false;t.pigsty.orientation=t.pigsty.orientation?0:1;return true;}
- function geometry(t,anchor,width,height,tileW=96,tileH=48){const span=tileW*((t.w||4)+(t.h||4))/2,w=span*.88,h=w*height/width,front={x:anchor.x+((t.w||4)-(t.h||4))*tileW/4,y:anchor.y+((t.w||4)+(t.h||4))*tileH/4-span*.06};return {x:front.x-w/2,y:front.y-h,w,h,front};}
+ function geometry(t,anchor,width,height,tileW=96,tileH=48){// The footprint includes the barn behind the yard, not just the front fence.
+  const span=tileW*((t.w||4)+(t.h||4))/2,w=span*.64,h=w*height/width;
+  const front={x:anchor.x,y:anchor.y+span*.2};return {x:anchor.x-w/2,y:front.y-h,w,h,front};}
  const depth=(t,anchor)=>2*geometry(t,anchor,1,1).front.y;
  const visualScale=stage=>({20:.7,40:.9,70:1.15,100:1.35,120:1.5})[stage]||.7;
  root.MFPigstyCore={CONFIG,is,normalize,info,art,start,stats,buy,sell,fits,upgrade,rotate,geometry,depth,visualScale};
