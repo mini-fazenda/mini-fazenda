@@ -23,6 +23,23 @@ const path = require('node:path');
   await page.evaluate(()=>MFFriendsUI.open());
   await page.evaluate(()=>document.fonts.load('600 16px Nunito'));
   assert.equal(await page.evaluate(()=>document.fonts.check('600 16px Nunito')),true);
+  // A barra inicia sem top 3; expandir pagina, recolher funciona em qualquer página.
+  assert.equal(await page.locator('#mf-amigos .mfa-card').count(),0);
+  assert.equal(await page.locator('#mf-amigos .mfa-back').isDisabled(),true);
+  await page.locator('.x').click();
+  for(const width of [320,844,1280]){
+   await page.setViewportSize({width,height:width===844?390:800});
+   await page.locator('.mfa-more').click();
+   const per=width<=900?3:7;
+   assert.equal(await page.locator('#mf-amigos .mfa-card').count(),per);
+   assert.equal(await page.locator('#mf-amigos .mfa-name').first().innerText(),'Bacuri');
+   const bounds=await page.locator('#mf-amigos').boundingBox();assert.ok(bounds.x+bounds.width<=width);
+   await page.locator('.mfa-more').click();
+   assert.notEqual(await page.locator('#mf-amigos .mfa-name').first().innerText(),'Bacuri');
+   await page.locator('.mfa-back').click();
+   assert.equal(await page.locator('#mf-amigos .mfa-card').count(),0);
+  }
+  await page.locator('.mfa-head').click();
   const search=page.locator('.mfd-search');
   for(const q of ['baC','#128385','128385']){await search.fill(q);assert.equal(await page.locator('.mfd-friends .row').count(),1);assert.match(await page.locator('.mfd-friends').innerText(),/1º Bacuri/)}
   await search.fill('cabare');assert.match(await page.locator('.mfd-friends').innerText(),/Cabaré/);

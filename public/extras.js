@@ -87,6 +87,11 @@
   /* ---------- Barra de amigos ---------- */
   #mf-amigos{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));z-index:39;display:flex;align-items:stretch;gap:6px;
     padding:6px;border-radius:16px;background:linear-gradient(#e7a95e,#b86f2c);border:3px solid #6b3a12;box-shadow:0 4px 0 #4a260a,0 8px 18px #0005;transform-origin:left bottom;font-family:Amfost,Arial,sans-serif}
+  #mf-amigos.collapsed{padding:4px;gap:4px;border-width:2px;border-radius:12px}
+  #mf-amigos.collapsed .mfa-head{width:98px;min-height:48px;flex-direction:row;gap:5px}
+  #mf-amigos.collapsed .mfa-head b{font-size:20px}
+  #mf-amigos.collapsed .mfa-cards{display:none}
+  #mf-amigos.collapsed .mfa-arrows{gap:3px}
   #mf-amigos button{cursor:pointer;font-family:inherit}
   #mf-amigos .mfa-head{width:58px;border:0;border-radius:11px;background:linear-gradient(#ffd765,#f5a623);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative;
     font-size:13px;text-shadow:-1px -1px 0 #8a4b10,1px -1px 0 #8a4b10,-1px 1px 0 #8a4b10,1px 1px 0 #8a4b10;padding:0}
@@ -577,17 +582,17 @@
     if ($('mf-amigos') || visiting() || editing()) return;
     const bar = document.createElement('div'); bar.id = 'mf-amigos';
     bar.innerHTML = `<button class="mfa-head" type="button" aria-label="Amigos"><b>👥</b>Amigos<span class="mfa-badge" hidden></span></button>
-      <div class="mfa-cards"></div>
-      <div class="mfa-arrows"><button class="mfa-arrow mfa-more" type="button" aria-label="Mostrar mais amigos">▶</button><button class="mfa-arrow mfa-back" type="button" aria-label="Voltar">◀</button></div>`;
+      <div class="mfa-cards" id="mf-friend-cards"></div>
+      <div class="mfa-arrows"><button class="mfa-arrow mfa-more" type="button" aria-label="Expandir amigos" aria-controls="mf-friend-cards" aria-expanded="false">▶</button><button class="mfa-arrow mfa-back" type="button" aria-label="Recolher amigos" aria-controls="mf-friend-cards">◀</button></div>`;
     document.body.appendChild(bar);
     bar.addEventListener('click', e => e.stopPropagation());
     bar.querySelector('.mfa-head').addEventListener('click', () => openFriends());
     bar.querySelector('.mfa-more').addEventListener('click', () => {
-      const per = frExpanded ? 7 : 3, pages = Math.max(1, Math.ceil(frState.friends.length / 7));
-      if (!frExpanded) { frExpanded = true; frPage = 0; } else if (frPage < pages - 1) frPage++;
+      const pages = Math.max(1, Math.ceil(frState.friends.length / friendsPerPage()));
+      if (!frExpanded) { frExpanded = true; frPage = 0; } else frPage = (frPage + 1) % pages;
       renderBar();
     });
-    bar.querySelector('.mfa-back').addEventListener('click', () => { if (frExpanded && frPage > 0) frPage--; else { frExpanded = false; frPage = 0; } renderBar(); });
+    bar.querySelector('.mfa-back').addEventListener('click', () => { frExpanded = false; frPage = 0; renderBar(); });
     renderBar();
   }
   function friendCard(f, rank) {
@@ -596,9 +601,15 @@
       <div class="mfa-name" title="${esc(f.name)}">${esc(f.name)}</div><div class="mfa-lv">★ Nível ${f.level}</div>
       <button class="mfa-visit" type="button" data-uid="${esc(f.uid)}">Visitar</button></div>`;
   }
+  const friendsPerPage = () => window.matchMedia('(max-width:900px),(max-height:500px)').matches ? 3 : 7;
+  window.addEventListener('resize', () => { frPage = 0; renderBar(); });
   function renderBar() {
     const bar = $('mf-amigos'); if (!bar) return;
-    const per = frExpanded ? 7 : 3, list = frState.friends, start = frExpanded ? frPage * 7 : 0;
+    const per = frExpanded ? friendsPerPage() : 0, list = frState.friends;
+    const pages = Math.max(1, Math.ceil(list.length / friendsPerPage()));
+    frPage = Math.min(frPage, pages - 1);
+    const start = frExpanded ? frPage * per : 0;
+    bar.classList.toggle('collapsed', !frExpanded);
     const shown = list.slice(start, start + per);
     let html = shown.map((f, i) => friendCard(f, start + i)).join('');
     for (let i = shown.length; i < per; i++) html += `<div class="mfa-card mfa-empty" role="button" tabindex="0"><span class="mfa-rank">${start + i + 1}</span><svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true" style="opacity:.4"><circle cx="24" cy="14" r="9" fill="#816746"/><path d="M7 43v-7c0-17 34-17 34 0v7Z" fill="#816746"/></svg>Adicionar amigo</div>`;
@@ -607,8 +618,10 @@
     bar.querySelectorAll('.mfa-visit').forEach(b => b.addEventListener('click', () => visitFriend(b.dataset.uid)));
     const badge = bar.querySelector('.mfa-badge'), n = frState.requests.length;
     badge.hidden = !n; badge.textContent = n;
-    const pages = Math.max(1, Math.ceil(list.length / 7));
-    bar.querySelector('.mfa-more').disabled = frExpanded && frPage >= pages - 1;
+    const expand = bar.querySelector('.mfa-more');
+    expand.disabled = frExpanded && pages <= 1;
+    expand.setAttribute('aria-expanded', String(frExpanded));
+    expand.setAttribute('aria-label', frExpanded ? 'Próximos amigos' : 'Expandir amigos');
     bar.querySelector('.mfa-back').disabled = !frExpanded;
   }
   async function visitFriend(uid) {
