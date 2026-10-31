@@ -1,3 +1,4 @@
+import {startUpdateNotice} from './update-notice.js?v=1';
 import {atomicFarmSave} from './atomic-farm-save.js?v=1';
 import {publicProjection,reconcilePublicProjection} from './public-projection.js?v=1';
 import {conditionalSave,isMaxRetry} from './conditional-save.js?v=1';
@@ -348,6 +349,21 @@ async function drain(){
     return true;
   }catch(e){suspending=false;if(connected&&!saveBlocked)$('gate').hidden=true;throw e}
 }
+// Pausa novas ações enquanto confirma o último snapshot no Firebase.
+async function prepareForUpdate(){
+ if(!user)return true;
+ if(stopped||!ready||!connected||!sessionActive||suspending)throw new Error('Aguarde a conexão com sua fazenda para atualizar.');
+ const run=epoch;
+ if(visiting){if(pending||saving)throw new Error('Aguarde a sincronização antes de atualizar.');return true;}
+ checkpoint();if(saveBlocked)throw new Error('Aguarde a confirmação do salvamento para atualizar.');suspending=true;gate('Salvando seu progresso antes de atualizar…');
+ let timeout;
+ try{
+  await Promise.race([flush(),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('O salvamento está demorando. Tente novamente quando a conexão voltar.')),12000);})]);
+  if(run!==epoch||stopped||!connected||!sessionActive||pending||saveBlocked)throw new Error('O salvamento ainda não foi confirmado. Tente novamente.');
+  return true;
+ }catch(e){if(run===epoch){suspending=false;if(ready&&connected&&!saveBlocked)$('gate').hidden=true;}throw e;}finally{clearTimeout(timeout);}
+}
+startUpdateNotice({currentVersion:releaseVersion,prepare:prepareForUpdate});
 $('sync').onclick=()=>{if(stopped)return;if(!pending){if(ready&&saveBlocked){saveBlocked=false;checkpoint();}return;}clearTimeout(retryTimer);status('Tentando salvar…');void flush().catch(e=>retryPending(e));};
 $('logout').onclick=async()=>{
   try{

@@ -4,7 +4,7 @@ globalThis.MFReleaseNotesData={
  features:[
   'Galinheiro com construção em três etapas.',
   'Galinhas coloridas e ovos de ouro e diamante.',
-  'Materiais por presentes, níveis e prêmios diários.',
+  'Materiais de construção e aviso para atualizar.',
   'Conquistas, coleções e troféu de Beta Tester.'
  ],
  fixes:[]

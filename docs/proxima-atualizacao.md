@@ -26,3 +26,7 @@ As notas da próxima versão estão preparadas em `public/release-notes-data.js`
 - Mudanças acumuladas nesta branch, sem publicação em produção.
 
 - Preço progressivo das galinhas: 300 moedas na primeira e +100 por nova galinha (mantém +5 XP).
+
+## Aviso de nova versão (publicado separadamente)
+
+O host consulta `release.json` a cada 60 segundos enquanto a página está visível e ao voltar à aba/conexão. Uma versão diferente abre aviso obrigatório com Atualizar jogo. O botão captura o progresso, pausa novas entradas e aguarda a confirmação Firebase antes de navegar para uma URL com parâmetro de atualização. Falha, pendência ou troca de sessão impede recarga e permite tentar novamente. Não atualiza sozinho. Quem ainda tem o código anterior precisa atualizar manualmente uma primeira vez para receber esta função.
