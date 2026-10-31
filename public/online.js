@@ -80,6 +80,7 @@ function scheduleProjection(state,version,run,saveId){
   if(!projectionPending||version>=projectionPending.version){
     projectionPending={state,version,saveId,document:publicProjection(state,version,saveId,sdk.serverTimestamp()),run,uid:user.uid,account:user};
   }
+  if(projectionPending)status('Sincronizando a versão visitável da fazenda…');
   void flushProjection();
 }
 async function flushProjection(){
