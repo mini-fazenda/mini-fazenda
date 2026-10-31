@@ -30,3 +30,7 @@ As notas da próxima versão estão preparadas em `public/release-notes-data.js`
 ## Aviso de nova versão (publicado separadamente)
 
 O host consulta `release.json` a cada 60 segundos enquanto a página está visível e ao voltar à aba/conexão. Uma versão diferente abre aviso obrigatório com Atualizar jogo. O botão captura o progresso, pausa novas entradas e aguarda a confirmação Firebase antes de navegar para uma URL com parâmetro de atualização. Falha, pendência ou troca de sessão impede recarga e permite tentar novamente. Não atualiza sozinho. Quem ainda tem o código anterior precisa atualizar manualmente uma primeira vez para receber esta função.
+
+## Login no iPhone — mitigação preparada
+
+Removida a passagem automática de popup bloqueado para `signInWithRedirect`, incompatível com armazenamento de terceiros bloqueado em hospedagem externa sem proxy/helper no mesmo domínio. O popup é iniciado no próprio toque e erros recebem orientação legível para Safari/abrir fora do navegador interno. Leitura de retornos legados é mantida, sem iniciar novos redirecionamentos. Não limpa armazenamento, contas nem fazendas. A tela de erro hospedada pelo Firebase já aberta não pode ser modificada pelo jogo; o jogador precisa voltar ao endereço do jogo. Validar em iPhone real, especialmente Safari e abertura a partir do WhatsApp. Ref.: https://firebase.google.com/docs/auth/web/redirect-best-practices (opção 2).

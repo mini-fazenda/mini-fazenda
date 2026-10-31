@@ -1,3 +1,4 @@
+import {createGoogleLogin,googleLoginError} from './google-login.js?v=1';
 import {startUpdateNotice} from './update-notice.js?v=1';
 import {atomicFarmSave} from './atomic-farm-save.js?v=1';
 import {publicProjection,reconcilePublicProjection} from './public-projection.js?v=1';
@@ -442,19 +443,11 @@ $('neighbors').onclick=async()=>{
   try{$('farms').showModal();await listFarms(true)}catch(e){$('farm-list').textContent='Não foi possível carregar as fazendas.'}
 };
 $('more').onclick=()=>listFarms().catch(e=>status(e.message));
-$('login').onclick=async()=>{
-  $('login').disabled=true;
-  try{await sdk.signInWithPopup(auth,new sdk.GoogleAuthProvider())}
-  catch(e){
-    console.warn('[Google login]',e?.code,e);
-    if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment'].includes(e?.code)){
-      gate('O navegador bloqueou a janela Google. Redirecionando para entrar…');
-      try{await sdk.signInWithRedirect(auth,new sdk.GoogleAuthProvider());return}catch(err){console.warn('[redirect]',err)}
-    }
-    const messages={'auth/unauthorized-domain':'Este domínio não está autorizado no Firebase.','auth/popup-closed-by-user':'Login cancelado. Tente novamente.','auth/network-request-failed':'Falha de rede ao abrir o Google. Confira sua conexão e tente novamente.','auth/cancelled-popup-request':'Já existe uma tentativa de login em andamento.'};
-    gate(messages[e?.code]||`Não foi possível entrar com Google (${e?.code||'erro desconhecido'}).`);
-  }finally{$('login').disabled=false}
-};
+function showLoginError(result){
+ gate(result.message);
+ if(result.help){const link=document.createElement('a');link.href=new URL('./',location.href).href;link.textContent='Link do jogo: copie e abra no Safari';link.style.cssText='display:block;margin-top:12px;color:inherit;text-decoration:underline';$('message').append(link);}
+}
+// Criado depois de inicializar o SDK; a chamada de popup continua no gesto do clique.
 setInterval(checkpoint,1000);
 // Sem beforeunload/preventDefault: fechar ou recarregar nunca abre confirmação.
 window.addEventListener('pagehide',()=>{checkpoint();void flush().catch(()=>{})});
@@ -471,7 +464,8 @@ async function init(){
   sdk.onValue(sdk.ref(db,'.info/serverTimeOffset'),s=>{clockOffset=Number(s.val())||0});
   // A autenticação pertence à aba, para que encerrar a sessão antiga não encerre a nova.
   try{await sdk.setPersistence(auth,sdk.browserSessionPersistence)}catch(e){console.warn('[auth persistence]',e)}
-  try{await sdk.getRedirectResult(auth)}catch(e){console.warn('[Google redirect]',e?.code);gate(`Falha ao concluir login Google (${e?.code||'erro desconhecido'}).`)}
+  try{await sdk.getRedirectResult(auth)}catch(e){console.warn('[Google redirect]',e?.code);showLoginError(googleLoginError(e))}
+  $('login').onclick=createGoogleLogin({sdk,auth,button:$('login'),report:showLoginError});
   $('login').disabled=false;
   sdk.onAuthStateChanged(auth,account=>{void boot(account).catch(e=>{
     console.warn('[Firebase initial connection]',e);
