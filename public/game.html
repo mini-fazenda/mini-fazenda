@@ -927,7 +927,7 @@ pollTimer=setInterval(()=>{if(unlocked&&document.visibilityState!=='hidden')choo
 @media(max-width:600px){#loja-content .mf-shop-arrow{width:31px;height:42px;font-size:25px}#loja-content #mf-shop-prev{left:-3%}#loja-content #mf-shop-next{right:-3%}#loja-content #mf-shop-page{bottom:5%;font-size:12px}}
 </style>
 <script src="render-resolution.js?v=1"></script>
-<script src="plot-ground.js?v=2"></script>
+<script src="plot-ground.js?v=visual-scale-92"></script>
 <script src="crop-sprites.js?v=2"></script>
 <script src="farm-economy.js?v=girassol-4"></script>
 <script src="growth-time.js?v=1"></script>
@@ -4888,7 +4888,7 @@ if(t.fruitTree)window.MFFruitTrees?.sync(t);
 const animalFrame=window.MFBarn?.src(t)||window.MFNatureAssets?.srcFor(t)||window.MFSheepAnimation?.src(t)||t.imgSrc;
 const img = preload(animalFrame);
 
-if(img?.complete&&img.naturalWidth&&(window.MFBarn?.drawSprite(ctx,t,anchor,img)||window.MFCropSprites?.drawSprite(ctx,t,anchor,img)))continue;
+if(img?.complete&&img.naturalWidth&&(window.MFPlotGround?.drawSprite(ctx,t,anchor,img)||window.MFBarn?.drawSprite(ctx,t,anchor,img)||window.MFCropSprites?.drawSprite(ctx,t,anchor,img)))continue;
 const targetW = TILE_W * (t.w || 1);
 if (img && img.complete && img.naturalWidth > 0) {
   const scale = targetW / img.naturalWidth;
@@ -5034,7 +5034,7 @@ const anchor = gridToScreen(
 );
 const drawX = anchor.x - drawW / 2;
 const drawY = anchor.y - drawH + TILE_H * (window.MFFlags?.is(estruturaMovendo)?0.5:window.MFFruitTrees?.config(estruturaMovendo)?.directCoins?1:0.9);
-if(!window.MFBarn?.drawSprite(ctx,estruturaMovendo,anchor,img)&&!window.MFCropSprites?.drawSprite(ctx,estruturaMovendo,anchor,img)){if(estruturaMovendo.animal?.flipped){ctx.save();ctx.translate(anchor.x,0);ctx.scale(-1,1);ctx.drawImage(img,-drawW/2,drawY,drawW,drawH);ctx.restore();}else ctx.drawImage(img, drawX, drawY, drawW, drawH);}
+if(!window.MFPlotGround?.drawSprite(ctx,estruturaMovendo,anchor,img)&&!window.MFBarn?.drawSprite(ctx,estruturaMovendo,anchor,img)&&!window.MFCropSprites?.drawSprite(ctx,estruturaMovendo,anchor,img)){if(estruturaMovendo.animal?.flipped){ctx.save();ctx.translate(anchor.x,0);ctx.scale(-1,1);ctx.drawImage(img,-drawW/2,drawY,drawW,drawH);ctx.restore();}else ctx.drawImage(img, drawX, drawY, drawW, drawH);}
   }
 
   ctx.restore();
@@ -5069,7 +5069,7 @@ const drawH = img.naturalHeight * scale * vs;
 const anchor = gridToScreen(clampX + (placingItem.w - 1) / 2, clampY + (placingItem.h - 1) / 2);
 const drawX = anchor.x - drawW / 2;
 const drawY = anchor.y - drawH + TILE_H * (window.MFFlags?.is(placingItem)?0.5:window.MFFruitTrees?.types[String(placingItem.id).replace('item-arvore-','')]?.directCoins?1:0.9);
-if(!window.MFBarn?.drawSprite(ctx,placingItem,anchor,img)&&!window.MFCropSprites?.drawSprite(ctx,placingItem,anchor,img))ctx.drawImage(img, drawX, drawY, drawW, drawH);
+if(!window.MFPlotGround?.drawSprite(ctx,placingItem,anchor,img)&&!window.MFBarn?.drawSprite(ctx,placingItem,anchor,img)&&!window.MFCropSprites?.drawSprite(ctx,placingItem,anchor,img))ctx.drawImage(img, drawX, drawY, drawW, drawH);
       }
     }
     ctx.restore();
