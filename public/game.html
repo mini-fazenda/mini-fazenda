@@ -7330,7 +7330,7 @@ const cache={
   if(rebuild){
    // Limite de buffers para não desperdiçar memória em celulares de DPR alto.
    const mx=Math.round(W*.18),my=Math.round(H*.18),sw=W+2*mx,sh=H+2*my;
-   const sourceRatio=Math.max(1,Math.min(ratio,Math.sqrt(7000000/(sw*sh))));
+   const sourceRatio=Math.max(.5,Math.min(ratio,Math.sqrt(7000000/(sw*sh))));
    const pw=Math.max(1,Math.round(sw*sourceRatio));
    const ph=Math.max(1,Math.round(sh*sourceRatio));
    if(this.source.width!==pw)this.source.width=pw;
