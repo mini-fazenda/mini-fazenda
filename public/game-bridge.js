@@ -99,6 +99,7 @@
       dailyRewards:clone(window.MFDaily?.capture() || {}),
       levelRewards:window.MFLevelRewards?.capture()||null,
       tutorial:window.MFTutorial?.capture() || null,
+      releaseNotes:window.MFReleaseNotes?.capture()||{},
       actionQueue:filaAcoes.map(t=>({gx:t.gx,gy:t.gy,...(t._job?{job:clone(t._job)}:{})})),
       loot: lootParticles.map(p=>simple(p))
     });
@@ -117,6 +118,7 @@
   // Crescimento visual continua pelo relógio do servidor, sem executar ações do dono.
   setInterval(()=>{if(host.isVisiting()&&!document.hidden){syncAllGrowth(Date.now());requestRedraw();}},1000);
   function restore(data) {
+    window.MFReleaseNotes?.restore(data?.releaseNotes);
     if (!data) return;
     data=window.MFSaveRuntime.refresh(data,window.MFAdapter.project);
     data={...data,terrenos:clone(data.terrenos || []),inventory:data.inventory || {}};
