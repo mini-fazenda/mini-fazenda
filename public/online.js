@@ -406,19 +406,35 @@ $('neighbors').onclick=async()=>{
   try{$('farms').showModal();await listFarms(true)}catch(e){$('farm-list').textContent='Não foi possível carregar as fazendas.'}
 };
 $('more').onclick=()=>listFarms().catch(e=>status(e.message));
+// iPhone/iPad e navegadores de dentro de apps (WhatsApp, Instagram, Facebook...) apagam o estado do
+// login por redirecionamento (o Firebase mostra "missing initial state"). Nesses aparelhos usamos só a
+// janela do Google (popup) e, se ela for bloqueada, pedimos um novo toque em vez de redirecionar.
+const UA=navigator.userAgent||'';
+const isIOS=/iPhone|iPad|iPod/.test(UA)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const inAppBrowser=/FBAN|FBAV|FB_IAB|Instagram|Line\/|WhatsApp|TikTok|musical_ly|Snapchat|Twitter|LinkedInApp|GSA\//.test(UA);
+const standaloneApp=window.navigator.standalone===true||window.matchMedia?.('(display-mode: standalone)')?.matches;
+const noRedirect=isIOS||inAppBrowser||standaloneApp;
+function openInBrowserHint(){
+  if(inAppBrowser)return' Se não abrir, toque em ⋯ (ou no ícone de compartilhar) e escolha "Abrir no Safari" ou "Abrir no navegador".';
+  if(standaloneApp)return' Se não abrir, jogue pelo Safari em vez do atalho da tela de início.';
+  return isIOS?' No iPhone, confira em Ajustes → Safari se "Bloquear Pop-ups" está desligado.':'';
+}
 $('login').onclick=async()=>{
   $('login').disabled=true;
   try{await sdk.signInWithPopup(auth,new sdk.GoogleAuthProvider())}
   catch(e){
     console.warn('[Google login]',e?.code,e);
     if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment'].includes(e?.code)){
+      if(noRedirect){gate('O navegador bloqueou a janela do Google. Toque em "Entrar com Google" de novo.'+openInBrowserHint());return}
       gate('O navegador bloqueou a janela Google. Redirecionando para entrar…');
       try{await sdk.signInWithRedirect(auth,new sdk.GoogleAuthProvider());return}catch(err){console.warn('[redirect]',err)}
     }
-    const messages={'auth/unauthorized-domain':'Este domínio não está autorizado no Firebase.','auth/popup-closed-by-user':'Login cancelado. Tente novamente.','auth/network-request-failed':'Falha de rede ao abrir o Google. Confira sua conexão e tente novamente.','auth/cancelled-popup-request':'Já existe uma tentativa de login em andamento.'};
-    gate(messages[e?.code]||`Não foi possível entrar com Google (${e?.code||'erro desconhecido'}).`);
+    const messages={'auth/unauthorized-domain':'Este domínio não está autorizado no Firebase.','auth/popup-closed-by-user':'Login cancelado. Tente novamente.'+(noRedirect?openInBrowserHint():''),'auth/network-request-failed':'Falha de rede ao abrir o Google. Confira sua conexão e tente novamente.','auth/cancelled-popup-request':'Já existe uma tentativa de login em andamento.','auth/web-storage-unsupported':'Este navegador está bloqueando o armazenamento do login.'+openInBrowserHint()};
+    gate(messages[e?.code]||`Não foi possível entrar com Google (${e?.code||'erro desconhecido'}).`+(noRedirect?openInBrowserHint():''));
   }finally{$('login').disabled=false}
 };
+// Aviso logo na tela de entrada para quem abriu de dentro de outro app
+if(inAppBrowser)setTimeout(()=>{const m=$('message');if(m&&!$('gate').hidden&&!/Safari|navegador/.test(m.textContent))m.textContent+=' Dica: o login funciona melhor abrindo o jogo no Safari ou no Chrome.'},1500);
 setInterval(checkpoint,1000);
 // Sem beforeunload/preventDefault: fechar ou recarregar nunca abre confirmação.
 window.addEventListener('pagehide',()=>{checkpoint();void flush().catch(()=>{})});
