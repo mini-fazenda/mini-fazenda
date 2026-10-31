@@ -243,7 +243,7 @@
   // O número de passos é limitado aos terrenos existentes: nada é gerado em segundo plano.
   function resumeOfflineAradora({savedAt}){
     const now=Date.now(),start=Number(savedAt);
-    if(!aradora.spawned||!Number.isFinite(start)||start<1e11||start>=now)return now;
+    if(host.isVisiting()||!aradora.spawned||!Number.isFinite(start)||start<1e11||start>=now)return now;
     let cursor=start;
     for(let i=0;i<=terrenos.length+1&&cursor<now;i++){
       if(!aradora.acaoAtual){
