@@ -51,8 +51,9 @@ const mock=require('./firebase-mock.cjs');
  await f.evaluate(()=>{moedas=9876;window.__farmName='Conta';saveGameState('test')});
  await page.waitForFunction(()=>testCloud['farms/rodrigo']?.state.moedas===9876);
  console.log('PASS: salvamento automático por conta');
- // Falha na cópia de visitas precisa se recuperar sem outra alteração do jogador.
- await page.evaluate(()=>{testFailProjection=1;});await f.evaluate(()=>{window.__farmName='Yellowstone';saveGameState('projection-retry')});await page.waitForFunction(()=>testFailProjection===0);await page.waitForFunction(()=>testCloud['publicFarms/rodrigo']?.state?.farmName==='Yellowstone',{timeout:15000});
+ // O save privado e a projeção pública são gravados atomicamente na mesma revisão.
+ await f.evaluate(()=>{window.__farmName='Yellowstone';saveGameState('atomic-projection')});
+ await page.waitForFunction(()=>testCloud['farms/rodrigo']?.state.farmName==='Yellowstone'&&testCloud['publicFarms/rodrigo']?.state?.farmName==='Yellowstone'&&testCloud['publicFarms/rodrigo'].revision===testCloud['farms/rodrigo'].revision);
  // Reparar cópia antiga ao entrar, mesmo que o progresso privado não mude.
  await page.evaluate(()=>{testCloud['publicFarms/rodrigo'].state.farmName='Antiga';localStorage.setItem('test-cloud',JSON.stringify(testCloud));});await page.reload();await page.waitForFunction(()=>document.querySelector('#gate').hidden);f=page.frames().find(f=>f.url().includes('game.html'));await page.waitForFunction(()=>testCloud['publicFarms/rodrigo']?.state?.farmName==='Yellowstone');console.log('PASS: visita atualiza após falha e corrige cópia antiga no login');
  // Conta com revisão remota mais alta na mesma sessão: deve recuperar sem perder a alteração.
