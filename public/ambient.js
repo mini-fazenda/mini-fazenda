@@ -168,21 +168,23 @@
     const truck = p.truck || {};
     const roadGy = (Number.isFinite(+truck.stopY) ? +truck.stopY : (Number.isFinite(+truck.laneGy) ? +truck.laneGy : 5)) + 1;
     const truckFar = Math.min(Number.isFinite(+truck.stopX) ? +truck.stopX : -10, Number.isFinite(+truck.startX) ? +truck.startX : -4) + 1;
-    return { cols: COLS, rows: ROWS, roadGy, truckFar };
+    const shift=window.MFExpansion?.shift()||{gx:0,gy:0,x:0,y:0};
+    return { cols: COLS-shift.gx, rows: ROWS-shift.gy, minGx:-shift.gx,minGy:-shift.gy,roadGy, truckFar,shift };
   }
 
   function build(info) {
-    const { cols, rows, roadGy, truckFar } = info;
+    const { cols, rows, minGx, minGy, roadGy, truckFar } = info;
     let R = rng(7); // sementes fixas: expandir não embaralha o cenário
     // rio: corre do pé da montanha (alto) para baixo-esquerda, depois do ponto onde o caminhão para
-    const riverBase = Math.min(-11.5, truckFar - 3.8);
+    const riverBase = Math.min(-18.5, truckFar - 3.8);
     const riverC = gy => riverBase - 0.9 * Math.sin(gy * 0.33) - 0.35 * Math.sin(gy * 0.9 + 1);
     const RIVER_W = 1.25, BANK_W = 1.75;
     const gyEnd = rows + 26;
     // montanha: linha da base em coordenada de tela (acima da borda de cima)
     const mountBase = x => {
-      const edge = x >= 0 ? -HH + x / 2 : -HH - x / 2;       // bordas de cima do losango
-      return Math.min(edge - 250, -300 + Math.sin(x * 0.004) * 30) + Math.sin(x * 0.011) * 14;
+      const apexX=(minGx-minGy)*HW,apexY=(minGx+minGy)*HH;
+      const edge = -HH+apexY+Math.abs(x-apexX)/2;       // bordas de cima do losango
+      return Math.min(edge - 250, -300+(minGx+minGy)*HH + Math.sin(x * 0.004) * 30) + Math.sin(x * 0.011) * 14;
     };
     let gyTop = -30; // o rio nasce no pé da montanha
     while (gyTop < 0) { const p = iso(riverC(gyTop), gyTop); if (p.y > mountBase(p.x) - 6) break; gyTop += 0.25; }
@@ -205,13 +207,13 @@
     while (tunnelGx > -80) { const p = iso(tunnelGx, roadGy); if (p.y < mountBase(p.x) + 26) break; tunnelGx -= 0.25; }
     const roadEnd = tunnelGx;
     const road = new Path2D(), roadEdge = new Path2D();
-    const roadPts = (off) => { const pts = []; const end = roadEnd; for (let gx = 0.2; gx >= end; gx -= 0.5) { const taper = 1; pts.push(iso(gx, roadGy + (off * (0.35 + 0.65 * taper)) + Math.sin(gx * 1.7) * 0.04)); } return pts; };
+    const roadPts = (off) => { const pts = []; const end = roadEnd; for (let gx = minGx-2; gx >= end; gx -= 0.5) { const taper = 1; pts.push(iso(gx, roadGy + (off * (0.35 + 0.65 * taper)) + Math.sin(gx * 1.7) * 0.04)); } return pts; };
     const A = roadPts(-0.62), B = roadPts(0.62);
     road.moveTo(A[0].x, A[0].y); for (const q of A) road.lineTo(q.x, q.y); for (let i = B.length - 1; i >= 0; i--) road.lineTo(B[i].x, B[i].y); road.closePath();
     const A2 = roadPts(-0.78), B2 = roadPts(0.78);
     roadEdge.moveTo(A2[0].x, A2[0].y); for (const q of A2) roadEdge.lineTo(q.x, q.y); for (let i = B2.length - 1; i >= 0; i--) roadEdge.lineTo(B2[i].x, B2[i].y); roadEdge.closePath();
     R = rng(13);
-    const pebbles = []; for (let gx = -0.5; gx > roadEnd + 1; gx -= 0.35) if (R() < 0.6) pebbles.push({ ...iso(gx, roadGy + (R() - 0.5) * 1.0), r: 1.2 + R() * 1.6 });
+    const pebbles = []; for (let gx = minGx-2.5; gx > roadEnd + 1; gx -= 0.35) if (R() < 0.6) pebbles.push({ ...iso(gx, roadGy + (R() - 0.5) * 1.0), r: 1.2 + R() * 1.6 });
     const bridgeC = riverC(roadGy);
 
     R = rng(17);
@@ -232,9 +234,9 @@
     const foothill = [];
     for (let x = mtnX0; x <= mtnX1; x += 40) foothill.push({ x, y: mountBase(x) - 22 - Math.abs(Math.sin(x * 0.02)) * 26 });
     // ocupação: o que pode ter árvore
-    const inFarm = (gx, gy, m) => gx > -m && gx < cols + m && gy > -m && gy < rows + m;
+    const inFarm = (gx, gy, m) => gx > minGx-m && gx < cols + m && gy > minGy-m && gy < rows + m;
     const nearRiver = (gx, gy, m) => gy > gyTop - 1 && Math.abs(gx - riverC(gy)) < BANK_W + m;
-    const nearRoad = (gx, gy, m) => gx < 1 && gx > roadEnd - m && Math.abs(gy - roadGy) < 0.8 + m;
+    const nearRoad = (gx, gy, m) => gx < minGx-1.5 && gx > roadEnd - m && Math.abs(gy - roadGy) < 0.8 + m;
     const inLabelBand = (gx, gy) => (gx > -6 && gx < 0 && gy > -1 && gy < rows + 1) || (gx > cols && gx < cols + 5.5 && gy > -1 && gy < rows + 1);
     const nearTunnel = (gx, gy, m) => Math.hypot(gx - tunnelGx, gy - roadGy) < 3 + m;
     const okTall = (gx, gy) => {
@@ -271,7 +273,7 @@
       R = rng(((i * 73856093) ^ (j * 19349663) ^ 0x5bd1e995) >>> 0); // cada célula tem a sua semente
       const gx = i * ST, gy = j * ST, jx = gx + R() * 0.9, jy = gy + R() * 0.9;
       const n = noise2(jx, jy); // clareiras e bosques
-      const dist = Math.max(-jx, -jy, jx - cols, jy - rows);  // distância da fazenda
+      const dist = Math.max(minGx-jx, minGy-jy, jx - cols, jy - rows);  // distância da fazenda
       const density = (dist < 3 ? 0.02 : dist < 6 ? 0.10 : dist < 10 ? 0.15 : 0.20) * (1 + n * 0.35);
       if (okTall(jx, jy) && R() < density) {
         const p = iso(jx, jy), roll = R();
@@ -502,7 +504,8 @@
     MFViewport.resize(fxCanvas);
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
     g.setTransform(zoom*MFViewport.ratio, 0, 0, zoom*MFViewport.ratio, (MFViewport.width / 2 + offsetX)*MFViewport.ratio, (MFViewport.height / 3 + offsetY)*MFViewport.ratio);
-    const view = viewRect(), t = now / 1000;
+    const q=window.MFExpansion?.shift()||{x:0,y:0};g.translate(q.x,q.y);
+    const v=viewRect(),view={l:v.l-q.x,r:v.r-q.x,t:v.t-q.y,b:v.b-q.y},t = now / 1000;
     // rio: espuminhas descendo
     if (!fxParts) fxParts = makeParts(L);
     const span = L.gyEnd - L.gyTop;
@@ -552,7 +555,9 @@
     const info = farmInfo(), sig = JSON.stringify(info);
     if (sig !== LAYOUT_SIG) { LAYOUT = build(info); LAYOUT_SIG = sig; fxParts = null; }
     if (!fxCanvas) ensureFx();
-    const L = LAYOUT, view = viewOverride || viewRect();
+    const L = LAYOUT, originalView = viewOverride || viewRect(),q=info.shift;
+    const view={l:originalView.l-q.x,r:originalView.r-q.x,t:originalView.t-q.y,b:originalView.b-q.y};
+    b.save();b.translate(q.x,q.y);
     window.MFNatureAssets?.ground(b,view);
     drawMountains(b, L, view);
     for (const it of L.low) drawSprite(b, it, view);
@@ -565,12 +570,13 @@
     b.fillStyle = 'rgba(20,50,10,0.22)';
     for (const it of L.props) if (it.shadow && it.x > view.l && it.x < view.r && it.y > view.t && it.y < view.b) { b.beginPath(); b.ellipse(it.x + 6 * it.k, it.y, 30 * it.k, 11 * it.k, 0, 0, 7); b.fill(); }
     for (const it of L.props) drawSprite(b, it, view);
+    b.restore();
   }
 
   function layout() { if (!enabled()) return null; if (!SPRITES) buildSprites(); const info = farmInfo(), sig = JSON.stringify(info); if (sig !== LAYOUT_SIG) { LAYOUT = build(info); LAYOUT_SIG = sig; fxParts = null; } return LAYOUT; }
   // ponto do túnel (em tiles) para o caminhão entrar e sair
-  function tunnel() { const L = layout(); return L ? { gx: L.tunnelGx, gy: L.roadGy } : null; }
+  function tunnel() { const L = layout(); const q=window.MFExpansion?.shift()||{gx:0,gy:0};return L ? { gx: L.tunnelGx+q.gx, gy: L.roadGy+q.gy } : null; }
   // altura da ponte num ponto da estrada (o caminhão sobe e desce junto)
-  function bridgeLift(gx, gy) { const L = layout(); if (!L || Math.abs(gy - L.roadGy) > 1.2) return 0; return bridgeLiftAt(L, gx); }
-  window.MFAmbient = { draw, enabled, tunnel, bridgeLift, groundReady:()=>enabled()&&!!window.MFNatureAssets?.groundReady(),refreshSprites(){SPRITES=null;LAYOUT_SIG='';},inspect(){const L=layout(),r=fallAssetRect(L);return {trees:L.props.filter(p=>['palm','pine','leafy'].includes(p.kind)).length,palms:L.props.filter(p=>p.kind==='palm').length,bankRocks:L.props.filter(p=>p.kind==='bankRock').length,riverStart:L.fallTop,waterOutlet:{x:r.x+r.w*.23,y:r.y+r.h*.92}};}, version: 5, signature: () => (enabled() ? 'amb5:' + COLS + 'x' + ROWS + ':' + sceneryRevision+':'+window.MFNatureAssets?.signature() : 'off') };
+  function bridgeLift(gx, gy) { const q=window.MFExpansion?.shift()||{gx:0,gy:0};gx-=q.gx;gy-=q.gy;const L = layout(); if (!L || Math.abs(gy - L.roadGy) > 1.2) return 0; return bridgeLiftAt(L, gx); }
+  window.MFAmbient = { draw, enabled, tunnel, bridgeLift, groundReady:()=>enabled()&&!!window.MFNatureAssets?.groundReady(),refreshSprites(){SPRITES=null;LAYOUT_SIG='';},inspect(){const L=layout(),r=fallAssetRect(L);return {trees:L.props.filter(p=>['palm','pine','leafy'].includes(p.kind)).length,palms:L.props.filter(p=>p.kind==='palm').length,bankRocks:L.props.filter(p=>p.kind==='bankRock').length,riverStart:L.fallTop,riverGap:-farmInfo().shift.gx-(-18.5+1.25+L.BANK_W),roadGap:2,waterOutlet:{x:r.x+r.w*.23,y:r.y+r.h*.92}};}, version: 5, signature: () => (enabled() ? 'amb6:' + JSON.stringify(farmInfo()) + ':' + sceneryRevision+':'+window.MFNatureAssets?.signature() : 'off') };
 })();

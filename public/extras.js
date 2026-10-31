@@ -331,7 +331,7 @@
     for (const t of TABS) {
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'mfs-tab' + (t.k === 'promo' ? ' promo' : ''); b.textContent = t.l; b.dataset.k = t.k;
-      b.addEventListener('click', () => { state.tab = t.k; state.sub = 'todos'; state.page = 0; state.sel = null; render(); });
+      b.addEventListener('click', () => { if(t.k==='upgrades'&&visiting())return;state.tab = t.k; state.sub = 'todos'; state.page = 0; state.sel = null; render(); });
       tabs.appendChild(b);
     }
     window.addEventListener('resize', fit);
@@ -372,13 +372,14 @@
     const lv = typeof playerLevel !== 'undefined' ? playerLevel : 1;
     shop.querySelector('.mfs-coins').textContent = typeof moedas !== 'undefined' ? moedas : '';
     shop.querySelector('.mfs-wallet img').src = coinSrc();
-    shop.querySelectorAll('.mfs-tab').forEach(b => b.classList.toggle('on', b.dataset.k === state.tab));
+    shop.querySelectorAll('.mfs-tab').forEach(b => {b.classList.toggle('on', b.dataset.k === state.tab);b.disabled=b.dataset.k==='upgrades'&&visiting();});
     const tab = TABS.find(t => t.k === state.tab), subs = shop.querySelector('.mfs-subs'), body = shop.querySelector('.mfs-body');
     subs.innerHTML = ''; subs.style.display = tab.subs ? '' : 'none';
     for (const [k, l] of tab.subs || []) {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'mfs-sub' + (state.sub === k ? ' on' : ''); b.textContent = l;
       b.addEventListener('click', () => { state.sub = k; state.page = 0; state.sel = null; render(); }); subs.appendChild(b);
     }
+    if(state.tab==='upgrades'){window.MFExpansion?.render(body);return;}
     let list = readItems().filter(i => i.tab === state.tab).sort((a, b) => state.tab === 'sementes' ? (a.grow - b.grow) || (a.level - b.level) || (a.price - b.price) : state.tab==='arvores'?(a.price-b.price):(a.level - b.level) || (a.grow - b.grow) || (a.price - b.price));
     if (tab.subs && state.sub !== 'todos') list = list.filter(i => i.sub === state.sub);
     if (!list.length) {
@@ -855,7 +856,7 @@
       fertBusy = true; syncCursor();
       try {
         const key=MFFertilizerCore.key(t);
-        const res = await F.fertilize(owner, { gx: t.gx, gy: t.gy,key });
+        const res = await F.fertilize(owner, { ...MFFertilizerCore.coordinates(t),key });
         const q = { x, y }; // despeja onde o jogador tocou
         await pourAt(q);
         fertLeft = res.left; if (res.resetIn) fertResetAt = Date.now() + res.resetIn;

@@ -1,5 +1,7 @@
 (function(root){
- const HOURS12=12*60*60*1000,key=t=>`block_${Math.floor(t.gx)}_${Math.floor(t.gy)}`;
+ const HOURS12=12*60*60*1000;
+ const coordinates=t=>{const s=root.MFExpansion?.shift()||{gx:0,gy:0};return {gx:Math.floor(t.gx-s.gx),gy:Math.floor(t.gy-s.gy)};};
+ const key=t=>{const p=coordinates(t);return `block_${p.gx}_${p.gy}`;};
  function bind(t){
   const c=t?.cultura;if(!c||c.tipo==='morta')return false;
   // Migra a aceleração por plantio da versão anterior sem perder o progresso.
@@ -34,5 +36,5 @@
   if(elapsed(c,now)>=target)return 0;let lo=now,hi=now+Math.max(0,target-elapsed(c,now));
   for(let i=0;i<48;i++){const mid=(lo+hi)/2;if(elapsed(c,mid)>=target)hi=mid;else lo=mid;}return Math.ceil(hi-now);
  }
- root.MFFertilizerCore={key,apply,bind,active,elapsed,delay,HOURS12};
+ root.MFFertilizerCore={key,coordinates,apply,bind,active,elapsed,delay,HOURS12};
 })(globalThis);

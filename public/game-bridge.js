@@ -89,7 +89,7 @@
       aradora: {...window.MFSaveRuntime.actorProgress(data.aradora),x:aradora.x,y:aradora.y,facing:aradora.facing,
         path:clone(aradora.path || []),action:actionState(aradora),fila:clone((aradora.fila || []).map(t=>({gx:t.gx,gy:t.gy}))),
         ...(background?{offlineAt:background.npcAt}: {})},
-      runtimeVersion:1,
+      runtimeVersion:1,expansions:window.MFExpansion?.capture(),
       truck: simple(caminhaoVendas),nextTruckAt:window.__mfTruckDue || 0,
       aradoraWelcomeShown:!!window.__aradoraWelcomeShown,
       missions:window.MFMissions.capture(),
@@ -180,6 +180,7 @@
       img.style.display=caminhaoVendas.spawned?'':'none';
       updateTruckDomPosition();
     }
+    window.MFExpansion?.restore(data);
     window.__mfTruckDue=data.nextTruckAt || 0;
     if(window.__mfTruckDue && !caminhaoVendas.spawned && !host.isVisiting()){
       setTimeout(()=>{window.__mfTruckDue=0;gerarPedidoCaminhao();initTruck();if(truckDomImg)truckDomImg.style.display=''},Math.max(0,window.__mfTruckDue-Date.now()));
