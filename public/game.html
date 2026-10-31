@@ -1707,6 +1707,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   let pinchStartDist = 0;
   let pinchStartZoom = 1;
+  let touchCanvasRect = null;
 
   const TAP_MAX_MOVEMENT = 10;     // px
   const TAP_MAX_DURATION = 250;    // ms
@@ -1746,6 +1747,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (e.touches.length === 1) {
       const t = e.touches[0];
       touchMode = 'tap'; touchVX=touchVY=0;touchLastT=performance.now();window.MFAdapter?.cancelGlide();
+      touchCanvasRect=canvas.getBoundingClientRect();
       touchStartX = lastTouchX = t.clientX;
       touchStartY = lastTouchY = t.clientY;
       touchStartTime = (performance && performance.now) ? performance.now() : Date.now();
@@ -1755,6 +1757,7 @@ document.addEventListener("DOMContentLoaded", function() {
       if(touchMode==='move')window.MFMoveControls?.touchCancel();
       const [t1, t2] = e.touches;
       touchMode = 'pinch';
+      touchCanvasRect=canvas.getBoundingClientRect();
       pinchStartDist = getTouchesDistance(t1, t2);
       pinchStartZoom = typeof zoom === 'number' ? zoom : 1;
     }
@@ -1782,10 +1785,18 @@ document.addEventListener("DOMContentLoaded", function() {
       let newZoom = pinchStartZoom * scale;
       newZoom=Math.max(window.MFAdapter?.project?.camera?.minZoom??MIN_ZOOM,newZoom);
       newZoom=Math.min(window.MFAdapter?.project?.camera?.maxZoom??MAX_ZOOM,newZoom);
+      // Mantém o ponto entre os dedos fixo no mapa, em vez de dar zoom
+      // no centro da tela e causar a sensação de câmera tremendo.
+      const rect=touchCanvasRect||canvas.getBoundingClientRect();
+      const sx=(t1.clientX+t2.clientX)/2-rect.left;
+      const sy=(t1.clientY+t2.clientY)/2-rect.top;
+      const wx=(sx-MFViewport.width/2-offsetX)/zoom;
+      const wy=(sy-MFViewport.height/3-offsetY)/zoom;
       zoom = newZoom;
-
+      offsetX=sx-MFViewport.width/2-wx*zoom;
+      offsetY=sy-MFViewport.height/3-wy*zoom;
       if (typeof clampCamera === 'function') clampCamera();
-      if (typeof needRedraw !== 'undefined') needRedraw = true;
+      if (typeof requestRedraw === 'function') requestRedraw();
       return;
     }
 
@@ -7260,14 +7271,27 @@ function clampNewCamera(){
  if(bottom-top<viewHeight){offsetY+=(midY-(top+bottom)/2)}else if(top>view.top+viewHeight*.1)offsetY+=view.top+viewHeight*.1-top;else if(bottom<view.bottom-viewHeight*.1)offsetY+=view.bottom-viewHeight*.1-bottom;
 }
 const diamondImg=new Image(); diamondImg.onload=()=>{cache.sig='';requestRedraw()};diamondImg.onerror=()=>{cache.sig='';requestRedraw();console.warn('[MF] Imagem do terreno inválida ou inacessível')};
-const cache={canvas:document.createElement('canvas'),sig:'',draw(){const a=this.canvas,b=a.getContext('2d');let sig=[MFViewport.width,MFViewport.height,MFViewport.ratio,offsetX.toFixed(2),offsetY.toFixed(2),zoom.toFixed(3),COLS,ROWS,project.world.ground,project.world.opacity,project.world.diamondImage,project.world.diamondImageOpacity,diamondImg.complete&&diamondImg.naturalWidth,backgroundScale,backgroundOffsetX,backgroundOffsetY,backgroundImg.src,backgroundImg.complete&&backgroundImg.naturalWidth,window.MFAmbient?.signature?.()].join('|');if(sig===this.sig)return;this.sig=sig;
+// A malha geométrica é fixa no espaço da fazenda: criar Path2D a cada
+// movimento da câmera causava milhares de operações por quadro.
+let gridGeometry={cols:-1,rows:-1,tw:0,th:0,path:null};
+function groundGridPath(){
+ if(gridGeometry.cols===COLS&&gridGeometry.rows===ROWS&&gridGeometry.tw===TILE_W&&gridGeometry.th===TILE_H)return gridGeometry.path;
+ const path=new Path2D(),hw=TILE_W/2,hh=TILE_H/2;
+ for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+  const gx=(x-y)*hw,gy=(x+y)*hh;
+  path.moveTo(gx,gy-hh);path.lineTo(gx+hw,gy);path.lineTo(gx,gy+hh);
+  path.lineTo(gx-hw,gy);path.closePath();
+ }
+ gridGeometry={cols:COLS,rows:ROWS,tw:TILE_W,th:TILE_H,path};
+ return path;
+}
+const cache={canvas:document.createElement('canvas'),sig:'',groundGridPath,draw(){const a=this.canvas,b=a.getContext('2d');let sig=[MFViewport.width,MFViewport.height,MFViewport.ratio,offsetX.toFixed(2),offsetY.toFixed(2),zoom.toFixed(3),COLS,ROWS,project.world.ground,project.world.opacity,project.world.diamondImage,project.world.diamondImageOpacity,diamondImg.complete&&diamondImg.naturalWidth,backgroundScale,backgroundOffsetX,backgroundOffsetY,backgroundImg.src,backgroundImg.complete&&backgroundImg.naturalWidth,window.MFAmbient?.signature?.()].join('|');if(sig===this.sig)return;this.sig=sig;
  MFViewport.resize(a);b.save();b.translate(MFViewport.width/2+offsetX,MFViewport.height/3+offsetY);b.scale(zoom,zoom);
  if(backgroundImg.complete&&backgroundImg.naturalWidth){let w=backgroundImg.naturalWidth*backgroundScale,h=backgroundImg.naturalHeight*backgroundScale;b.drawImage(backgroundImg,-w/2+backgroundOffsetX,-h/2+backgroundOffsetY,w,h)}
  try{window.MFAmbient?.draw?.(b)}catch(e){console.warn('[MF] ambientação',e)}
- b.beginPath();let hw=TILE_W/2,hh=TILE_H/2;
- for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const gx=(x-y)*hw,gy=(x+y)*hh;b.moveTo(gx,gy-hh);b.lineTo(gx+hw,gy);b.lineTo(gx,gy+hh);b.lineTo(gx-hw,gy);b.closePath()}
+ const hw=TILE_W/2,hh=TILE_H/2;
  const paintedGround=!!window.MFAmbient?.groundReady?.(); // chão pintado (ambient.js) substitui o losango liso
- let c=project.world.ground||'#71c541';let opacity=Math.max(0,Math.min(1,finite(project.world.opacity,.32)));if(!paintedGround){b.globalAlpha=opacity;b.fillStyle=c;b.fill();b.globalAlpha=1;}
+ let c=project.world.ground||'#71c541';let opacity=Math.max(0,Math.min(1,finite(project.world.opacity,.32)));if(!paintedGround){b.globalAlpha=opacity;b.fillStyle=c;b.fill(groundGridPath());b.globalAlpha=1;}
  if(!paintedGround&&diamondImg.complete&&diamondImg.naturalWidth>0){
  b.save();
  // Máscara isométrica limpa: não depende de caminhos dos quadradinhos sobrepostos.
@@ -7302,9 +7326,11 @@ function spritePlace(key,src,worldX,worldY,w,h,flip=1,footY=worldY){
  if(item.src!==src){item.img.src=src;item.src=src;item.img.classList.toggle('mf-sheep-idle',src.includes('673fc36f27a6b61b5c3b-ovelha-grande.png'));}item.frame=frame;
  const sx=MFViewport.width/2+offsetX+worldX*zoom,sy=MFViewport.height/3+offsetY+worldY*zoom;
  const ww=w*zoom,hh=h*zoom,el=item.img;
- el.style.left=(sx-ww/2)+'px';el.style.top=(sy-hh)+'px';el.style.width=ww+'px';el.style.height=hh+'px';
- el.style.transform=`scaleX(${flip<0?-1:1})`;
- el.style.zIndex=String(mfDepthZ(footY));el.style.display='block';return true;
+ // Não invalide layout/composição do navegador quando o sprite não mudou.
+ const style={left:(sx-ww/2)+'px',top:(sy-hh)+'px',width:ww+'px',height:hh+'px',
+  transform:`scaleX(${flip<0?-1:1})`,zIndex:String(mfDepthZ(footY)),display:'block'};
+ for(const prop in style)if(el.style[prop]!==style[prop])el.style[prop]=style[prop];
+ return true;
 }
 function gifPlace(key,src,worldX,worldY,w,h,flip=1,z=5){
  if(!isGif(src))return false;
@@ -7315,7 +7341,7 @@ function frontAnimalPlace(key,src,worldX,worldY,w,h,footY=worldY,flip=1){
  // prioridade determinada por Y, não por z-index fixo.
  return spritePlace(key,src,worldX,worldY,w,h,flip,footY);
 }
-function gifBegin(){frame++}function gifEnd(){for(const [key,val] of gifCache)if(val.frame!==frame)val.img.style.display='none'}
+function gifBegin(){frame++}function gifEnd(){for(const val of gifCache.values())if(val.frame!==frame&&val.img.style.display!=='none')val.img.style.display='none'}
 function apply(p,opts={}){project=merge(copy(def),p||{});
  const w=project.world,c=project.camera,t=project.truck;
  COLS=Math.max(20,Math.min(100,finite(w.cols,COLS)));ROWS=Math.max(20,Math.min(100,finite(w.rows,ROWS)));
@@ -7365,11 +7391,11 @@ function editorViewport(){if(!window.__MF_EDITOR_EDITING)return {left:0,right:MF
  return {left:l,right:MFViewport.width-r,top:59,bottom:MFViewport.height};}
 window.MFAdapter={version:"5.3",defaults:def,get project(){return project},set project(v){project=v},merge,clone:copy,apply,captureState,applyState,saveElements,applyElement,applyItem,applyShopAppearance,applyMenuAppearance,clampCamera:clampNewCamera,cache,gifPlace,spritePlace,frontAnimalPlace,gifBegin,gifEnd,isGif,elementSelector:movableSelector,salePreview,editorViewport,mobileView,currentElements,applyLayoutProfile,scaleForStructure,inertia,cancelGlide,flush(){cache.sig='';requestRedraw()},floatPosition};
 // Adiciona zoom com foco no ponteiro e pan com arrastar (somente quando não se está manipulando itens).
-let panning=false,moved=false,initial=null,justPanned=0;
-let glideVX=0,glideVY=0,lastPanTime=0,gliding=false;
+let justPanned=0;
+let glideVX=0,glideVY=0,gliding=false;
 function cancelGlide(){glideVX=glideVY=0;gliding=false}
 function inertia(vx,vy){if(!project.camera?.inertiaEnabled)return;glideVX=Number(vx)||0;glideVY=Number(vy)||0;gliding=true}
-function tickGlide(){requestAnimationFrame(tickGlide);if(!gliding||panning||document.hidden)return;const friction=Math.max(.7,Math.min(.97,Number(project.camera?.friction)||.88));
+function tickGlide(){requestAnimationFrame(tickGlide);if(!gliding||mfGesture||document.hidden)return;const friction=Math.max(.7,Math.min(.97,Number(project.camera?.friction)||.88));
  offsetX+=glideVX;offsetY+=glideVY;const bx=offsetX,by=offsetY;clampNewCamera();if(Math.abs(offsetX-bx)>1)glideVX=0;if(Math.abs(offsetY-by)>1)glideVY=0;
  glideVX*=friction;glideVY*=friction;if(Math.hypot(glideVX,glideVY)<.15)cancelGlide();requestRedraw();}
 requestAnimationFrame(tickGlide);
@@ -7378,7 +7404,7 @@ requestAnimationFrame(tickGlide);
 let mfGesture=null,mfSpace=false,mfLastHarvest='',mfLastHarvestAt=0;
 window.addEventListener('keydown',e=>{if(e.code==='Space'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||'')&&!document.activeElement?.isContentEditable){mfSpace=true;if(!window.__MF_EDITOR_EDITING)e.preventDefault()}},true);
 window.addEventListener('keyup',e=>{if(e.code==='Space')mfSpace=false},true);
-window.addEventListener('blur',()=>{mfSpace=false;mfGesture=null;window.__MF_INPUT_MODE=null});
+window.addEventListener('blur',()=>{mfSpace=false;mfGesture=null;window.__MF_INPUT_MODE=null;cancelGlide()});
 function mfTileAtClient(cx,cy){const r=canvas.getBoundingClientRect();return screenPointToTile((cx-r.left-MFViewport.width/2-offsetX)/zoom,(cy-r.top-MFViewport.height/3-offsetY)/zoom)}
 function mfTryHarvest(cx,cy){const tile=mfTileAtClient(cx,cy);if(!tile)return;const key=tile.gx+','+tile.gy,now=performance.now();if(key===mfLastHarvest&&now-mfLastHarvestAt<350)return;mfLastHarvest=key;mfLastHarvestAt=now;
  // Dispara o mesmo fluxo de clique usado pelo jogo, sem iniciar outro ciclo de renderização.
@@ -7394,7 +7420,15 @@ canvas.addEventListener('mousedown',e=>{if(window.__MF_EDITOR_EDITING||modoColoc
 },true);
 window.addEventListener('mousemove',e=>{const g=mfGesture;if(!g||window.__MF_EDITOR_EDITING)return;
  const dx=e.clientX-g.x,dy=e.clientY-g.y;if(Math.hypot(dx,dy)>5)g.moved=true;
- if(g.mode==='pan'){if(!g.moved)return;g.vx=e.clientX-g.lastX;g.vy=e.clientY-g.lastY;offsetX=g.ox+dx;offsetY=g.oy+dy;clampNewCamera();requestRedraw();}
+ if(g.mode==='pan'){if(!g.moved)return;
+  g.vx=e.clientX-g.lastX;g.vy=e.clientY-g.lastY;
+  const requestedX=g.ox+dx,requestedY=g.oy+dy;
+  offsetX=requestedX;offsetY=requestedY;clampNewCamera();
+  // Quando atinge o limite, rebaseia o gesto para evitar câmera "grudada"
+  // e salto ao inverter o sentido do arrasto.
+  g.ox+=offsetX-requestedX;g.oy+=offsetY-requestedY;
+  requestRedraw();
+ }
  else if(g.moved){/* A colheita continua nos listeners originais do jogo. */}
  g.lastX=e.clientX;g.lastY=e.clientY;
 },true);
@@ -7404,9 +7438,8 @@ window.addEventListener('mouseup',e=>{const g=mfGesture;if(!g)return;
  mfGesture=null;window.__MF_INPUT_MODE=null;
 },true);
 canvas.addEventListener('contextmenu',e=>{if(!window.__MF_EDITOR_EDITING)e.preventDefault()});
-canvas.addEventListener('mousedown',e=>{if(e.button!==0||window.__MF_EDITOR_EDITING||modoColocar||modoMover||modoTrator||window.MFObjects?.placing?.()||window.__MF_INPUT_MODE==='harvest'||window.__MF_INPUT_MODE==='pan')return;cancelGlide();panning=true;moved=false;lastPanTime=performance.now();initial={mx:e.clientX,my:e.clientY,x:offsetX,y:offsetY,prevX:e.clientX,prevY:e.clientY};},true);
-window.addEventListener('mousemove',e=>{if(!panning||!initial)return;let dx=e.clientX-initial.mx,dy=e.clientY-initial.my;if(!moved&&Math.hypot(dx,dy)>8)moved=true;if(moved){const t=performance.now(),delta=Math.max(8,t-lastPanTime),step=Math.min(2,16.67/delta);glideVX=(e.clientX-initial.prevX)*step;glideVY=(e.clientY-initial.prevY)*step;initial.prevX=e.clientX;initial.prevY=e.clientY;lastPanTime=t;offsetX=initial.x+dx;offsetY=initial.y+dy;clampNewCamera();requestRedraw()}},true);
-window.addEventListener('mouseup',()=>{if(moved){justPanned=performance.now();inertia(glideVX,glideVY)}panning=false;initial=null},true);
+// Pan/arrasto agora têm um único controlador (mfGesture); o listener
+// legado duplicado causava trabalho e disputa pelo mesmo offset da câmera.
 canvas.addEventListener('click',e=>{if(performance.now()-justPanned<180){e.preventDefault();e.stopImmediatePropagation()}},true);
 canvas.addEventListener('wheel',e=>{e.preventDefault();e.stopImmediatePropagation();const r=canvas.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top;
  cancelGlide();const wx=(sx-MFViewport.width/2-offsetX)/zoom,wy=(sy-MFViewport.height/3-offsetY)/zoom;
@@ -7419,7 +7452,6 @@ window.addEventListener('pageshow',refreshRenderSurface);
 window.visualViewport?.addEventListener('resize',refreshRenderSurface);
 canvas.addEventListener('contextrestored',refreshRenderSurface);
 
-window.addEventListener('blur',()=>{panning=false;cancelGlide()});
 // A versão editável usa JSON como fonte única. A versão exportada contém apenas este adaptador + jogo.
 window.MFProjectReady=new Promise((resolve,reject)=>{setTimeout(()=>{try{apply(project);if(!project.game&&typeof loadGameState==='function')loadGameState();resolve()}catch(err){console.error('[MF] Erro na inicialização',err);reject(err)}},0)});
 })();
