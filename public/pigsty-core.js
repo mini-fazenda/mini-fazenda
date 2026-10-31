@@ -1,6 +1,6 @@
 /* Configuração e regras do Chiqueiro; todo crescimento usa data absoluta. */
 (function(root){
- const CONFIG={levels:[{level:1,capacity:3,cost:0,size:6},{level:12,capacity:6,cost:5000,size:8},{level:25,capacity:10,cost:12000,size:10}],pigPrice:2000,growTime:90*60000,minWeight:20,maxWeight:120,maxSale:5000,saleXP:0};
+ const CONFIG={levels:[{level:1,capacity:3,cost:2000,size:6},{level:12,capacity:6,cost:5000,size:8},{level:25,capacity:10,cost:12000,size:10}],pigPrice:2000,growTime:90*60000,minWeight:20,maxWeight:120,maxSale:5000,saleXP:0};
  const is=t=>t?.itemId==='item-chiqueiro'||!!t?.pigsty;
  const info=t=>CONFIG.levels[Math.max(0,Math.min(2,(t?.pigsty?.level||1)-1))];
  function normalize(t){if(!is(t))return t;t.pigsty||={};const s=t.pigsty;s.level=Math.max(1,Math.min(3,Math.floor(Number(s.level)||1)));s.orientation=s.orientation?1:0;s.pigs=(Array.isArray(s.pigs)?s.pigs:Object.values(s.pigs||{})).filter(p=>p&&typeof p.id==='string'&&Number.isFinite(p.bornAt));s.notices||={};return t;}
