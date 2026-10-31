@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import '../public/pig-weight.js';
+const core=MFPigWeight;
+test('porco cresce de 20 a 120kg em 90min, com preço proporcional limitado a 5000',()=>{const t={animal:{tipo:'porco'}};core.start(t,1000);assert.equal(core.state(t,1000).weight,20);assert.equal(core.state(t,1000).coins,833);for(const weight of [40,47,70,76,100,120]){const now=1000+(weight-20)/100*core.TIME,s=core.sync(t,now);assert.ok(Math.abs(s.weight-weight)<1e-8);assert.equal(s.coins,Math.floor(weight*5000/120));}assert.equal(core.state(t,1000+core.TIME*5).coins,5000);assert.equal(core.state(JSON.parse(JSON.stringify(t)),1000+core.TIME).weight,120);});
