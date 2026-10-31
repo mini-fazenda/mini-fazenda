@@ -126,7 +126,10 @@ function watchVisit(uid,initial){
     if(!data?.state){gate('Esta fazenda não está disponível no momento.');return;}
     const version=Number(data.revision)||0;
     if(version<visitRevision)return;
-    if(version===visitRevision&&data.saveId===visitData?.saveId&&Number(data.updatedAt||0)<=Number(visitData?.updatedAt||0))return;
+    if(version===visitRevision){
+      const timestamp=Number(data.updatedAt)||0,previousAt=Number(visitData?.updatedAt)||0;
+      if(timestamp<previousAt||timestamp===previousAt&&data.saveId===visitData?.saveId)return;
+    }
     visitRevision=version;visitData=data;
     if(ready&&bridge?.applyVisit){
       try{bridge.applyVisit(data.state,data.updatedAt);$('farm-title').textContent='Visitando: '+(data.state.farmName||'Fazenda');if(connected)$('gate').hidden=true;status('Visita em tempo real');}catch(e){gate('Não foi possível atualizar a visita. Volte à sua fazenda e tente novamente.');console.warn('[visita]',e);}
