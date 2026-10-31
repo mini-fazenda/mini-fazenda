@@ -1,5 +1,5 @@
 import {atomicFarmSave} from './atomic-farm-save.js?v=1';
-import {publicState} from './public-state.js?v=1';
+import {publicProjection,reconcilePublicProjection} from './public-projection.js?v=1';
 import {conditionalSave,isMaxRetry} from './conditional-save.js?v=1';
 import {normalizeSave,documentRevision,progressText} from './save-compat.js?v=legacy-1';
 import {nextDocument,clearLegacySaves,recoverPendingState} from './persistence.js?v=legacy-1';
@@ -73,9 +73,13 @@ function checkpoint(){
     void flush().catch(e=>{console.warn('[save]',e);retryPending(e)});
   }catch(e){saveError(e)}
 }
-function scheduleProjection(state,version,run){
-  if(run!==epoch||stopped)return;
-  if(!projectionPending||version>=projectionPending.version)projectionPending={state,version,run,uid:user.uid,account:user};
+function scheduleProjection(state,version,run,saveId){
+  if(run!==epoch||stopped||!state)return;
+  // Nunca publicar uma recuperação local não confirmada como se fosse save do dono.
+  // A publicação usa apenas a revisão e o saveId da leitura confirmada do Firebase.
+  if(!projectionPending||version>=projectionPending.version){
+    projectionPending={state,version,saveId,document:publicProjection(state,version,saveId,sdk.serverTimestamp()),run,uid:user.uid,account:user};
+  }
   void flushProjection();
 }
 async function flushProjection(){
@@ -84,8 +88,8 @@ async function flushProjection(){
   const operation=(async()=>{
     const active=()=>record.run===epoch&&sessionActive&&!stopped;
     const update=current=>{
-      if(!active()||current?.revision>record.version)return;
-      return {state:publicState(record.state),revision:record.version,updatedAt:sdk.serverTimestamp()};
+      if(!active())return;
+      return reconcilePublicProjection(current,record.document);
     };
     try{
       let result;
@@ -94,12 +98,17 @@ async function flushProjection(){
       if(!active())return;
       const publishedRevision=Number(result.snapshot.val()?.revision)||0;
       if(!result.committed&&publishedRevision<record.version)throw new Error('visit/revision-conflict');
+      if(!result.committed&&publishedRevision===record.version&&record.saveId&&result.snapshot.val()?.saveId!==record.saveId){
+        throw new Error('visit/save-id-mismatch');
+      }
       if(projectionPending===record)projectionPending=null;
+      if(!pending&&!saveBlocked&&ready&&!visiting)status('Salvo na nuvem e disponível para visitas');
       if(publishedRevision>record.version)return; // Evita regredir diretório e perfil da revisão mais recente.
       // Falhas no diretório/perfil não devem descartar uma atualização visual ainda pendente.
       try{await sdk.set(sdk.ref(db,`directory/${record.uid}`),{name:record.state.farmName||'Fazenda',level:record.state.playerLevel||1,updatedAt:sdk.serverTimestamp()});void publishProfile(record.state);}catch(e){console.warn('[diretório]',e);}
     }catch(e){
       console.warn('[publicação da visita]',e);
+      if(record.run===epoch&&!stopped&&!visiting)status('Save confirmado, mas a versão para visitas ainda está sincronizando. Nova tentativa automática.');
       clearTimeout(projectionTimer);projectionTimer=setTimeout(()=>{if(record.run===epoch)void flushProjection();},3000);
     }
   })();
@@ -117,7 +126,7 @@ function watchVisit(uid,initial){
     if(!data?.state){gate('Esta fazenda não está disponível no momento.');return;}
     const version=Number(data.revision)||0;
     if(version<visitRevision)return;
-    if(version===visitRevision&&Number(data.updatedAt||0)<=Number(visitData?.updatedAt||0))return;
+    if(version===visitRevision&&data.saveId===visitData?.saveId&&Number(data.updatedAt||0)<=Number(visitData?.updatedAt||0))return;
     visitRevision=version;visitData=data;
     if(ready&&bridge?.applyVisit){
       try{bridge.applyVisit(data.state,data.updatedAt);$('farm-title').textContent='Visitando: '+(data.state.farmName||'Fazenda');if(connected)$('gate').hidden=true;status('Visita em tempo real');}catch(e){gate('Não foi possível atualizar a visita. Volte à sua fazenda e tente novamente.');console.warn('[visita]',e);}
@@ -315,9 +324,9 @@ async function boot(account){
     if(run===epoch&&!stopped&&snap.val()!==null&&snap.val()!==sessionId)void disconnectPrevious();
   },e=>{console.warn('[session listener]',e);status('Verificando sessão…')});
   mount(ownState,false,stateSavedAt);
-  if(ownState)scheduleProjection(ownState,revision,run);
-  // A projeção pública deve refletir apenas o save confirmado, não recuperação pendente local.
-  if(confirmedForProjection)scheduleProjection({...confirmedForProjection,savedAt:confirmedForProjection.savedAt||remote?.updatedAt},revision,run);
+  // Publicação SOMENTE da versão confirmada no Firebase. Se uma recuperação
+  // local está aguardando salvar, o save atômico publicará essa versão depois.
+  if(confirmedForProjection)scheduleProjection({...confirmedForProjection,savedAt:confirmedForProjection.savedAt||remote?.updatedAt},revision,run,confirmedSaveId);
   void startFriends({sdk,db,uid:user.uid,visit:visitFarm,applyFertilize}).then(()=>{if(run===epoch&&ownState)void publishProfile(ownState)}).catch(e=>console.warn('[amigos]',e));
 }
 async function drain(){
