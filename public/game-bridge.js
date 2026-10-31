@@ -23,10 +23,12 @@
     return {...simple(a),alvo:{gx:a.alvo.gx,gy:a.alvo.gy},...(a.seed?{seed:clone(a.seed)}:{}),elapsed:a.startTime?Math.max(0,performance.now()-a.startTime):0};
   }
   let activeSeconds=0,background=null;
-  function backgroundSnapshot(at=Date.now()){
-    const action=player.acaoAtual;
+  function backgroundSnapshot(at=Date.now(),npcAt=at){
+    const action=player.acaoAtual,npcAction=aradora.acaoAtual;
     return {at,action,elapsed:action?.startTime?
-      Math.max(0,performance.now()-action.startTime):Math.max(0,Number(action?.elapsed)||0)};
+      Math.max(0,performance.now()-action.startTime):Math.max(0,Number(action?.elapsed)||0),
+      npcAt,npcAction,npcElapsed:npcAction?.startTime?
+      Math.max(0,performance.now()-npcAction.startTime):Math.max(0,Number(npcAction?.elapsed)||0)};
   }
   function pauseBackground(){
     if(background||host.isVisiting())return;
@@ -36,7 +38,8 @@
   function resumeBackground(notify=true){
     if(!background||host.isVisiting()||!host.playing())return;
     const paused=background,now=Date.now();
-    if(now<=paused.at||(document.hidden&&now-paused.at<5000))return;
+    if(now<=Math.min(paused.at,paused.npcAt??paused.at)||
+       (document.hidden&&now-Math.min(paused.at,paused.npcAt??paused.at)<5000))return;
     background=null;
     // Plantações precisam amadurecer ANTES de resolver as colheitas enfileiradas.
     syncAllGrowth(now);
@@ -52,7 +55,13 @@
       if(t.animal)window.MFAnimalProduction?.sync(t.animal);
       if(t.fruitTree)window.MFFruitTrees?.sync(t);
     }
-    if(document.hidden)background=backgroundSnapshot(cursor);
+    let npcCursor=now;
+    if(aradora.spawned&&(paused.npcAction===aradora.acaoAtual||!paused.npcAction)){
+      if(aradora.acaoAtual)aradora.acaoAtual.elapsed=paused.npcElapsed||0;
+      npcCursor=resumeOfflineAradora({savedAt:paused.npcAt??paused.at});
+      if(aradora.acaoAtual)delete aradora.acaoAtual.elapsed;
+    }
+    if(document.hidden)background=backgroundSnapshot(cursor,npcCursor);
     else requestRedraw();
     if(notify)host.changed('background-progress');
   }
@@ -78,7 +87,8 @@
     Object.assign(data, { version: 2, savedAt:background?.at||Date.now(), offsetX, offsetY, zoom,activeSeconds,character:window.__mfCharacter||null,
       player: {...window.MFSaveRuntime.actorProgress(data.player), gx:player.gx,gy:player.gy,x:player.x,y:player.y,facing:player.facing,path:clone(player.path),action:actionState(player)},
       aradora: {...window.MFSaveRuntime.actorProgress(data.aradora),x:aradora.x,y:aradora.y,facing:aradora.facing,
-        path:clone(aradora.path || []),action:actionState(aradora),fila:clone((aradora.fila || []).map(t=>({gx:t.gx,gy:t.gy})))},
+        path:clone(aradora.path || []),action:actionState(aradora),fila:clone((aradora.fila || []).map(t=>({gx:t.gx,gy:t.gy}))),
+        ...(background?{offlineAt:background.npcAt}: {})},
       runtimeVersion:1,
       truck: simple(caminhaoVendas),nextTruckAt:window.__mfTruckDue || 0,
       aradoraWelcomeShown:!!window.__aradoraWelcomeShown,
@@ -186,6 +196,7 @@
     arando=player.acaoAtual?.state==='ararando';
     if(arando)player.currentSprite=spriteArando;
     resumeOfflinePlanting(data);
+    resumeOfflineAradora({savedAt:data.aradora?.offlineAt||data.savedAt});
     atualizarBloqueioTerrasPorNivel();
     requestRedraw();
   }
@@ -225,6 +236,57 @@
       player.acaoAtual=null;arando=false;player.currentSprite=player.previousSprite||spriteFront;
       cursor=completeAt;
       if(filaAcoes.length)iniciarArar(filaAcoes.shift());
+    }
+    return now;
+  }
+  // Aradora automática também avança pelo tempo real e só processa terras secas válidas.
+  // O número de passos é limitado aos terrenos existentes: nada é gerado em segundo plano.
+  function resumeOfflineAradora({savedAt}){
+    const now=Date.now(),start=Number(savedAt);
+    if(!aradora.spawned||!Number.isFinite(start)||start<1e11||start>=now)return now;
+    let cursor=start;
+    for(let i=0;i<=terrenos.length+1&&cursor<now;i++){
+      if(!aradora.acaoAtual){
+        processAradora();
+        if(!aradora.acaoAtual)break;
+      }
+      const a=aradora.acaoAtual,t=a.alvo;
+      const conflicting=player.acaoAtual?.alvo===t||filaAcoes.includes(t)||
+        (t?._ocupant&&t._ocupant!=='aradora');
+      if(!t||!terrenos.includes(t)||t.cultura||!String(t.imgSrc||'').includes('terra-seca')||conflicting){
+        if(t?._ocupant==='aradora')t._ocupant=null;
+        aradora.acaoAtual=null;aradora.path=[];aradora.arando=false;
+        continue;
+      }
+      let travel=0;
+      if(a.state==='indo'){
+        let from={x:aradora.x,y:aradora.y};
+        for(const step of aradora.path||[]){
+          const to=gridToScreen(step.x,step.y);
+          travel+=Math.hypot(to.x-from.x,to.y-from.y);from=to;
+        }
+        travel=1000*travel/180;
+      }
+      const elapsed=a.state==='ararando'?Math.max(0,Number(a.elapsed)||0):0;
+      const duration=Math.max(1,Number(a.duration)||1500);
+      const completeAt=cursor+travel+Math.max(0,duration-elapsed);
+      if(completeAt>now){
+        if(now-cursor>=travel){
+          aradora.path=[];aradora.gx=t.gx;aradora.gy=t.gy;
+          Object.assign(aradora,gridToScreen(t.gx,t.gy));
+          a.state='ararando';a.startTime=performance.now()-(elapsed+now-cursor-travel);
+          a.progress=Math.min(1,(elapsed+now-cursor-travel)/duration);
+          aradora.arando=true;cursor=now;
+        }
+        return cursor;
+      }
+      t.imgSrc=TERRA_ARADA_SRC;t.cultura=null;
+      if(t._ocupant==='aradora')t._ocupant=null;
+      aradora.gx=t.gx;aradora.gy=t.gy;
+      Object.assign(aradora,gridToScreen(t.gx,t.gy));
+      aradora.path=[];aradora.acaoAtual=null;aradora.arando=false;
+      aradora.currentSprite=aradora.previousSprite||aradora.spriteFront;
+      addXP(1);cursor=completeAt;
     }
     return now;
   }
