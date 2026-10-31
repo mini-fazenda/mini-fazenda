@@ -221,6 +221,7 @@
   #mf-shop .mfs-price img{width:24px;height:24px}
   #mf-shop .mfs-buy{border:2px solid #2f6e1f;border-radius:10px;background:linear-gradient(#8ee05d,#4ea72e);color:#fff;font:700 16px Amfost,Arial,sans-serif;padding:4px 18px;cursor:pointer;
     text-shadow:-1px -1px 0 #2f6e1f,1px -1px 0 #2f6e1f,-1px 1px 0 #2f6e1f,1px 1px 0 #2f6e1f}
+  #mf-shop .mfs-buy:disabled{max-width:100%;font-size:13px;padding:4px 8px;background:#9a9a9a;border-color:#666;cursor:default}
   #mf-shop .mfs-card.lock{filter:grayscale(.85);opacity:.75;cursor:default}
   #mf-shop .mfs-card.lock .mfs-buy{background:#9a9a9a;border-color:#666}
   #mf-shop .mfs-lock{position:absolute;top:24%;left:50%;transform:translateX(-50%);background:#3b260bdd;color:#ffe36b;padding:4px 12px;border-radius:10px;font-size:16px;white-space:nowrap;z-index:2}
@@ -295,7 +296,8 @@
         let grow = Number(conf.growTime || card.dataset.growTime) || (typeof CROP_TIME_TABLE !== 'undefined' ? CROP_TIME_TABLE[tipo] : 0) || 0;
         const production=tab==='animais'?window.MFAnimalProduction?.types?.[tipo]:null;
         if(tab==='animais')grow=tipo==='porco'?(window.MFPigstyCore?.CONFIG.growTime||5400000):production?.cycle||0;
-        let sell = tipo==='porco'?(window.MFPigstyCore?.CONFIG.maxSale||5000):production?production.saleCoins*production.amount:null;
+        const tree=window.MFFruitTrees?.types?.[tipo.replace(/^arvore-/, '')];
+        let sell = tree?.directCoins?tree.saleCoins:tipo==='porco'?(window.MFPigstyCore?.CONFIG.maxSale||5000):production?production.saleCoins*production.amount:null;
         if (tab === 'sementes') {
           const one = window.MFAdapter?.salePreview?.(price, xp, tipo)?.coins;
           if (Number.isFinite(one)) sell = one * (Number(conf.yieldCount) || Number(conf.yield) || YIELD[tipo] || 1);
@@ -305,7 +307,7 @@
           name: card.querySelector('span')?.textContent?.trim() || tipo,
           icon: card.querySelector('img')?.src || card.dataset.img || '',
           pic: tab === 'sementes' ? (conf.shopImg || card.dataset.img || card.querySelector('img')?.src) : (card.querySelector('img')?.src || card.dataset.img),
-          production, pigWeight:tipo==='porco', price, xp, level: Math.max(1, Number(card.dataset.nivel || conf.level) || 1), grow, sell,
+          tree, production, pigWeight:tipo==='porco', price, xp, level: Math.max(1, Number(card.dataset.nivel || conf.level) || 1), grow, sell,
           desc: tipo==='porco'?conf.description:tab==='animais'?(production?`Colocação imediata. Primeira coleta de ${production.name.toLowerCase()} pronta ao comprar. Próximas coletas a cada ${fmtTime(production.cycle)}. Venda: ${production.saleCoins} moedas por unidade.`:'Colocação imediata. Este animal ainda não possui produção de itens.') : conf.description || DESC[tipo] || (tab === 'animais' ? 'Um novo amigo para a sua fazenda.' : 'Item especial para a sua fazenda.'),
         };
       });
@@ -344,21 +346,23 @@
   function shopMsg(t) { const m = shop.querySelector('.mfs-msg'); m.textContent = t; m.classList.add('on'); clearTimeout(msgTimer); msgTimer = setTimeout(() => m.classList.remove('on'), 1800); }
 
   function cardHTML(it, lv) {
-    const lock = it.level > lv;
+    const lock = it.level > lv, short=it.tree?.directCoins&&moedas<it.price;
     return `<div class="mfs-card${lock ? ' lock' : ''}${state.sel === it.id ? ' sel' : ''}" data-id="${esc(it.id)}">
-      ${lock ? `<div class="mfs-lock">🔒 Nível ${it.level}</div>` : ''}
+      ${lock ? `<div class="mfs-lock">🔒 Libera no nível ${it.level}</div>` : ''}
       <h4>${esc(it.name)}</h4>
       <div class="mfs-img"><img alt="" src="${esc(it.icon)}"></div>
       <div class="mfs-info"><span><img alt="" src="${esc(starSrc())}"> ★ ${it.xp}</span>${it.grow ? `<span>⏱ ${it.production?'Coleta: ':''}${fmtTime(it.grow)}</span>` : ''}</div>
+      ${it.tree?.directCoins?`<div class="mfs-sell">Coleta: +${it.tree.stars} XP</div>`:''}
       ${it.sell != null ? `<div class="mfs-sell">${it.pigWeight?'Venda máxima:':it.production?`Vender ${esc(it.production.name)}:`:'Colher por:'} <img alt="" style="width:14px;height:14px;vertical-align:-3px" src="${esc(coinSrc())}"> ${it.sell}</div>` : ''}
       <div class="mfs-price"><img alt="" src="${esc(coinSrc())}">${it.price}${it.tab==='animais'?' <small>Comprar</small>':''}</div>
-      <button class="mfs-buy" type="button">${it.id==='item-chiqueiro'?'Posicionar':'Comprar'}</button></div>`;
+      <button class="mfs-buy" type="button" ${(it.tree?.directCoins&&(lock||short))?'disabled':''}>${short?'Moedas insuficientes':it.id==='item-chiqueiro'?'Posicionar':'Comprar'}</button></div>`;
   }
   function previewHTML(it) {
     if (!it) return '<div class="mfs-preview"><div class="t">Prévia</div><p style="border:0">Toque em um item para ver os detalhes.</p></div>';
     return `<div class="mfs-preview"><div class="t">Prévia</div><h3>${esc(it.name)}</h3>
       <div class="pic"><img alt="" src="${esc(it.pic)}"></div>
       <div class="mfs-info"><span><img alt="" src="${esc(starSrc())}"> Estrelas: ${it.xp}</span>${it.grow ? `<span>⏱ ${fmtTime(it.grow)}</span>` : ''}</div>
+      ${it.tree?.directCoins?`<div class="mfs-sell">XP: +${it.tree.plantXP} ao plantar · +${it.tree.stars} na coleta</div>`:''}
       ${it.sell != null ? `<div class="mfs-sell">${it.pigWeight?'Venda máxima:':it.production?`Vender ${esc(it.production.name)}:`:'Colher e vender:'} <img alt="" style="width:15px;height:15px;vertical-align:-3px" src="${esc(coinSrc())}"> ${it.sell}</div>` : ''}
       <div class="mfs-price"><img alt="" src="${esc(coinSrc())}">${it.price}</div>
       ${it.level > 1 ? `<div class="mfs-sell">Disponível no nível ${it.level}</div>` : ''}
