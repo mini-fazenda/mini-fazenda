@@ -1,0 +1,22 @@
+/* Consulta leve da versão publicada; atualização somente por ação do jogador. */
+export function watchRelease({currentVersion,fetchImpl=fetch,onAvailable,isActive=()=>true,now=Date.now,setTimer=setInterval,clearTimer=clearInterval,interval=60000}){
+ let checking=false,stopped=false,last=null;const valid=v=>typeof v==='string'&&/^[a-f0-9]{40}$/i.test(v);
+ async function check(){if(stopped||checking||!valid(currentVersion)||!isActive())return false;checking=true;const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),8000);
+  try{const response=await fetchImpl('release.json?check='+now(),{cache:'no-store',signal:controller.signal});if(!response.ok)return false;const {version}=await response.json();if(stopped||!valid(version)||version===currentVersion||version===last)return false;last=version;onAvailable(version);return true;}catch{return false;}finally{clearTimeout(timeout);checking=false;}
+ }
+ const timer=setTimer(()=>void check(),interval);return {check,stop(){stopped=true;clearTimer(timer);}};
+}
+export function createUpdater({prepare,reload,onState=()=>{}}){let busy=false;
+ return {async update(version){if(busy||!/^[a-f0-9]{40}$/i.test(version||''))return false;busy=true;onState('saving');try{if(await prepare()!==true)throw Error('Aguarde a sincronização do jogo.');reload(version);return true;}catch(e){onState('error',e?.message||'Não foi possível salvar. Tente novamente.');return false;}finally{busy=false;}},get busy(){return busy;}};
+}
+export function startUpdateNotice({currentVersion,prepare,document:doc=document,window:win=window}){
+ const panel=doc.createElement('aside');panel.id='mf-update-notice';panel.hidden=true;panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','Atualização do jogo');
+ panel.innerHTML='<section><div><strong>Nova versão disponível!</strong><p role="status" aria-live="polite">Atualize para receber as novidades.</p></div><button type="button" data-update>Atualizar jogo</button></section>';doc.body.append(panel);
+ const style=doc.createElement('style');style.textContent=`#mf-update-notice[hidden]{display:none!important}#mf-update-notice{position:fixed;inset:0;z-index:200000;display:grid;place-items:center;box-sizing:border-box;padding:16px;background:#10230edb;color:#603b20;font:16px Arial,sans-serif}#mf-update-notice>section{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:18px;width:min(520px,100%);box-sizing:border-box;padding:25px;border:4px solid #9a642c;border-radius:20px;background:#fff0c5;text-align:center;box-shadow:0 5px 18px #0005}#mf-update-notice strong{font-size:24px}#mf-update-notice p{margin:10px 0 0;line-height:1.4}#mf-update-notice button{font:bold 17px Arial,sans-serif;border:2px solid #3e7726;border-radius:10px;background:linear-gradient(#8ed648,#4f9a27);color:white;padding:13px 22px;cursor:pointer}#mf-update-notice button:disabled{opacity:.55;cursor:wait}#mf-update-notice button:focus-visible{outline:3px solid #187abc;outline-offset:2px}@media(max-height:450px){#mf-update-notice>section{padding:18px;gap:12px}#mf-update-notice strong{font-size:21px}}`;doc.head.append(style);
+ let available=null;const button=panel.querySelector('[data-update]'),message=panel.querySelector('p');
+ panel.addEventListener('keydown',event=>{if(event.key==='Escape'||event.key==='Tab'){event.preventDefault();event.stopPropagation();button.focus();}});
+ const updater=createUpdater({prepare,reload(version){const next=new URL(win.location.href);next.searchParams.set('mf_update',version);win.location.replace(next.href);},onState(state,error){button.disabled=state==='saving';button.textContent=state==='saving'?'Salvando…':'Atualizar jogo';message.textContent=state==='saving'?'Confirmando seu progresso antes de atualizar…':error;}});
+ const monitor=watchRelease({currentVersion,fetchImpl:win.fetch.bind(win),isActive:()=>!doc.hidden&&win.navigator.onLine!==false,onAvailable(version){available=version;panel.hidden=false;message.textContent='Atualize o jogo para continuar e receber as novidades.';button.focus();}});
+ button.onclick=()=>void updater.update(available);const check=()=>void monitor.check();doc.addEventListener('visibilitychange',check);win.addEventListener('online',check);void monitor.check();
+ return {check:monitor.check,stop(){monitor.stop();doc.removeEventListener('visibilitychange',check);win.removeEventListener('online',check);panel.remove();style.remove();}};
+}
