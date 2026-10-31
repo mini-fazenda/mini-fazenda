@@ -3,7 +3,7 @@
  const clone=x=>JSON.parse(JSON.stringify(x));
  const visiting=()=>!!window.MFHost?.isVisiting?.();
  const canStore=t=>!!t&&!t.cultura&&!t.animal&&!/terra-seca|terra-arada|arando-a-terra/.test(String(t.imgSrc))&&!!t.imgSrc;
- function snapshot(t){const data=Object.fromEntries(Object.entries(t).filter(([k,v])=>!k.startsWith('_')&&!['gx','gy'].includes(k)&&['string','number','boolean'].includes(typeof v)));if(t.fruitTree)data.fruitTree=clone(t.fruitTree);if(t.animal)data.animal=clone(t.animal);return data;}
+ function snapshot(t){const data=Object.fromEntries(Object.entries(t).filter(([k,v])=>!k.startsWith('_')&&!['gx','gy'].includes(k)&&['string','number','boolean'].includes(typeof v)));if(t.fruitTree)data.fruitTree=clone(t.fruitTree);if(t.animal)data.animal=clone(t.animal);if(t.pigsty)data.pigsty=clone(t.pigsty);return data;}
  function changed(){window.MFHost?.changed?.('object-storage');requestRedraw();}
  function store(t){
   if(visiting()||!canStore(t)||!terrenos.includes(t))return false;

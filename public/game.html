@@ -2533,6 +2533,7 @@ function getTerrenosSnapshot() {
           totalTime: (typeof t.animal.totalTime === 'number') ? t.animal.totalTime : (ANIMAL_ADULT && ANIMAL_ADULT[(t.animal.tipo||'').toLowerCase()] ? ANIMAL_ADULT[(t.animal.tipo||'').toLowerCase()].totalTime : 0)
         };
       }
+      if(t.pigsty)base.pigsty=JSON.parse(JSON.stringify(t.pigsty));
       if(t.animal)base.animal=JSON.parse(JSON.stringify(t.animal));
       if(t.cultura)base.cultura=JSON.parse(JSON.stringify(t.cultura));
       if(t.fruitTree)base.fruitTree={...t.fruitTree};
@@ -2601,6 +2602,7 @@ function restoreTerrenosFromSnapshot(arr) {
           reapplyAnimalFromTime(t);
         }
       }
+      if(it.pigsty)t.pigsty=JSON.parse(JSON.stringify(it.pigsty));
       if(it.fruitTree){t.fruitTree={...it.fruitTree};window.MFFruitTrees?.sync(t);}
       terrenos.push(t);
     });
@@ -7688,13 +7690,13 @@ window.fecharTodasOverlays=function(){document.querySelectorAll('#overlay-loja,#
 })();
 </script>
 
-<script src="extras.js?v=pig-weight-7"></script>
+<script src="extras.js?v=pigsty-shop-8"></script>
 <script src="sales-core.js?v=1"></script>
 <script src="inventory-sales.js?v=estoque-4"></script>
 <script src="daily-state.js?v=2"></script>
 <script src="daily-rewards.js?v=3"></script>
 <script src="truck-ui.js?v=entrega-explicita-1"></script>
-<script src="object-storage.js?v=level-gifts-2"></script>
+<script src="object-storage.js?v=pigsty-3"></script>
 <script src="pointer-menu.js?v=1"></script>
 <script src="barn-ui.js?v=1"></script>
 <script src="animal-tools.js?v=1"></script>
@@ -7721,9 +7723,11 @@ canvas.addEventListener('contextmenu', e => { if (window.MFCancelPlacing()) e.pr
 <script src="ajustes-celular.js?v=3"></script>
 <script src="tutorial.js?v=hidpi-1"></script>
 <script src="save-runtime.js?v=1"></script>
-<script src="move-controls.js?v=barn-rotate-4"></script>
+<script src="move-controls.js?v=pigsty-5"></script>
 <script src="level-rewards-core.js?v=1"></script>
 <script src="level-rewards.js?v=1"></script>
 <script src="pig-weight.js?v=1"></script>
 <script src="flags-pigs.js?v=1"></script>
+<script src="pigsty-core.js?v=1"></script>
+<script src="pigsty.js?v=1"></script>
 <script src="game-bridge.js?v=enclosed-position-5"></script>
