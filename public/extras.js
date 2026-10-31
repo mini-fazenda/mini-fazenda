@@ -294,8 +294,8 @@
         const price = Number(card.dataset.preco) || 0, xp = Number(card.dataset.xp) || 0;
         let grow = Number(conf.growTime || card.dataset.growTime) || (typeof CROP_TIME_TABLE !== 'undefined' ? CROP_TIME_TABLE[tipo] : 0) || 0;
         const production=tab==='animais'?window.MFAnimalProduction?.types?.[tipo]:null;
-        if(tab==='animais')grow=tipo==='porco'?5400000:production?.cycle||0;
-        let sell = tipo==='porco'?5000:production?production.saleCoins*production.amount:null;
+        if(tab==='animais')grow=tipo==='porco'?(window.MFPigstyCore?.CONFIG.growTime||5400000):production?.cycle||0;
+        let sell = tipo==='porco'?(window.MFPigstyCore?.CONFIG.maxSale||5000):production?production.saleCoins*production.amount:null;
         if (tab === 'sementes') {
           const one = window.MFAdapter?.salePreview?.(price, xp, tipo)?.coins;
           if (Number.isFinite(one)) sell = one * (Number(conf.yieldCount) || Number(conf.yield) || YIELD[tipo] || 1);
@@ -352,7 +352,7 @@
       <div class="mfs-info"><span><img alt="" src="${esc(starSrc())}"> ★ ${it.xp}</span>${it.grow ? `<span>⏱ ${it.production?'Coleta: ':''}${fmtTime(it.grow)}</span>` : ''}</div>
       ${it.sell != null ? `<div class="mfs-sell">${it.pigWeight?'Venda máxima:':it.production?`Vender ${esc(it.production.name)}:`:'Colher por:'} <img alt="" style="width:14px;height:14px;vertical-align:-3px" src="${esc(coinSrc())}"> ${it.sell}</div>` : ''}
       <div class="mfs-price"><img alt="" src="${esc(coinSrc())}">${it.price}${it.tab==='animais'?' <small>Comprar</small>':''}</div>
-      <button class="mfs-buy" type="button">Comprar</button></div>`;
+      <button class="mfs-buy" type="button">${it.id==='item-chiqueiro'?'Posicionar':'Comprar'}</button></div>`;
   }
   function previewHTML(it) {
     if (!it) return '<div class="mfs-preview"><div class="t">Prévia</div><p style="border:0">Toque em um item para ver os detalhes.</p></div>';
