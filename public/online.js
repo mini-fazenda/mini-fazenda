@@ -425,20 +425,62 @@ $('neighbors').onclick=async()=>{
   try{$('farms').showModal();await listFarms(true)}catch(e){$('farm-list').textContent='Não foi possível carregar as fazendas.'}
 };
 $('more').onclick=()=>listFarms().catch(e=>status(e.message));
+// iPhone/iPad e navegadores de dentro de apps (WhatsApp, Instagram, Facebook...) apagam o estado do
+// login por redirecionamento (o Firebase mostra "missing initial state"). Nesses aparelhos usamos só a
+// janela do Google (popup) e, se ela for bloqueada, pedimos um novo toque em vez de redirecionar.
+const UA=navigator.userAgent||'';
+const isIOS=/iPhone|iPad|iPod/.test(UA)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const inAppBrowser=/FBAN|FBAV|FB_IAB|Instagram|Line\/|WhatsApp|TikTok|musical_ly|Snapchat|Twitter|LinkedInApp|GSA\//.test(UA);
+const standaloneApp=window.navigator.standalone===true||window.matchMedia?.('(display-mode: standalone)')?.matches;
+const noRedirect=isIOS||inAppBrowser||standaloneApp;
+function openInBrowserHint(){
+  if(inAppBrowser)return' Se não abrir, toque em ⋯ (ou no ícone de compartilhar) e escolha "Abrir no Safari" ou "Abrir no navegador".';
+  if(standaloneApp)return' Se não abrir, jogue pelo Safari em vez do atalho da tela de início.';
+  return isIOS?' No iPhone, confira em Ajustes → Safari se "Bloquear Pop-ups" está desligado.':'';
+}
 $('login').onclick=async()=>{
   $('login').disabled=true;
   try{await sdk.signInWithPopup(auth,new sdk.GoogleAuthProvider())}
   catch(e){
     console.warn('[Google login]',e?.code,e);
     if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment'].includes(e?.code)){
+      if(noRedirect){gate('O navegador bloqueou a janela do Google. Toque em "Entrar com Google" de novo.'+openInBrowserHint());return}
       gate('O navegador bloqueou a janela Google. Redirecionando para entrar…');
       try{await sdk.signInWithRedirect(auth,new sdk.GoogleAuthProvider());return}catch(err){console.warn('[redirect]',err)}
     }
-    const messages={'auth/unauthorized-domain':'Este domínio não está autorizado no Firebase.','auth/popup-closed-by-user':'Login cancelado. Tente novamente.','auth/network-request-failed':'Falha de rede ao abrir o Google. Confira sua conexão e tente novamente.','auth/cancelled-popup-request':'Já existe uma tentativa de login em andamento.'};
-    gate(messages[e?.code]||`Não foi possível entrar com Google (${e?.code||'erro desconhecido'}).`);
+    const messages={'auth/unauthorized-domain':'Este domínio não está autorizado no Firebase.','auth/popup-closed-by-user':'Login cancelado. Tente novamente.'+(noRedirect?openInBrowserHint():''),'auth/network-request-failed':'Falha de rede ao abrir o Google. Confira sua conexão e tente novamente.','auth/cancelled-popup-request':'Já existe uma tentativa de login em andamento.','auth/web-storage-unsupported':'Este navegador está bloqueando o armazenamento do login.'+openInBrowserHint()};
+    gate(messages[e?.code]||`Não foi possível entrar com Google (${e?.code||'erro desconhecido'}).`+(noRedirect?openInBrowserHint():''));
   }finally{$('login').disabled=false}
 };
+// Aviso logo na tela de entrada para quem abriu de dentro de outro app
+if(inAppBrowser)setTimeout(()=>{const m=$('message');if(m&&!$('gate').hidden&&!/Safari|navegador/.test(m.textContent))m.textContent+=' Dica: o login funciona melhor abrindo o jogo no Safari ou no Chrome.'},1500);
 setInterval(checkpoint,1000);
+// Versão nova publicada no GitHub Pages: quem deixa o jogo aberto (comum no celular) continuava
+// rodando o código antigo por dias. Esse código antigo salvava a fazenda, mas a versão para visitas
+// ficava parada (regras novas do Firebase recusam a publicação antiga) — os amigos viam a fazenda velha.
+// Aqui o jogo confere release.json, salva o que estiver pendente e recarrega na versão nova.
+let releaseUpdating=false;
+async function checkRelease(){
+  const current=window.MF_BUILD_VERSION;
+  if(!current||releaseUpdating||document.hidden)return;
+  let latest='';
+  try{
+    const r=await fetch(new URL('release.json',location.href).href+'?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok)return;latest=String((await r.json())?.version||'');
+  }catch(e){return}
+  if(!latest||latest===current)return;
+  // Evita laço caso a CDN ainda entregue a página antiga logo após publicar.
+  const key='mf-release-reload:'+latest;
+  try{const last=Number(sessionStorage.getItem(key))||0;if(Date.now()-last<5*60000)return;sessionStorage.setItem(key,String(Date.now()));}catch(e){}
+  releaseUpdating=true;
+  gate('Nova versão do jogo disponível. Salvando e atualizando…');
+  try{if(!visiting)checkpoint();await Promise.race([flush(),new Promise(res=>setTimeout(res,8000))]);}catch(e){console.warn('[atualização]',e)}
+  const url=new URL(location.href);url.searchParams.set('v',latest);location.replace(url.href);
+}
+window.MFCheckRelease=checkRelease;
+setInterval(()=>void checkRelease(),120000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)void checkRelease()});
+
 // Sem beforeunload/preventDefault: fechar ou recarregar nunca abre confirmação.
 window.addEventListener('pagehide',()=>{checkpoint();void flush().catch(()=>{})});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){checkpoint();void flush().catch(()=>{})}});

@@ -35,7 +35,7 @@ const assert=require('node:assert/strict');const {chromium,webkit}=require('play
    lootParticles.length=0;
    const inv=__gameInventory.map;
    if(inv.melancia?.count!==4||inv.cenoura?.count!==5)throw Error('Colheita mudou a espécie/rendimento: '+JSON.stringify(inv));
-   const old=moedas;document.querySelector('#mf-sales-actions button:nth-child(2)').click();if(moedas!==old+4*325+5*14)throw Error('Colheita vendida com valor de outra espécie');
+   const old=moedas;document.querySelector('#mf-sales-actions button:nth-child(2)').click();const price=k=>MFFarmEconomy.crops[k].saleCoins;if(moedas!==old+4*price('melancia')+5*price('cenoura'))throw Error('Colheita vendida com valor de outra espécie');
    draw();if(!terrenos.find(t=>t.itemId==='item-celeiro')?.imgSrc.includes('celeiro'))throw Error('Depósito virou outro objeto');
   });
   assert.deepEqual(errors,[]);console.log('PASS: fila mista preserva preço/espécie, catálogo não troca culturas, escolha do personagem não contamina cache, recarga/colheita/venda corretas.');

@@ -47,14 +47,14 @@ const {chromium,webkit,devices}=require('playwright');
  await f.evaluate(()=>{if(__gameInventory.map.milho.count!==6)throw Error('Selecionar vendeu/entregou sem confirmação');});
  await f.locator('#mf-sales-actions button').first().dispatchEvent('click');
  await f.evaluate(()=>{
-  if(moedas!==1600||__gameInventory.map.milho)throw Error('Venda não creditou exatamente 600 moedas');
+  if(moedas!==1000+6*MFFarmEconomy.crops.milho.saleCoins||__gameInventory.map.milho)throw Error('Venda não creditou 6 milhos pelo preço da tabela');
   if(truckOrder.pedidos[0].entregue!==0)throw Error('Venda também entregou ao caminhão');
   document.getElementById('mf-sale-summary').hidden=true;addToInventory('milho',6,'');
   document.getElementById('overlay-bau').style.display='none';abrirOverlayCaminhao();
   // Usa o mapa autoritativo, mesmo que o contador visual esteja incorreto.
   __gameInventory.slots[__gameInventory.map.milho.slotIndex].dataset.count='0';
   parent.testPlaying=true;document.getElementById('mf-truck-deliver').click();parent.testPlaying=false;
-  if(truckOrder.pedidos[0].entregue!==6||__gameInventory.map.milho||moedas!==1600)throw Error('Entrega explícita incorreta');
+  if(truckOrder.pedidos[0].entregue!==6||__gameInventory.map.milho||moedas!==1000+6*MFFarmEconomy.crops.milho.saleCoins)throw Error('Entrega explícita incorreta');
  });
  console.log('PASS: configurações antigas são atualizadas; seleção preserva estoque; venda credita; entrega exige ação explícita.');
  if(errors.length)throw Error(errors.join('\n'));await browser.close();
