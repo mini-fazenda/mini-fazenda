@@ -25,7 +25,7 @@
  function update(){const t=selected,info=terrenos.includes(t)?describe(t):null;if(!info||modoMover||window.MFAdapter?.project?.display?.cropInfo===false){box.hidden=true;return;}
   box.hidden=false;box.querySelector('strong').textContent=info.name+' · '+info.percent+'%';const bar=box.querySelector('[role=progressbar]');bar.setAttribute('aria-valuenow',String(info.percent));bar.setAttribute('aria-label',info.name);bar.firstElementChild.style.width=info.percent+'%';box.querySelector('span').textContent=info.ready?'Pronto para coletar!':'Pronto em '+format(info.remaining);
   const r=canvas.getBoundingClientRect(),a=gridToScreen(t.gx+((t.w||1)-1)/2,t.gy+((t.h||1)-1)/2),img=preload(t.imgSrc),vs=root.MFAdapter?.scaleForStructure?.(t,Number(t.visualScale)||1)??(Number(t.visualScale)||1),height=img?.naturalWidth?TILE_W*(t.w||1)*vs*img.naturalHeight/img.naturalWidth:96;
-  const x=r.left+(MFViewport.width/2+offsetX+a.x*zoom)*r.width/MFViewport.width,y=r.top+(MFViewport.height/3+offsetY+(a.y+TILE_H*.9-height)*zoom)*r.height/MFViewport.height;
+  const x=r.left+(MFViewport.width/2+offsetX+a.x*zoom)*r.width/MFViewport.width,y=r.top+(MFViewport.height/3+offsetY+(t.fruitTree&&root.MFTreeCatalog&&img?.naturalWidth?root.MFTreeCatalog.geometry(t,img,a).y:a.y+TILE_H*.9-height)*zoom)*r.height/MFViewport.height;
   const top=Math.max(r.top+8,y-box.offsetHeight-10);box.style.left=Math.max(r.left+8,Math.min(r.right-184,x-88))+'px';box.style.top=Math.min(r.bottom-box.offsetHeight-8,top)+'px';
  }
  Object.assign(root.MFGrowthInfo,{update,select});setInterval(update,200);
