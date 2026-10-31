@@ -6,7 +6,7 @@
  for(const [type,c]of newTypes){const id='item-arvore-'+type;
   const description=`Produz a cada ${c.minutes} min. Lucro: ${c.saleCoins} moedas por colheita. XP: +${c.plantXP} ao plantar, +${c.stars} por colheita. Ocupa 2×2 blocos e produz para sempre.`;
   MFAdapter.project.items[id]={name:c.treeName,category:'arvores',type:'proprio',price:c.price,xp:c.plantXP,level:c.level,w:2,h:2,imgSrc:c.stages[0],icon:c.stages[2],growTime:c.cycle,visualScale:1,description};
-  const card=document.createElement('div');card.className='card-item';card.id=id;Object.assign(card.dataset,{category:'arvores',tipo:'proprio',preco:String(c.price),xp:String(c.plantXP),nivel:String(c.level),w:'2',h:'2',img:c.stages[0]});card.innerHTML='<span>'+c.treeName+'</span><img src="'+c.stages[2]+'">';
+  document.getElementById(id)?.remove();const card=document.createElement('div');card.className='card-item';card.id=id;Object.assign(card.dataset,{category:'arvores',tipo:'proprio',preco:String(c.price),xp:String(c.plantXP),nivel:String(c.level),w:'2',h:'2',img:c.stages[0]});card.innerHTML='<span>'+c.treeName+'</span><img src="'+c.stages[2]+'">';
   card.onclick=e=>{e.preventDefault();e.stopImmediatePropagation();if(window.MFHost?.isVisiting?.())return;if(playerLevel<c.level){notice('Libera no nível '+c.level);return;}if(moedas<c.price){notice('Moedas insuficientes');return;}setFarmMoveMode(false);placingItem={id,tipo:'proprio',price:c.price,xp:c.plantXP,w:2,h:2,imgSrc:c.stages[0],visualScale:1};selectedItem={...placingItem};modoColocar='placing';preview.active=true;preview.img=preload(c.stages[0]);requestRedraw();};document.getElementById('cards-grid').append(card);
   c.stages.forEach(preload);
  }
@@ -15,5 +15,9 @@
   if(!fits){notice('Precisa de um espaço livre de 2x2 para plantar esta árvore.');return false;}return spawn(gx,gy,...rest);
  };
  setInterval(()=>{if(window.MFHost?.isVisiting?.())return;for(const t of terrenos){const s=core.state(t);if(!s?.directCoins||!s.ready||t.fruitTree.readyNotified)continue;t.fruitTree.readyNotified=true;notice('Sua '+s.treeName+' está pronta para colher!');window.MFHost?.changed?.('tree-ready');}},1000);
- window.MFTreeCatalog={notice};
+ const cropDraw=MFCropSprites.drawSprite,cropHit=MFCropSprites.hit;
+ function geometry(t,img,a){const w=TILE_W*2,h=w*img.naturalHeight/img.naturalWidth;return {x:a.x-w/2,y:a.y+TILE_H-h,w,h};}
+ MFCropSprites.drawSprite=function(ctx,t,a,img){if(!core.config(t)?.directCoins)return cropDraw(ctx,t,a,img);const b=geometry(t,img,a);ctx.drawImage(img,b.x,b.y,b.w,b.h);return true;};
+ MFCropSprites.hit=function(t,img,x,y,a){if(!core.config(t)?.directCoins)return cropHit(t,img,x,y,a);const b=geometry(t,img,a);if(x<b.x||x>=b.x+b.w||y<b.y||y>=b.y+b.h)return false;try{const c=document.createElement('canvas');c.width=c.height=1;const g=c.getContext('2d');g.drawImage(img,(x-b.x)/b.w*img.naturalWidth,(y-b.y)/b.h*img.naturalHeight,1,1,0,0,1,1);return g.getImageData(0,0,1,1).data[3]>40;}catch(_){return true;}};
+ window.MFTreeCatalog={notice,geometry};
 })();
