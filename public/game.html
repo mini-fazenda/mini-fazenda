@@ -4755,17 +4755,18 @@ function expandMap(side) {
 // a máscara em vez de criar um canvas e repintar o PNG a cada movimento.
 const hoverMaskCache=new WeakMap();
 function hoverTintMask(img,w,h){
- let sizeCache=hoverMaskCache.get(img);
- if(!sizeCache){sizeCache=new Map();hoverMaskCache.set(img,sizeCache)}
+ // GIFs devem continuar refletindo o quadro animado atual no destaque.
+ const animated=!!window.MFAdapter?.isGif?.(img.src);
+ let sizeCache=animated?null:hoverMaskCache.get(img);
+ if(!sizeCache){sizeCache=new Map();if(!animated)hoverMaskCache.set(img,sizeCache)}
  const key=Math.ceil(w)+'x'+Math.ceil(h);
- if(sizeCache.has(key))return sizeCache.get(key);
+ if(!animated&&sizeCache.has(key))return sizeCache.get(key);
  const mask=document.createElement('canvas');
  mask.width=Math.max(1,Math.ceil(w));mask.height=Math.max(1,Math.ceil(h));
  const g=mask.getContext('2d');g.drawImage(img,0,0,w,h);
  g.globalCompositeOperation='source-in';g.fillStyle='rgba(255,255,210,0.16)';
  g.fillRect(0,0,w,h);
- if(sizeCache.size>=6)sizeCache.clear();
- sizeCache.set(key,mask);
+ if(!animated){if(sizeCache.size>=6)sizeCache.clear();sizeCache.set(key,mask)}
  return mask;
 }
 function draw() {
