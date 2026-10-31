@@ -222,6 +222,7 @@ window.MFOnline={
   requestFullscreen:requestHostFullscreen,
   exitFullscreen:exitHostFullscreen,
   ownUid:()=>user?.uid,
+  accountCreatedAt:()=>Date.parse(user?.metadata?.creationTime||'')||0,
   isVisiting:()=>visiting,playing,
   visitingUid:()=>visiting?visitingUid:null,
   bootState:()=>initialState,

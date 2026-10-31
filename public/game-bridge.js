@@ -101,6 +101,7 @@
       tutorial:window.MFTutorial?.capture() || null,
       releaseNotes:window.MFReleaseNotes?.capture()||{},
       constructionMaterials:window.MFMaterials?.capture()||{},
+      achievements:window.MFAchievements?.capture()||{},
       actionQueue:filaAcoes.map(t=>({gx:t.gx,gy:t.gy,...(t._job?{job:clone(t._job)}:{})})),
       loot: lootParticles.map(p=>simple(p))
     });
@@ -121,6 +122,7 @@
   function restore(data) {
     window.MFReleaseNotes?.restore(data?.releaseNotes);
     window.MFMaterials?.restore(data?.constructionMaterials);
+    window.MFAchievements?.restore(data?.achievements);
     if (!data) return;
     data=window.MFSaveRuntime.refresh(data,window.MFAdapter.project);
     data={...data,terrenos:clone(data.terrenos || []),inventory:data.inventory || {}};

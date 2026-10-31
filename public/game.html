@@ -3761,7 +3761,7 @@ window.__VacaMilk={startVacaMilkLoop:t=>window.MFAnimalProduction.sync(t.animal)
 function collectTreeFruit(t){
  if(window.MFHost?.isVisiting?.())return false;
  const result=window.MFFruitTrees.collect(t);if(!result)return false;
- if(result.directCoins){window.MFValueSource?.tile(t,'colheita');moedas+=result.saleCoins;if(moedasSpan)moedasSpan.textContent=moedas;}else window.addToInventory(result.type,result.amount,result.icon);
+ if(result.directCoins){window.MFAchievements?.record('sale',result.amount||1,result.type||t.itemId);window.MFValueSource?.tile(t,'colheita');moedas+=result.saleCoins;if(moedasSpan)moedasSpan.textContent=moedas;}else window.addToInventory(result.type,result.amount,result.icon);
  window.MFValueSource?.tile(t,'colheita');addXP(result.stars);
  window.MFGameAudio?.event('harvest',t.itemId);window.MFHost?.changed?.('tree-harvested');requestRedraw();return true;
 }
@@ -3826,7 +3826,7 @@ function tryHarvestAtTile(tile) {
   if(cfg && tile.cultura.etapa===2){
     if(!spawnLoot(tipo,screenX,screenY))return false;window.MFGameAudio?.event('harvest','item-'+tipo);
     tile.cultura=null;tile.itemId='item-terra';tile.imgSrc=TERRA_SECA_SRC;
-    addXP(window.MFAdapter?.project?.items?.['item-'+tipo]?.harvestXP ?? cfg.xp);window.MFHost?.changed?.('crop-harvested');return true;
+    window.MFAchievements?.record('harvest',1,tipo,cfg.yieldCount);addXP(window.MFAdapter?.project?.items?.['item-'+tipo]?.harvestXP ?? cfg.xp);window.MFHost?.changed?.('crop-harvested');return true;
   }
   return false;
 }
@@ -4493,7 +4493,7 @@ function plantCropAtTile(terreno,plantedAt=Date.now(),requestedSeed=placingItem)
     terreno.cultura = { tipo, seedId:seed.id, paidCoins:seed.price, etapa: 0, startTime: plantedAt, totalTime };
     terreno.imgSrc = etapas[0];
     startGrowthTimer(terreno);window.MFGameAudio?.event('plant',seed.id);
-    window.MFHost?.changed?.('crop-planted');
+    window.MFAchievements?.record('plant',1,tipo);window.MFHost?.changed?.('crop-planted');
     return true;
   }
 }
@@ -6115,7 +6115,8 @@ if (typeof moedas === 'number' && !isNaN(moedas)) {
 }
 
 // soma e sincroniza
-totalAtual += ganho;
+for(const p of order.pedidos)window.MFAchievements?.record('sale',p.qtd,p.tipo);
+  totalAtual += ganho;
 window.moedas = totalAtual;
 if (typeof moedas !== 'undefined') moedas = totalAtual;
 
@@ -6872,6 +6873,7 @@ function finalizarPedidoCaminhao() {
   }
 
   window.MFValueSource?.element(document.getElementById("caminhao-content") || document.getElementById("overlay-caminhao"), "caminhao");
+  for(const p of order.pedidos)window.MFAchievements?.record('sale',p.qtd,p.tipo);
   totalAtual += ganho;
   window.moedas = totalAtual;
   if (typeof moedas !== 'undefined') moedas = totalAtual;
@@ -7771,4 +7773,6 @@ canvas.addEventListener('contextmenu', e => { if (window.MFCancelPlacing()) e.pr
 <script src="release-notes-core.js?v=1"></script>
 <script src="release-notes-data.js?v=20261031-2"></script>
 <script src="release-notes.js?v=coop-2"></script>
-<script src="game-bridge.js?v=coop-9"></script>
+<script src="achievements-core.js?v=1"></script>
+<script src="achievements.js?v=1"></script>
+<script src="game-bridge.js?v=achievements-10"></script>

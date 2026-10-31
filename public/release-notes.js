@@ -32,7 +32,7 @@
  overlay.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();}else if(event.key==='Tab'){event.preventDefault();(document.activeElement===continueButton?closeButton:continueButton).focus();}});
  const settingsButton=document.createElement('button');settingsButton.id='mf-latest-news';settingsButton.type='button';settingsButton.textContent='ÚLTIMAS NOVIDADES';settingsButton.onclick=()=>{const settings=document.getElementById('overlay-config');if(settings)settings.style.display='none';open(true);};
  (document.querySelector('#config-content h3')?.parentElement||document.getElementById('config-content')).append(settingsButton);
- function blocked(){return [...document.querySelectorAll('#mf-char,#mf-daily,#mf-level,#mf-objects,#mf-coop,#mf-pigsty,#overlay-config,#overlay-loja,#overlay-bau,#overlay-caminhao')].some(el=>!el.hidden&&getComputedStyle(el).display!=='none')||window.MFTutorial?.capture?.()?.done===false;}
+ function blocked(){return [...document.querySelectorAll('#mf-achievements,#mf-char,#mf-daily,#mf-level,#mf-objects,#mf-coop,#mf-pigsty,#overlay-config,#overlay-loja,#overlay-bau,#overlay-caminhao')].some(el=>!el.hidden&&getComputedStyle(el).display!=='none')||window.MFTutorial?.capture?.()?.done===false;}
  const timer=setInterval(()=>{
   if(opened||restored&&!state.pending(data.id)){clearInterval(timer);return;}
   if(!restored||document.hidden||!window.MFHost?.playing?.()||window.MFHost?.isVisiting?.()||!window.__mfCharacter||blocked())return;

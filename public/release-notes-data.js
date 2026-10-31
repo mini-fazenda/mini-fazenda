@@ -5,7 +5,7 @@ globalThis.MFReleaseNotesData={
   'Galinheiro com construção em três etapas.',
   'Galinhas e ovos acumulados, inclusive offline.',
   'Materiais por presentes, níveis e prêmios diários.',
-  'Amplie o Galinheiro para 20 ou 35 galinhas.'
+  'Conquistas, coleções e troféu de Beta Tester.'
  ],
  fixes:[]
 };

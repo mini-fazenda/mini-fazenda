@@ -1,0 +1,47 @@
+/* Álbum e troféu: nenhum prêmio é concedido na fazenda visitada. */
+(()=>{
+ const C=MFAchievementsCore;let state=C.restore(),restored=false,page=0,tab='achievements',previousFocus;
+ const visitor=()=>!!window.MFHost?.isVisiting?.(),changed=()=>window.MFHost?.changed?.('achievement');
+ function observe(){if(!restored||visitor())return;
+  C.eligibility(state,window.MFHost?.accountCreatedAt?.());
+  const objects=[...terrenos,...(window.MFObjects?.capture()||[])];let hens=0,buildings=0;
+  for(const t of objects){if(t.itemId)C.discover(state,'item:'+t.itemId);if(t.cultura?.tipo)C.discover(state,'crop:'+t.cultura.tipo);
+   if(t.coop){hens+=(t.coop.hens||[]).length;if(t.coop.phase===2)buildings++;}
+   else if(t.pigsty||window.MFBarnCore?.is(t)&&Date.now()>=t.barnReadyAt)buildings++;
+  }
+  for(const [id,v] of Object.entries(window.__gameInventory?.map||{}))if(v.count>0)C.discover(state,'product:'+id);
+  state.counters.hens=Math.max(state.counters.hens,hens);state.counters.buildings=Math.max(state.counters.buildings,buildings);state.counters.level=Math.max(state.counters.level,Number(playerLevel)||1);
+ }
+ function record(event,qty=1,type='',units=0){if(!restored||visitor())return;C.record(state,event,qty,type,units);changed();}
+ function claim(id){if(visitor()||!restored||!window.MFHost?.playing?.())return false;observe();const ok=C.claim(state,id,r=>{
+  if(r.trophy){const all=[...terrenos,...(window.MFObjects?.capture()||[])];if(!all.some(t=>t.betaTrophy)&&!window.MFObjects?.add({itemId:'item-trofeu-beta',name:'Troféu Beta Tester',w:1,h:1,visualScale:1,betaTrophy:true,trophyOrientation:0,imgSrc:'assets/conquistas/beta-0.webp'}))return false;}
+  else {moedas+=r.reward;if(moedasSpan)moedasSpan.textContent=moedas;}
+  return true;
+ });if(ok){changed();requestRedraw();render();}return ok;}
+ const overlay=document.createElement('div');overlay.id='mf-achievements';overlay.hidden=true;overlay.innerHTML='<section role="dialog" aria-modal="true" aria-label="Álbum de Coleções e Conquistas"><button class="album-close" aria-label="Fechar"></button><button class="album-tab achievements">Conquistas</button><button class="album-tab collections">Coleções</button><div class="album-grid"></div><nav><button data-prev aria-label="Página anterior">◀</button><span aria-live="polite"></span><button data-next aria-label="Próxima página">▶</button></nav></section>';document.body.append(overlay);
+ const style=document.createElement('style');style.textContent=`
+ #mf-achievements[hidden]{display:none!important}#mf-achievements{position:fixed;inset:0;z-index:65000;background:#10240cba;display:grid;place-items:center}#mf-achievements section{position:relative;width:min(96vw,141dvh,1380px);aspect-ratio:3/2;background:url('assets/conquistas/album.png') center/100% 100%;font-family:Amfost,Arial;color:#563015}#mf-achievements button{cursor:pointer;font:inherit;color:inherit}#mf-achievements .album-close{position:absolute;right:2.6%;top:7.8%;width:7.5%;height:11%;background:transparent;border:0}#mf-achievements .album-tab{position:absolute;top:22%;height:10%;width:27%;border:3px solid #b87d25;border-radius:20px;background:#ffdb72;font-size:clamp(12px,2.2vw,30px)}#mf-achievements .achievements{left:22.3%}#mf-achievements .collections{left:51%}#mf-achievements .album-tab[aria-selected=true]{background:#ffc51c;box-shadow:0 3px #99571e}#mf-achievements .album-grid{position:absolute;left:4.5%;top:35%;width:91%;height:44%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:1.5%}#mf-achievements article{background:#fff0c5;border:3px solid #c48b32;border-radius:20px;padding:4%;box-sizing:border-box;overflow:auto;display:flex;flex-direction:column;justify-content:space-between}#mf-achievements h3{font-size:clamp(11px,1.65vw,23px);margin:0}#mf-achievements p{font:clamp(10px,1.25vw,18px) Arial;margin:3px 0}#mf-achievements progress{width:100%;height:14px;accent-color:#54b900}#mf-achievements article button{border:2px solid #568c1a;border-radius:9px;background:#7bc92c;padding:3px;font-size:clamp(10px,1.2vw,18px)}#mf-achievements article button:disabled{background:#e1cf9e;border-color:#b49a65;cursor:default}#mf-achievements nav{position:absolute;left:34%;bottom:7%;width:35%;height:9%;display:flex;align-items:center;justify-content:space-between;background:#ffdc76;border:3px solid #a26023;border-radius:20px}#mf-achievements nav button{background:#ffbb20;border:0;border-radius:15px;font-size:clamp(15px,2vw,30px);height:100%;width:25%}#mf-achievements nav span{font:clamp(10px,1.3vw,20px) Arial}#mf-album-open{position:fixed;right:12px;top:22%;z-index:1200;border:3px solid #8c5a24;border-radius:12px;background:#ffd354;padding:7px;font:18px Amfost,Arial;color:#603515;cursor:pointer}#mf-achievements button:focus-visible{outline:3px solid white;outline-offset:2px}
+ `;document.head.append(style);
+ const openButton=document.createElement('button');openButton.id='mf-album-open';openButton.textContent='🏆 Conquistas';openButton.onclick=open;document.body.append(openButton);
+ const grid=overlay.querySelector('.album-grid');
+ function close(){overlay.hidden=true;previousFocus?.focus();}
+ function open(){if(visitor())return;observe();page=0;previousFocus=document.activeElement;overlay.hidden=false;render();overlay.querySelector('.album-close').focus();}
+ function label(id){const [kind,...parts]=id.split(':'),key=parts.join(':'),item=window.MFAdapter?.project?.items?.[key.startsWith('item-')?key:'item-'+key];return item?.name||({ovo:'Ovo',leite:'Leite'}[key])||key.replace(/^item-/,'').replace(/-/g,' ');}
+ function render(){observe();const entries=tab==='achievements'?C.DEFINITIONS:state.discoveries.slice().sort();const total=Math.max(1,Math.ceil(entries.length/6));page=Math.max(0,Math.min(page,total-1));grid.replaceChildren();
+  for(const entry of entries.slice(page*6,page*6+6)){const card=document.createElement('article');if(tab==='collections'){const h=document.createElement('h3');h.textContent='🌿 '+label(entry);const p=document.createElement('p');p.textContent='Descoberto na sua fazenda • '+({item:'Objeto',crop:'Cultivo',product:'Produto'}[entry.split(':')[0]]||'Coleção');card.append(h,p);}else{const v=C.status(state,entry),h=document.createElement('h3');h.textContent=entry.icon+' '+entry.name+(entry.tiers.length>1?' · Nível '+Math.min(v.tier+1,entry.tiers.length):'');const p=document.createElement('p');p.textContent=entry.description;const progress=document.createElement('progress');progress.max=v.goal;progress.value=Math.min(v.progress,v.goal);progress.setAttribute('aria-label',entry.name);const text=document.createElement('p');text.textContent=Math.min(v.progress,v.goal).toLocaleString('pt-BR')+' / '+v.goal.toLocaleString('pt-BR');const button=document.createElement('button');button.disabled=!v.ready;button.textContent=v.done?'✓ Coletado':v.ready?(entry.trophy?'Coletar troféu':'Coletar '+v.reward+' moedas'):(entry.trophy?'Troféu exclusivo':v.reward+' moedas');button.onclick=()=>claim(entry.id);card.append(h,p,progress,text,button);}grid.append(card);}
+  // Cobre também os espaços vazios da arte de referência.
+  while(grid.children.length<6){const card=document.createElement('article');card.setAttribute('aria-hidden','true');grid.append(card);}
+  overlay.querySelector('nav span').textContent=(page+1)+' / '+total;overlay.querySelector('[data-prev]').disabled=page===0;overlay.querySelector('[data-next]').disabled=page===total-1;
+  for(const name of ['achievements','collections'])overlay.querySelector('.'+name).setAttribute('aria-selected',String(tab===name));
+ }
+ overlay.querySelector('.album-close').onclick=close;for(const name of ['achievements','collections'])overlay.querySelector('.'+name).onclick=()=>{tab=name;page=0;render();};overlay.querySelector('[data-prev]').onclick=()=>{page--;render();};overlay.querySelector('[data-next]').onclick=()=>{page++;render();};
+ overlay.addEventListener('keydown',e=>{if(e.key==='Escape'){e.stopPropagation();close();}if(e.key==='Tab'){const nodes=[...overlay.querySelectorAll('button:not(:disabled)')],first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
+ window.MFAchievements={open,close,claim,record,observe,capture(){observe();return structuredClone(state);},restore(raw){state=C.restore(raw);restored=true;}};
+ // Usar o mesmo ponto de ancoragem na fazenda, na prévia e no MiniBaú.
+ const trophy=t=>!!t?.betaTrophy,art=t=>'assets/conquistas/beta-'+(t.trophyOrientation?1:0)+'.webp';
+ function geometry(t,a,img){const w=TILE_W*.95;return {x:a.x-w/2,y:a.y+TILE_H*.22-w*img.naturalHeight/img.naturalWidth,w,h:w*img.naturalHeight/img.naturalWidth};}
+ const draw=MFBarn.drawSprite,hit=MFBarn.hit,is=MFBarn.is,src=MFBarn.src;
+ MFBarn.drawSprite=(g,t,a,img)=>{if(!trophy(t))return draw(g,t,a,img);const b=geometry(t,a,img);g.drawImage(img,b.x,b.y,b.w,b.h);return true;};
+ MFBarn.is=t=>trophy(t)||is(t);MFBarn.src=t=>trophy(t)?art(t):src(t);MFBarn.hit=(t,img,x,y)=>{if(!trophy(t))return hit(t,img,x,y);const b=geometry(t,gridToScreen(t.gx,t.gy),img);return x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h;};
+ window.MFBetaTrophy={is:trophy,rotate(t){if(visitor()||!trophy(t))return false;t.trophyOrientation=t.trophyOrientation?0:1;t.imgSrc=art(t);changed();requestRedraw();return true;}};
+})();

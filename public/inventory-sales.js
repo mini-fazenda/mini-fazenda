@@ -36,6 +36,7 @@
   try{
    try{window.MFValueSource?.element?.(box,'venda');}catch(e){console.warn('[efeito da venda]',e);}
    const result=MFSalesCore.sell(inv().map,selection,quote);
+   for(const row of result.rows)window.MFAchievements?.record('sale',row.qty,row.type);
    moedas+=result.total;if(result.stars)addXP(result.stars);
    document.getElementById('valor-moedas').textContent=moedas;
    for(const row of result.rows){const slot=inv().slots[row.slotIndex];if(slot)window.MFRenderInventorySlot(slot,row.left?row.type:'',row.left,row.imgSrc);}
