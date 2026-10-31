@@ -27,6 +27,20 @@ const assert=require('node:assert/strict');const {chromium,webkit}=require('play
   });
   await frame.waitForFunction(()=>terrenos[0].cultura.etapa===2,null,{timeout:7000});
   assert.equal(await frame.evaluate(()=>terrenos.length),2);assert.equal(await page.evaluate(()=>JSON.stringify(testCloud['farms/rodrigo'])),own);
+  // Correção do mesmo revision: mesmo timestamp, mas saveId confirmado diferente.
+  await page.evaluate(()=>{
+   const doc=testCloud['publicFarms/neighbor'];
+   const corrected={...doc,saveId:'vizinha-confirmado-3',state:{...doc.state,farmName:'Atualizada'}};
+   testCloud['publicFarms/neighbor']=corrected;
+   for(const sub of testSubs.filter(s=>s.p==='publicFarms/neighbor'))sub.cb({val:()=>structuredClone(corrected)});
+  });
+  await frame.waitForFunction(()=>window.__farmName==='Atualizada');
+  await page.evaluate(()=>{
+   const doc=testCloud['publicFarms/neighbor'];
+   const obsolete={...doc,saveId:'save-antigo',updatedAt:doc.updatedAt-10000,state:{...doc.state,farmName:'Obsoleta'}};
+   for(const sub of testSubs.filter(s=>s.p==='publicFarms/neighbor'))sub.cb({val:()=>structuredClone(obsolete)});
+  });
+  assert.equal(await frame.evaluate(()=>window.__farmName),'Atualizada','Evento da mesma revisão com timestamp mais antigo não pode regredir a visita');
   await page.locator('#home').click();await page.waitForFunction(()=>MFOnline.playing());
   assert.equal(await page.evaluate(()=>testSubs.filter(s=>s.p==='publicFarms/neighbor').length),0);assert.deepEqual(errors,[]);
   console.log('PASS: save/visita atômicos, listener ao vivo sem recarga, relógio correto, câmera preservada, revisão antiga ignorada e conta do visitante intacta.');
