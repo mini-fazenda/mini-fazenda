@@ -107,33 +107,51 @@
   #mf-amigos .mfa-arrow:disabled{opacity:.35;cursor:default}
   @media (max-width:900px),(max-height:500px){#mf-amigos{transform:scale(.66)}}
   /* ---------- Janela de amigos ---------- */
-  #mf-amigos-dlg{position:fixed;inset:0;z-index:2100;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);font-family:Amfost,Arial,sans-serif}
+  @font-face{font-family:Nunito;font-style:normal;font-weight:600;font-display:swap;src:url('assets/fonts/nunito-latin.ttf') format('truetype')}
+  @font-face{font-family:Nunito;font-style:normal;font-weight:700;font-display:swap;src:url('assets/fonts/nunito-bold.ttf') format('truetype')}
+  #mf-amigos-dlg{position:fixed;inset:0;z-index:2100;display:none;align-items:center;justify-content:center;background:#0007;font:600 14px "Nunito","Trebuchet MS",system-ui,sans-serif;color:#4a2a0e}
   #mf-amigos-dlg.on{display:flex}
-  #mf-amigos-dlg .mfd{width:min(560px,94vw);max-height:90vh;overflow:auto;border-radius:22px;padding:14px 18px 18px;box-sizing:border-box;position:relative;
-    background:linear-gradient(#cf9152,#a4652f 40%,#8b5124);border:6px solid #5b3417;box-shadow:0 14px 40px #0008}
-  #mf-amigos-dlg h2{margin:0 0 10px;text-align:center;font-size:36px;font-weight:400;color:#ffcf3f;text-shadow:-3px -3px 0 #6b3a12,3px -3px 0 #6b3a12,-3px 3px 0 #6b3a12,3px 3px 0 #6b3a12,0 5px 0 #4a260a}
-  #mf-amigos-dlg .x{position:absolute;right:8px;top:8px;width:44px;height:44px;border:0;background:none;padding:0;cursor:pointer}
-  #mf-amigos-dlg .x img{width:100%;height:100%}
-  #mf-amigos-dlg section{background:#f6ecd6;border:2px solid #6b3f1b;border-radius:14px;padding:10px 12px;margin-top:10px;color:#4a2a0e}
-  #mf-amigos-dlg h3{margin:0 0 8px;font-size:18px;font-weight:400;color:#a4652f}
-  #mf-amigos-dlg .myid{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:16px}
-  #mf-amigos-dlg .myid strong{font-size:30px;font-weight:400;color:#3b260b;letter-spacing:2px}
-  #mf-amigos-dlg .line{display:flex;gap:8px}
-  #mf-amigos-dlg input{flex:1;min-width:0;border:2px solid #d9bf8c;border-radius:10px;padding:8px 10px;font:700 18px Arial,sans-serif;letter-spacing:2px}
-  #mf-amigos-dlg .btn{border:2px solid #2f6e1f;border-radius:10px;background:linear-gradient(#8ee05d,#4ea72e);color:#fff;font:400 15px Amfost,Arial,sans-serif;padding:6px 12px;cursor:pointer;
-    text-shadow:-1px -1px 0 #2f6e1f,1px -1px 0 #2f6e1f,-1px 1px 0 #2f6e1f,1px 1px 0 #2f6e1f;white-space:nowrap}
-  #mf-amigos-dlg .btn.no{background:linear-gradient(#f2a08f,#d9533f);border-color:#8a2a1c;text-shadow:-1px -1px 0 #8a2a1c,1px -1px 0 #8a2a1c,-1px 1px 0 #8a2a1c,1px 1px 0 #8a2a1c}
-  #mf-amigos-dlg .btn.sec{background:#e8d3a6;border-color:#b08850;color:#6b3f1b;text-shadow:none}
-  #mf-amigos-dlg .msg{min-height:18px;margin-top:6px;font:700 13px Arial,sans-serif}
-  #mf-amigos-dlg .msg.ok{color:#2f7a24}#mf-amigos-dlg .msg.err{color:#c0261b}
-  #mf-amigos-dlg .row{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #e3cfa5}
-  #mf-amigos-dlg .row:first-of-type{border-top:0}
-  #mf-amigos-dlg .row .av{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:19px;border:2px solid #6b3a12;flex:none}
-  #mf-amigos-dlg .row .who{flex:1;min-width:0}
-  #mf-amigos-dlg .row .who b{display:block;font-weight:400;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #mf-amigos-dlg .row .who small{font:700 12px Arial,sans-serif;color:#a4652f}
-  #mf-amigos-dlg .none{font:600 14px Arial,sans-serif;color:#8a6a40}
-  #mf-amigos-dlg .hint{font:600 13px Arial,sans-serif;color:#7a4a1f;margin:6px 0 0}
+  #mf-amigos-dlg *{box-sizing:border-box}
+  #mf-amigos-dlg .mfd{width:min(600px,calc(100% - 24px));height:85vh;height:85dvh;max-height:85dvh;overflow:hidden;border-radius:12px;padding:10px;position:relative;display:flex;flex-direction:column;gap:8px;background:#f6ecd6;border:2px solid #6b3f1b;box-shadow:0 14px 40px #0008}
+  #mf-amigos-dlg .mfd-header{display:flex;align-items:center;justify-content:space-between;flex:none}
+  #mf-amigos-dlg h2{margin:0;font:400 28px Amfost,Arial,sans-serif;color:#ffcf3f;text-shadow:2px 2px #6b3a12,-1px -1px #6b3a12}
+  #mf-amigos-dlg .x{width:36px;height:36px;border:2px solid #8a2a1c;border-radius:10px;background:#df5140;color:white;font:700 24px system-ui;cursor:pointer;padding:0}
+  #mf-amigos-dlg .mfd-tools{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;flex:none}
+  #mf-amigos-dlg .myid{display:flex;align-items:center;gap:6px;font-size:16px;white-space:nowrap}
+  #mf-amigos-dlg .myid strong{font-weight:700}
+  #mf-amigos-dlg .line{display:flex;gap:6px;flex:1;min-width:200px}
+  #mf-amigos-dlg input{height:36px;min-width:0;width:100%;border:2px solid #c9aa77;border-radius:10px;padding:6px 9px;font:600 16px "Nunito","Trebuchet MS",system-ui,sans-serif;background:#fffcf5;color:#4a2a0e}
+  #mf-amigos-dlg .mfd-input{flex:1;width:90px}
+  #mf-amigos-dlg .btn{height:36px;flex:none;border:2px solid #397526;border-radius:10px;background:linear-gradient(#8ee05d,#4ea72e);color:#183c0d;font:700 14px "Nunito","Trebuchet MS",system-ui,sans-serif;padding:4px 9px;cursor:pointer;white-space:nowrap;text-shadow:none}
+  #mf-amigos-dlg button:disabled{opacity:.6;cursor:wait}
+  #mf-amigos-dlg .btn.sec{background:#ead8b3;border-color:#b08850;color:#6b3f1b}
+  #mf-amigos-dlg .btn.no{background:#f4c1b6;border-color:#a55745;color:#752819}
+  #mf-amigos-dlg .msg{flex:none;font-size:13px;line-height:18px;min-height:0}
+  #mf-amigos-dlg .msg:empty{display:none}
+  #mf-amigos-dlg .msg.ok{color:#2f7a24}#mf-amigos-dlg .msg.err{color:#a3291e}
+  #mf-amigos-dlg .mfd-search-wrap{position:relative;display:flex;align-items:center;flex:none;gap:6px}
+  #mf-amigos-dlg .mfd-search{padding:6px 34px 6px 30px}
+  #mf-amigos-dlg .mfd-loupe{position:absolute;left:10px;pointer-events:none}
+  #mf-amigos-dlg .mfd-clear{position:absolute;right:3px;top:2px;height:32px;width:32px;border:0;background:none;font:22px system-ui;color:#6b3f1b;cursor:pointer}
+  #mf-amigos-dlg h3,#mf-amigos-dlg summary{margin:0;font-size:16px;font-weight:700}
+  #mf-amigos-dlg .mfd-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+  #mf-amigos-dlg .mfd-pending{border-bottom:1px solid #dfc99e;margin-bottom:4px;padding-bottom:4px}
+  #mf-amigos-dlg summary{cursor:pointer;padding:4px 0}
+  #mf-amigos-dlg .row{display:flex;align-items:center;gap:8px;min-height:56px;padding:6px 0;border-bottom:1px solid #e3cfa5}
+  #mf-amigos-dlg .av{width:40px;height:40px;border:2px solid #6b3a12;border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-size:20px;flex:none}
+  #mf-amigos-dlg .who{flex:1;min-width:0}
+  #mf-amigos-dlg .who b{display:block;font-size:16px;line-height:20px;font-weight:700;overflow-wrap:anywhere}
+  #mf-amigos-dlg .who small{display:block;font-size:13px;line-height:17px;color:#89603c}
+  #mf-amigos-dlg .mfd-actions{display:flex;align-items:center;gap:5px;flex:none}
+  #mf-amigos-dlg .mfd-remove{width:30px;height:32px;padding:0;border:0;background:none;color:#89603c;font:20px system-ui;cursor:pointer;border-radius:8px}
+  #mf-amigos-dlg .none{padding:12px 0;font-size:14px;color:#89603c}
+  #mf-amigos-dlg .mfd-confirm{position:absolute;inset:0;background:#34210da6;display:flex;align-items:center;justify-content:center;padding:12px;z-index:1}
+  #mf-amigos-dlg .mfd-confirm[hidden]{display:none}
+  #mf-amigos-dlg .mfd-confirm-box{background:#f6ecd6;border:2px solid #6b3f1b;border-radius:12px;padding:12px;max-width:100%;overflow-wrap:anywhere}
+  #mf-amigos-dlg .mfd-confirm-box p{margin:0 0 12px;font-size:16px}
+  #mf-amigos-dlg button:focus-visible,#mf-amigos-dlg input:focus-visible,#mf-amigos-dlg summary:focus-visible{outline:3px solid #2980b9;outline-offset:1px}
+  @media(max-width:540px){#mf-amigos-dlg .mfd-tools{gap:6px}#mf-amigos-dlg .line{flex-basis:100%}#mf-amigos-dlg .row{flex-wrap:wrap;column-gap:6px}#mf-amigos-dlg .who{flex-basis:calc(100% - 48px)}#mf-amigos-dlg .mfd-actions{margin-left:46px}#mf-amigos-dlg .mfd{gap:6px}}
+
 
 
   /* ---------- Escolha de personagem ---------- */
@@ -540,7 +558,11 @@
   function myInfo() { return { name: window.__farmName || 'Minha fazenda', level: typeof playerLevel !== 'undefined' ? playerLevel : 1 }; }
   function copyId() {
     const code = frState.code || FR()?.myCode?.(); if (!code) { toast('Seu ID aparece quando você entra na conta'); return; }
-    const done = () => toast(`ID #${code} copiado! Mande para os amigos.`);
+    const done = () => {
+      const b = $('mf-amigos-dlg')?.querySelector('.mfd-copy');
+      if (b) { b.textContent = 'Copiado ✓'; clearTimeout(copyId.timer); copyId.timer = setTimeout(() => { b.textContent = 'Copiar'; }, 2000); }
+      else toast(`ID #${code} copiado!`);
+    };
     try { navigator.clipboard.writeText('#' + code).then(done, () => toast(`Seu ID: #${code}`)); } catch (e) { toast(`Seu ID: #${code}`); }
   }
   function updateHudId() {
@@ -593,53 +615,99 @@
     const F = FR(); if (!F) { toast('Na versão online, isso abre a fazenda do seu amigo.'); return; }
     try { closeFriends(); await F.visit(uid); } catch (e) { toast(e?.message || 'Não foi possível abrir a fazenda.'); }
   }
+  const normalizeFriend = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  let inviteBusy = false, removeTarget = null;
+  function enviarPresente(idAmigo) {
+    // Apenas aviso: não chama o backend nem altera o save.
+    toast('Envio de presentes chega em breve! 🎁');
+  }
+  async function sendFriendInvite(rawCode) {
+    const d = $('mf-amigos-dlg'), msg = d.querySelector('.mfd-msg'), code = String(rawCode).replace(/\D/g, '').slice(0, 6);
+    if (inviteBusy) return;
+    const fail = text => { msg.className = 'msg mfd-msg err'; msg.textContent = text; };
+    if (code.length !== 6) return fail('O ID tem 6 números.');
+    if (code === String(frState.code || FR()?.myCode?.())) return fail('Esse é o seu ID');
+    if (frState.friends.some(f => String(f.code) === code)) return fail('Esse jogador já é seu amigo');
+    const F = FR(); if (!F) return fail('Entre na sua conta para adicionar amigos.');
+    inviteBusy = true; d.querySelectorAll('.mfd-send,[data-invite]').forEach(b => b.disabled = true);
+    msg.className = 'msg mfd-msg'; msg.textContent = 'Enviando…';
+    try {
+      const result = await F.sendInvite(code, myInfo());
+      msg.className = 'msg mfd-msg ok'; msg.textContent = /Agora vocês são amigos/.test(result || '') ? 'Amizade aceita!' : 'Convite enviado!';
+      d.querySelector('.mfd-input').value = '';
+    } catch (e) {
+      const text = e?.message || 'Não foi possível enviar.';
+      fail(/nenhuma fazenda|não encontrado/i.test(text) ? 'ID não encontrado' : /já são amigos/i.test(text) ? 'Esse jogador já é seu amigo' : /próprio ID/i.test(text) ? 'Esse é o seu ID' : text);
+    } finally { inviteBusy = false; d.querySelectorAll('.mfd-send,[data-invite]').forEach(b => b.disabled = false); }
+  }
   function buildFriendsDialog() {
     if ($('mf-amigos-dlg')) return;
     const d = document.createElement('div'); d.id = 'mf-amigos-dlg';
-    d.innerHTML = `<div class="mfd" role="dialog" aria-label="Amigos"><button class="x" type="button" aria-label="Fechar"><img alt="Fechar" src="https://i.postimg.cc/NfZ5Tcm1/icone-botao-fechar.png"></button>
-      <h2>Amigos</h2>
-      <section><h3>Seu ID de amigo</h3><div class="myid"><strong class="mfd-code">——</strong><button class="btn sec mfd-copy" type="button">Copiar</button></div>
-        <p class="hint">Mande esse número para os seus amigos te adicionarem.</p></section>
-      <section><h3>Adicionar amigo</h3><div class="line"><input class="mfd-input" inputmode="numeric" maxlength="7" placeholder="#000000" aria-label="ID do amigo"><button class="btn mfd-send" type="button">Enviar convite</button></div><div class="msg mfd-msg"></div></section>
-      <section><h3>Convites recebidos</h3><div class="mfd-reqs"></div></section>
-      <section><h3 class="mfd-ftitle">Seus amigos</h3><div class="mfd-friends"></div></section></div>`;
+    d.innerHTML = `<div class="mfd" role="dialog" aria-modal="true" aria-labelledby="mfd-title">
+      <header class="mfd-header"><h2 id="mfd-title">Amigos</h2><button class="x" type="button" aria-label="Fechar">×</button></header>
+      <div class="mfd-tools"><div class="myid">Seu ID: <strong class="mfd-code">——</strong><button class="btn sec mfd-copy" type="button">Copiar</button></div>
+      <div class="line"><input class="mfd-input" inputmode="numeric" maxlength="7" placeholder="#000000" aria-label="ID do amigo"><button class="btn mfd-send" type="button">Adicionar</button></div></div>
+      <div class="msg mfd-msg" role="status" aria-live="polite"></div>
+      <div class="mfd-search-wrap"><span class="mfd-loupe" aria-hidden="true">⌕</span><input class="mfd-search" placeholder="Buscar por nome ou ID" aria-label="Buscar por nome ou ID"><button class="mfd-clear" aria-label="Limpar busca" type="button" hidden>×</button></div>
+      <h3 class="mfd-ftitle">Seus amigos</h3>
+      <div class="mfd-scroll"><details class="mfd-pending" hidden><summary>Convites recebidos <span class="mfd-rcount"></span></summary><div class="mfd-reqs"></div></details><div class="mfd-friends"></div></div>
+      <div class="mfd-confirm" hidden><div class="mfd-confirm-box" role="alertdialog" aria-modal="true" aria-labelledby="mfd-confirm-text"><p id="mfd-confirm-text"></p><button class="btn no mfd-confirm-remove" type="button">Remover</button> <button class="btn sec mfd-confirm-cancel" type="button">Cancelar</button></div></div></div>`;
     document.body.appendChild(d);
     d.addEventListener('click', e => { e.stopPropagation(); if (e.target === d) closeFriends(); });
-    d.addEventListener('keydown', e => e.stopPropagation());
+    d.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') { if (removeTarget) cancelRemove(); else closeFriends(); } });
     d.querySelector('.x').addEventListener('click', closeFriends);
     d.querySelector('.mfd-copy').addEventListener('click', copyId);
-    const input = d.querySelector('.mfd-input'), msg = d.querySelector('.mfd-msg'), send = d.querySelector('.mfd-send');
-    const doSend = async () => {
-      const F = FR(); msg.className = 'msg mfd-msg';
-      if (!F) { msg.classList.add('err'); msg.textContent = 'Entre na sua conta para adicionar amigos.'; return; }
-      send.disabled = true; msg.textContent = 'Enviando…';
-      try { msg.classList.add('ok'); msg.textContent = await F.sendInvite(input.value, myInfo()); input.value = ''; }
-      catch (e) { msg.className = 'msg mfd-msg err'; msg.textContent = e?.message || 'Não foi possível enviar.'; }
-      finally { send.disabled = false; }
-    };
-    send.addEventListener('click', doSend);
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') doSend(); });
-    input.addEventListener('input', () => { const v = input.value.replace(/\D/g, '').slice(0, 6); input.value = v ? '#' + v : ''; });
+    const input = d.querySelector('.mfd-input'), search = d.querySelector('.mfd-search');
+    d.querySelector('.mfd-send').addEventListener('click', () => sendFriendInvite(input.value));
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') sendFriendInvite(input.value); });
+    input.addEventListener('input', () => { input.value = input.value.replace(/\D/g, '').slice(0, 6); });
+    search.addEventListener('input', renderDialog);
+    d.querySelector('.mfd-clear').addEventListener('click', () => { search.value = ''; renderDialog(); search.focus(); });
+    d.querySelector('.mfd-confirm-cancel').addEventListener('click', cancelRemove);
+    d.querySelector('.mfd-confirm-remove').addEventListener('click', async e => {
+      const target = removeTarget; if (!target || !FR()) return;
+      e.currentTarget.disabled = true;
+      try { await FR().remove(target.uid); cancelRemove(); }
+      catch (err) { toast(err?.message || 'Não foi possível remover.'); }
+      finally { d.querySelector('.mfd-confirm-remove').disabled = false; }
+    });
+  }
+  function cancelRemove() {
+    removeTarget = null;
+    const d = $('mf-amigos-dlg'); if (!d) return;
+    d.querySelector('.mfd-confirm').hidden = true;
+    d.querySelector('.mfd-search').focus();
   }
   function renderDialog() {
     const d = $('mf-amigos-dlg'); if (!d) return;
     d.querySelector('.mfd-code').textContent = frState.code ? '#' + frState.code : (FR() ? 'carregando…' : '—');
     const reqs = d.querySelector('.mfd-reqs'), fr = d.querySelector('.mfd-friends');
-    reqs.innerHTML = frState.requests.length ? frState.requests.map(r => `<div class="row"><div class="av" style="background:${avColor(r.code || r.uid)}">${initial(r.name)}</div>
-      <div class="who"><b>${esc(r.name)}</b><small>#${esc(r.code)} · Nível ${r.level}</small></div>
-      <button class="btn" type="button" data-ok="${esc(r.uid)}">Aceitar</button><button class="btn no" type="button" data-no="${esc(r.uid)}">Recusar</button></div>`).join('')
-      : '<div class="none">Nenhum convite por enquanto.</div>';
+    d.querySelector('.mfd-pending').hidden = !frState.requests.length;
+    d.querySelector('.mfd-rcount').textContent = `(${frState.requests.length})`;
+    reqs.innerHTML = frState.requests.map(r => `<div class="row"><div class="av" style="background:${avColor(r.code || r.uid)}">${initial(r.name)}</div>
+      <div class="who"><b>${esc(r.name)}</b><small>#${esc(r.code)} · Nível ${r.level}</small></div><div class="mfd-actions">
+      <button class="btn" type="button" data-ok="${esc(r.uid)}">Aceitar</button><button class="btn sec" type="button" data-no="${esc(r.uid)}">Recusar</button></div></div>`).join('');
     d.querySelector('.mfd-ftitle').textContent = `Seus amigos (${frState.friends.length})`;
-    fr.innerHTML = frState.friends.length ? frState.friends.map((f, i) => `<div class="row"><div class="av" style="background:${avColor(f.code || f.uid)}">${initial(f.name)}</div>
-      <div class="who"><b>${i + 1}º ${esc(f.name)}</b><small>${f.code ? '#' + esc(f.code) + ' · ' : ''}Nível ${f.level} · ${f.xp} ★</small></div>
-      <button class="btn" type="button" data-visit="${esc(f.uid)}">Visitar</button><button class="btn sec" type="button" data-rm="${esc(f.uid)}">Remover</button></div>`).join('')
-      : '<div class="none">Você ainda não tem amigos na fazenda. Mande seu ID para alguém!</div>';
+    const query = normalizeFriend(d.querySelector('.mfd-search').value), idQuery = query.replace(/^#/, '');
+    d.querySelector('.mfd-clear').hidden = !query;
+    const shown = frState.friends.map((f, i) => ({f, i})).filter(({f}) => !query || normalizeFriend(f.name).includes(query) || String(f.code || '').includes(idQuery));
+    fr.innerHTML = shown.length ? shown.map(({f, i}) => `<div class="row"><div class="av" style="background:${avColor(f.code || f.uid)}">${initial(f.name)}</div>
+      <div class="who"><b>${i + 1}º ${esc(f.name)}</b><small>${f.code ? '#' + esc(f.code) + ' · ' : ''}Nível ${f.level} · ${f.xp} ★</small></div><div class="mfd-actions">
+      <button class="btn" type="button" data-visit="${esc(f.uid)}">Visitar</button><button class="btn sec" type="button" data-gift="${esc(f.uid)}">🎁 Presente</button><button class="mfd-remove" type="button" data-rm="${esc(f.uid)}" aria-label="Remover ${esc(f.name)}" title="Remover ${esc(f.name)}">×</button></div></div>`).join('')
+      : '<div class="none">Nenhum amigo encontrado.</div>';
+    if (!shown.length && /^\d{6}$/.test(idQuery) && !frState.friends.some(f => String(f.code) === idQuery) && idQuery !== String(frState.code)) {
+      fr.innerHTML += `<button class="btn" type="button" data-invite="${idQuery}" ${inviteBusy ? 'disabled' : ''}>Enviar convite para #${idQuery}</button>`;
+    }
     const F = FR(), act = async (fn, btn) => { if (!F) return; btn.disabled = true; try { await fn(); } catch (e) { toast(e?.message || 'Não deu certo. Tente de novo.'); btn.disabled = false; } };
     reqs.querySelectorAll('[data-ok]').forEach(b => b.addEventListener('click', () => act(() => F.accept(b.dataset.ok), b)));
     reqs.querySelectorAll('[data-no]').forEach(b => b.addEventListener('click', () => act(() => F.decline(b.dataset.no), b)));
     fr.querySelectorAll('[data-visit]').forEach(b => b.addEventListener('click', () => visitFriend(b.dataset.visit)));
+    fr.querySelectorAll('[data-gift]').forEach(b => b.addEventListener('click', () => enviarPresente(b.dataset.gift)));
+    fr.querySelectorAll('[data-invite]').forEach(b => b.addEventListener('click', () => sendFriendInvite(b.dataset.invite)));
     fr.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', () => {
-      if (b.dataset.sure) act(() => F.remove(b.dataset.rm), b); else { b.dataset.sure = '1'; b.textContent = 'Tem certeza?'; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = 'Remover'; } }, 3000); }
+      removeTarget = frState.friends.find(f => f.uid === b.dataset.rm); if (!removeTarget) return;
+      d.querySelector('#mfd-confirm-text').textContent = `Remover ${removeTarget.name} dos seus amigos?`;
+      d.querySelector('.mfd-confirm').hidden = false; d.querySelector('.mfd-confirm-cancel').focus();
     }));
   }
   function openFriends(focusAdd) {
@@ -647,8 +715,8 @@
     try { FR()?.refresh?.(); } catch (err) { }
     if (focusAdd) setTimeout(() => $('mf-amigos-dlg')?.querySelector('.mfd-input')?.focus(), 50);
   }
-  function closeFriends() { $('mf-amigos-dlg')?.classList.remove('on'); frOpen = false; }
-  window.MFFriendsUI = { open: openFriends, close: closeFriends };
+  function closeFriends() { cancelRemove(); $('mf-amigos-dlg')?.classList.remove('on'); frOpen = false; }
+  window.MFFriendsUI = { open: openFriends, close: closeFriends, enviarPresente };
   let frSubscribed = false;
   function hookFriends() {
     if (visiting() || editing()) return;
