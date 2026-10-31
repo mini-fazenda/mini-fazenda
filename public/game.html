@@ -7285,32 +7285,91 @@ function groundGridPath(){
  gridGeometry={cols:COLS,rows:ROWS,tw:TILE_W,th:TILE_H,path};
  return path;
 }
-const cache={canvas:document.createElement('canvas'),sig:'',groundGridPath,draw(){const a=this.canvas,b=a.getContext('2d');let sig=[MFViewport.width,MFViewport.height,MFViewport.ratio,offsetX.toFixed(2),offsetY.toFixed(2),zoom.toFixed(3),COLS,ROWS,project.world.ground,project.world.opacity,project.world.diamondImage,project.world.diamondImageOpacity,diamondImg.complete&&diamondImg.naturalWidth,backgroundScale,backgroundOffsetX,backgroundOffsetY,backgroundImg.src,backgroundImg.complete&&backgroundImg.naturalWidth,window.MFAmbient?.signature?.()].join('|');if(sig===this.sig)return;this.sig=sig;
- MFViewport.resize(a);b.save();b.translate(MFViewport.width/2+offsetX,MFViewport.height/3+offsetY);b.scale(zoom,zoom);
- if(backgroundImg.complete&&backgroundImg.naturalWidth){let w=backgroundImg.naturalWidth*backgroundScale,h=backgroundImg.naturalHeight*backgroundScale;b.drawImage(backgroundImg,-w/2+backgroundOffsetX,-h/2+backgroundOffsetY,w,h)}
- try{window.MFAmbient?.draw?.(b)}catch(e){console.warn('[MF] ambientação',e)}
- const hw=TILE_W/2,hh=TILE_H/2;
- const paintedGround=!!window.MFAmbient?.groundReady?.(); // chão pintado (ambient.js) substitui o losango liso
- let c=project.world.ground||'#71c541';let opacity=Math.max(0,Math.min(1,finite(project.world.opacity,.32)));if(!paintedGround){b.globalAlpha=opacity;b.fillStyle=c;b.fill(groundGridPath());b.globalAlpha=1;}
- if(!paintedGround&&diamondImg.complete&&diamondImg.naturalWidth>0){
- b.save();
- // Máscara isométrica limpa: não depende de caminhos dos quadradinhos sobrepostos.
- b.beginPath();
- b.moveTo(0,-hh);
- b.lineTo(COLS*hw,(COLS-1)*hh);
- b.lineTo((COLS-ROWS)*hw,(COLS+ROWS-1)*hh);
- b.lineTo(-ROWS*hw,(ROWS-1)*hh);
- b.closePath();b.clip();
- const left=-ROWS*hw,top=-hh,width=(COLS+ROWS)*hw,height=(COLS+ROWS)*hh;
- let alpha=finite(project.world.diamondImageOpacity,1);
- if(alpha>1)alpha/=100;
- b.globalAlpha=Math.max(0,Math.min(1,alpha));
- // Estica a arte por todo o chão, sem tocar nos sprites das plantações.
- b.drawImage(diamondImg,left,top,width,height);
- b.restore();
+// Cache estático com margem. Durante o arrasto e a pinça, apenas uma
+// textura já pronta é reposicionada; montanhas, rio, vegetação e terreno
+// não precisam ser rasterizados novamente a cada movimento da câmera.
+const cache={
+ canvas:document.createElement('canvas'),source:document.createElement('canvas'),
+ sig:'',groundGridPath,rebuilds:0,blits:0,
+ sourceW:0,sourceH:0,sourceRatio:0,marginX:0,marginY:0,
+ baseX:NaN,baseY:NaN,baseZoom:NaN,lastX:NaN,lastY:NaN,lastZoom:NaN,lastMovedAt:0,
+ draw(){
+  const a=this.canvas,W=MFViewport.width,H=MFViewport.height,ratio=MFViewport.ratio;
+  const signature=[W,H,ratio,COLS,ROWS,project.world.ground,project.world.opacity,
+    project.world.diamondImage,project.world.diamondImageOpacity,
+    diamondImg.complete&&diamondImg.naturalWidth,backgroundScale,backgroundOffsetX,
+    backgroundOffsetY,backgroundImg.src,backgroundImg.complete&&backgroundImg.naturalWidth,
+    window.MFAmbient?.signature?.()].join('|');
+  const now=performance.now();
+  if(this.lastX!==offsetX||this.lastY!==offsetY||this.lastZoom!==zoom){
+   this.lastMovedAt=now;this.lastX=offsetX;this.lastY=offsetY;this.lastZoom=zoom;
+  }
+  const factor=Number.isFinite(this.baseZoom)&&this.baseZoom>0?zoom/this.baseZoom:1;
+  const x=W/2+offsetX-(this.marginX+W/2+this.baseX)*factor;
+  const y=H/3+offsetY-(this.marginY+H/3+this.baseY)*factor;
+  const covered=this.sourceW>0&&x<=.5&&y<=.5&&
+   x+this.sourceW*factor>=W-.5&&y+this.sourceH*factor>=H-.5;
+  const changed=this.baseX!==offsetX||this.baseY!==offsetY||this.baseZoom!==zoom;
+  const rebuild=signature!==this.sig||!covered||factor<.84||factor>1.16||
+   (changed&&now-this.lastMovedAt>160);
+  if(rebuild){
+   // Limite de buffers para não desperdiçar memória em celulares de DPR alto.
+   const mx=Math.round(W*.18),my=Math.round(H*.18),sw=W+2*mx,sh=H+2*my;
+   const sourceRatio=Math.max(1,Math.min(ratio,Math.sqrt(7000000/(sw*sh))));
+   const pw=Math.max(1,Math.round(sw*sourceRatio));
+   const ph=Math.max(1,Math.round(sh*sourceRatio));
+   if(this.source.width!==pw)this.source.width=pw;
+   if(this.source.height!==ph)this.source.height=ph;
+   const b=this.source.getContext('2d');
+   b.setTransform(sourceRatio,0,0,sourceRatio,0,0);
+   b.clearRect(0,0,sw,sh);
+   b.imageSmoothingEnabled=true;b.imageSmoothingQuality='high';
+   b.save();b.translate(mx+W/2+offsetX,my+H/3+offsetY);b.scale(zoom,zoom);
+   if(backgroundImg.complete&&backgroundImg.naturalWidth){
+    const bw=backgroundImg.naturalWidth*backgroundScale,bh=backgroundImg.naturalHeight*backgroundScale;
+    b.drawImage(backgroundImg,-bw/2+backgroundOffsetX,-bh/2+backgroundOffsetY,bw,bh);
+   }
+   const view={
+    l:(-mx-W/2-offsetX)/zoom-60,
+    t:(-my-H/3-offsetY)/zoom-60,
+    r:(sw-mx-W/2-offsetX)/zoom+60,
+    b:(sh-my-H/3-offsetY)/zoom+200
+   };
+   try{window.MFAmbient?.draw?.(b,view)}
+   catch(e){console.warn('[MF] ambientação',e)}
+   const hw=TILE_W/2,hh=TILE_H/2;
+   const paintedGround=!!window.MFAmbient?.groundReady?.();
+   if(!paintedGround){
+    const opacity=Math.max(0,Math.min(1,finite(project.world.opacity,.32)));
+    b.globalAlpha=opacity;b.fillStyle=project.world.ground||'#71c541';
+    b.fill(groundGridPath());b.globalAlpha=1;
+   }
+   if(!paintedGround&&diamondImg.complete&&diamondImg.naturalWidth>0){
+    b.save();b.beginPath();b.moveTo(0,-hh);
+    b.lineTo(COLS*hw,(COLS-1)*hh);b.lineTo((COLS-ROWS)*hw,(COLS+ROWS-1)*hh);
+    b.lineTo(-ROWS*hw,(ROWS-1)*hh);b.closePath();b.clip();
+    const left=-ROWS*hw,top=-hh,width=(COLS+ROWS)*hw,height=(COLS+ROWS)*hh;
+    let alpha=finite(project.world.diamondImageOpacity,1);if(alpha>1)alpha/=100;
+    b.globalAlpha=Math.max(0,Math.min(1,alpha));
+    b.drawImage(diamondImg,left,top,width,height);b.restore();
+   }
+   window.MFFarmBoundary?.draw(b,COLS,ROWS,zoom);
+   b.restore();
+   this.sourceW=sw;this.sourceH=sh;this.sourceRatio=sourceRatio;
+   this.marginX=mx;this.marginY=my;this.baseX=offsetX;this.baseY=offsetY;
+   this.baseZoom=zoom;this.sig=signature;this.rebuilds++;
+  }
+  // Mantém o canvas de saída no tamanho original: compatibilidade com
+  // High-DPI, captura de tela e editores que usam MFAdapter.cache.canvas.
+  MFViewport.resize(a);
+  const b=a.getContext('2d');b.clearRect(0,0,W,H);
+  const scale=zoom/this.baseZoom;
+  const dstX=W/2+offsetX-(this.marginX+W/2+this.baseX)*scale;
+  const dstY=H/3+offsetY-(this.marginY+H/3+this.baseY)*scale;
+  b.drawImage(this.source,dstX,dstY,this.sourceW*scale,this.sourceH*scale);
+  this.blits++;
  }
- window.MFFarmBoundary?.draw(b,COLS,ROWS,zoom);
- b.restore()}};
+};
 // Imagens animadas permanecem elementos DOM, porque drawImage captura somente um quadro de GIF.
 // Usa o único registro mfHumanWalk do motor principal; não criar cópia separada.
 const animLayer=document.createElement('div');animLayer.id='mf-animated-layer';Object.assign(animLayer.style,{position:'fixed',inset:'0',pointerEvents:'none',zIndex:'1',overflow:'hidden'});document.body.appendChild(animLayer);
