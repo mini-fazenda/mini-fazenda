@@ -1,6 +1,6 @@
-/* Aviso público de atualização; demais novidades permanecem na branch. */
+/* Teste de detecção de uma nova publicação, sem mudança de regras. */
 globalThis.MFReleaseNotesData={
- id:'2026-10-31-botao-atualizacao-1',
- features:['Botão de atualização implementado.','Nova versão disponível? Toque em Atualizar jogo.'],
+ id:'2026-10-31-teste-atualizacao-2',
+ features:['TESTE DO AVISO DE ATUALIZAÇÃO','Se você está lendo isto, seu jogo foi atualizado!'],
  fixes:[]
 };
