@@ -229,7 +229,7 @@
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         "$cmd": {
-          ".write": "(auth != null && auth.token.email === 'bielz09.lulu@gmail.com' && auth.token.email_verified === true && newData.exists() && !data.exists()) || (auth != null && auth.uid === $uid && data.exists() && !newData.exists() && root.child('farms').child($uid).child('state/devTools/receipts').child($cmd).val() === true)",
+          ".write": "(auth != null && (auth.token.email === 'bielz09.lulu@gmail.com' || auth.token.email === 'fortekmarquez@gmail.com') && auth.token.email_verified === true && newData.exists() && !data.exists()) || (auth != null && auth.uid === $uid && data.exists() && !newData.exists() && root.child('farms').child($uid).child('state/devTools/receipts').child($cmd).val() === true)",
           ".validate": "newData.hasChildren(['type','from','by','at']) && newData.child('type').val().matches(/^(moedas|xp|fertilizar|fertilizar_infinito|fertilizar_infinito_off|crescer)$/) && ((newData.child('type').val() === 'moedas' && newData.child('amount').isNumber() && newData.child('amount').val() >= 1 && newData.child('amount').val() <= 1000000000) || (newData.child('type').val() === 'xp' && newData.child('amount').isNumber() && newData.child('amount').val() >= 1 && newData.child('amount').val() <= 10000000) || (newData.child('type').val() !== 'moedas' && newData.child('type').val() !== 'xp' && !newData.hasChild('amount'))) && newData.child('by').val() === auth.uid && (newData.child('from').val() === root.child('farms').child(auth.uid).child('state/farmName').val() || (newData.child('from').val() === 'Dev' && (!root.child('farms').child(auth.uid).child('state/farmName').exists() || root.child('farms').child(auth.uid).child('state/farmName').val() === '')))",
           "type": {
             ".validate": "newData.isString()"
@@ -253,9 +253,9 @@
       }
     },
     "adminLog": {
-      ".read": "auth != null && auth.token.email === 'bielz09.lulu@gmail.com' && auth.token.email_verified === true",
+      ".read": "auth != null && (auth.token.email === 'bielz09.lulu@gmail.com' || auth.token.email === 'fortekmarquez@gmail.com') && auth.token.email_verified === true",
       "$id": {
-        ".write": "auth != null && auth.token.email === 'bielz09.lulu@gmail.com' && auth.token.email_verified === true && newData.exists() && !data.exists()",
+        ".write": "auth != null && (auth.token.email === 'bielz09.lulu@gmail.com' || auth.token.email === 'fortekmarquez@gmail.com') && auth.token.email_verified === true && newData.exists() && !data.exists()",
         ".validate": "newData.hasChildren(['to','by','type','at']) && newData.child('by').val() === auth.uid",
         "to": {
           ".validate": "newData.isString() && newData.val().length <= 64"
