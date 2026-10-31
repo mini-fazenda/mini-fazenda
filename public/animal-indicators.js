@@ -2,18 +2,6 @@
 (()=>{
  const SRC='assets/ui/marcador-pronto.png',art=preload(SRC),markers=new Map(),tops=new Map(),phases=new WeakMap();
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
- // O estado pronto depende do relógio, não da câmera. Reavaliá-lo a cada
- // quadro multiplica o trabalho por todos os canteiros quando se vê o mapa todo.
- let readyStates=new WeakMap(),lastReadinessAt=-Infinity;
- function readyState(t,now,clock){
-  if(now-lastReadinessAt>=125||now<lastReadinessAt){
-   readyStates=new WeakMap();lastReadinessAt=now;
-  }
-  if(readyStates.has(t))return readyStates.get(t);
-  const value=MFReadyCore.readyFor(t,clock);
-  readyStates.set(t,value);
-  return value;
- }
  const assignChanged=(style,name,value)=>{if(style[name]!==value)style[name]=value};
  const layer=document.createElement('div');layer.id='mf-animal-indicators';document.body.append(layer);
  const style=document.createElement('style');style.textContent=`#mf-animal-indicators{position:fixed;inset:0;pointer-events:none;z-index:7;overflow:hidden}.mf-ready-marker{position:absolute;transform:translate(-50%,-100%);padding:0;border:0;background:none;cursor:pointer;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}.mf-ready-marker:focus-visible{outline:2px solid white;border-radius:8px}.mf-ready-marker .gem{position:absolute;bottom:0;overflow:hidden;transform-origin:center bottom;pointer-events:none}.mf-ready-marker img{position:absolute;width:147.126437%;height:auto;left:-23.563218%;top:-32.317073%;pointer-events:none;user-select:none}`;document.head.append(style);
@@ -22,7 +10,7 @@
  function update(now=performance.now()){
   const shown=new Set(),rect=canvas.getBoundingClientRect(),sx=rect.width/MFViewport.width,sy=rect.height/MFViewport.height,clock=Date.now();
   if(!art.complete||!art.naturalWidth){for(const m of markers.values())m.el.hidden=true;return;}
-  for(const t of terrenos){if(modoMover&&estruturaMovendo===t)continue;const state=readyState(t,now,clock);if(!state)continue;
+  for(const t of terrenos){if(modoMover&&estruturaMovendo===t)continue;const state=MFReadyCore.readyFor(t,clock);if(!state)continue;
    const src=state.kind==='pigsty'?MFPigstyCore.art(t):window.MFBarn?.src(t)||window.MFNatureAssets?.srcFor(t)||window.MFSheepAnimation?.src(t)||t.imgSrc,img=preload(src);if(!img?.complete||!img.naturalWidth)continue;
    const a=gridToScreen(t.gx+((t.w||1)-1)/2,t.gy+((t.h||1)-1)/2),vs=window.MFAdapter?.scaleForStructure?.(t,Number(t.visualScale)||1)??(Number(t.visualScale)||1),w=TILE_W*(t.w||1)*vs,h=w*img.naturalHeight/img.naturalWidth;
    const box=state.kind==='pigsty'?MFPigstyCore.geometry(t,a,img.naturalWidth,img.naturalHeight):state.kind==='tree'&&window.MFTreeCatalog?MFTreeCatalog.geometry(t,img,a):{x:a.x-w/2,y:a.y+TILE_H*.9-h,w,h};
