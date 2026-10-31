@@ -546,13 +546,13 @@
 
   function enabled() { return window.MFAdapter?.project?.world?.ambient !== false; }
 
-  function draw(b) {
+  function draw(b,viewOverride) {
     if (!enabled()) return;
     if (!SPRITES) buildSprites();
     const info = farmInfo(), sig = JSON.stringify(info);
     if (sig !== LAYOUT_SIG) { LAYOUT = build(info); LAYOUT_SIG = sig; fxParts = null; }
     if (!fxCanvas) ensureFx();
-    const L = LAYOUT, view = viewRect();
+    const L = LAYOUT, view = viewOverride || viewRect();
     window.MFNatureAssets?.ground(b,view);
     drawMountains(b, L, view);
     for (const it of L.low) drawSprite(b, it, view);
