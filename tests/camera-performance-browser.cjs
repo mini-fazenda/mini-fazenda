@@ -58,11 +58,11 @@ const {chromium,webkit}=require('playwright');
    touch('touchend',[]);
    if(zoom<=z1||Math.hypot(beforeTouch.x-afterTouch.x,beforeTouch.y-afterTouch.y)>0.1)
     throw Error('Pinça deslocou o ponto entre os dedos: '+JSON.stringify({beforeTouch,afterTouch,z1,zoom}));
-   const first=groundGridPath();
+   const first=MFAdapter.cache.groundGridPath();
    for(let i=0;i<8;i++){offsetX+=3;offsetY+=2;draw();
-    if(groundGridPath()!==first)throw Error('Reconstruiu toda a malha do chão em cada movimento');}
+    if(MFAdapter.cache.groundGridPath()!==first)throw Error('Reconstruiu toda a malha do chão em cada movimento');}
    COLS=42;
-   if(groundGridPath()===first)throw Error('Expandir a fazenda não invalidou a malha');
+   if(MFAdapter.cache.groundGridPath()===first)throw Error('Expandir a fazenda não invalidou a malha');
    return {drag:samples.at(-1),mouseZoom:z0,afterZoom:z1,pinchZoom:zoom,gridCached:true};
   });
   if(errors.length)throw Error(errors.join('\n'));
